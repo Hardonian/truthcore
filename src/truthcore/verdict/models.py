@@ -50,7 +50,7 @@ class Mode(Enum):
 @dataclass
 class WeightedFinding:
     """A finding with weight and scoring info."""
-    
+
     finding_id: str
     tool: str
     severity: SeverityLevel
@@ -58,15 +58,15 @@ class WeightedFinding:
     message: str
     location: str | None = None
     rule_id: str | None = None
-    
+
     # Weighted scoring
     weight: float = 1.0
     points: int = 0
-    
+
     # Source info
     source_file: str | None = None
     source_engine: str | None = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "finding_id": self.finding_id,
@@ -86,7 +86,7 @@ class WeightedFinding:
 @dataclass
 class EngineContribution:
     """Contribution from a single engine."""
-    
+
     engine_id: str
     findings_count: int = 0
     blockers: int = 0
@@ -95,7 +95,7 @@ class EngineContribution:
     lows: int = 0
     points_contributed: int = 0
     passed: bool = True
-    
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "engine_id": self.engine_id,
@@ -112,13 +112,13 @@ class EngineContribution:
 @dataclass
 class CategoryBreakdown:
     """Breakdown by category."""
-    
+
     category: Category
     weight: float
     findings_count: int = 0
     points_contributed: int = 0
     max_allowed: int | None = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "category": self.category.value,
@@ -138,22 +138,22 @@ class VerdictThresholds:
     - MAIN: Balanced, moderate tolerance
     - RELEASE: Strict, minimal issues allowed
     """
-    
+
     mode: Mode
-    
+
     # Blockers are always immediate fail
     max_blockers: int = 0
-    
+
     # High severity limits
     max_highs: int = 0
     max_highs_with_override: int = 3
-    
+
     # Points-based thresholds
     max_total_points: int = 100
-    
+
     # Category-specific limits (points)
     category_limits: dict[Category, int] = field(default_factory=dict)
-    
+
     # Weight multipliers per severity
     severity_weights: dict[SeverityLevel, float] = field(default_factory=lambda: {
         SeverityLevel.BLOCKER: float('inf'),
@@ -162,7 +162,7 @@ class VerdictThresholds:
         SeverityLevel.LOW: 1.0,
         SeverityLevel.INFO: 0.0,
     })
-    
+
     # Default category weights
     category_weights: dict[Category, float] = field(default_factory=lambda: {
         Category.SECURITY: 2.0,
@@ -175,13 +175,13 @@ class VerdictThresholds:
         Category.KNOWLEDGE: 1.0,
         Category.GENERAL: 1.0,
     })
-    
+
     @classmethod
     def for_mode(cls, mode: Mode | str) -> "VerdictThresholds":
         """Create thresholds for a specific mode."""
         if isinstance(mode, str):
             mode = Mode(mode)
-        
+
         if mode == Mode.PR:
             # PR mode: lenient, allows some issues
             return cls(
@@ -195,7 +195,7 @@ class VerdictThresholds:
                     Category.BUILD: 50,
                 },
             )
-        
+
         elif mode == Mode.MAIN:
             # Main mode: balanced
             return cls(
@@ -210,7 +210,7 @@ class VerdictThresholds:
                     Category.TYPES: 30,
                 },
             )
-        
+
         else:  # RELEASE
             # Release mode: strict
             return cls(
@@ -226,29 +226,42 @@ class VerdictThresholds:
                     Category.TYPES: 10,
                 },
             )
-    
+
     def get_category_weight(self, category: Category) -> float:
         """Get weight for a category."""
         return self.category_weights.get(category, 1.0)
-    
+
     def get_severity_weight(self, severity: SeverityLevel) -> float:
         """Get weight for a severity level."""
         return self.severity_weights.get(severity, 1.0)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert thresholds to dictionary."""
+        return {
+            "mode": self.mode.value,
+            "max_blockers": self.max_blockers,
+            "max_highs": self.max_highs,
+            "max_highs_with_override": self.max_highs_with_override,
+            "max_total_points": self.max_total_points,
+            "category_limits": {k.value: v for k, v in self.category_limits.items()},
+            "severity_weights": {k.value: v for k, v in self.severity_weights.items()},
+            "category_weights": {k.value: v for k, v in self.category_weights.items()},
+        }
 
 
 @dataclass
 class VerdictResult:
     """Complete verdict result."""
-    
+
     # Basic info
     verdict: VerdictStatus
     version: str = "2.0"
     timestamp: str = ""
     mode: Mode = Mode.PR
-    
+
     # Inputs processed
     inputs: list[str] = field(default_factory=list)
-    
+
     # Summary counts
     total_findings: int = 0
     blockers: int = 0
@@ -256,26 +269,26 @@ class VerdictResult:
     mediums: int = 0
     lows: int = 0
     total_points: int = 0
-    
+
     # Engine contributions
     engines: list[EngineContribution] = field(default_factory=list)
-    
+
     # Category breakdowns
     categories: list[CategoryBreakdown] = field(default_factory=list)
-    
+
     # Top findings (for explainability)
     top_findings: list[WeightedFinding] = field(default_factory=list)
-    
+
     # Reasons for decision
     ship_reasons: list[str] = field(default_factory=list)
     no_ship_reasons: list[str] = field(default_factory=list)
-    
+
     # Configuration used
     thresholds: VerdictThresholds | None = None
-    
+
     # Optional: profile used
     profile: str | None = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -302,7 +315,7 @@ class VerdictResult:
             },
             "thresholds": self.thresholds.to_dict() if self.thresholds else None,
         }
-    
+
     def to_markdown(self) -> str:
         """Generate markdown report."""
         lines = [
@@ -323,7 +336,7 @@ class VerdictResult:
             f"- **Total Points:** {self.total_points}",
             "",
         ]
-        
+
         # Engine breakdown
         if self.engines:
             lines.extend([
@@ -340,7 +353,7 @@ class VerdictResult:
                     f"{engine.points_contributed} | {status} |"
                 )
             lines.append("")
-        
+
         # Category breakdown
         if self.categories:
             lines.extend([
@@ -356,7 +369,7 @@ class VerdictResult:
                     f"{cat.findings_count} | {cat.points_contributed} | {limit_str} |"
                 )
             lines.append("")
-        
+
         # Top findings
         if self.top_findings:
             lines.extend([
@@ -375,7 +388,7 @@ class VerdictResult:
                     lines.append(f"   - Rule: `{finding.rule_id}`")
                 lines.append(f"   - Points: {finding.points} (weight: {finding.weight:.1f})")
                 lines.append("")
-        
+
         # Reasons
         if self.ship_reasons and self.verdict == VerdictStatus.SHIP:
             lines.extend([
@@ -385,7 +398,7 @@ class VerdictResult:
             for reason in self.ship_reasons:
                 lines.append(f"- ✅ {reason}")
             lines.append("")
-        
+
         if self.no_ship_reasons:
             lines.extend([
                 "## No-Ship Reasons",
@@ -394,7 +407,7 @@ class VerdictResult:
             for reason in self.no_ship_reasons:
                 lines.append(f"- ❌ {reason}")
             lines.append("")
-        
+
         # Add SVG chart if there are findings
         if self.total_findings > 0:
             lines.extend([
@@ -403,12 +416,12 @@ class VerdictResult:
                 self._generate_svg_chart(),
                 "",
             ])
-        
+
         lines.append("---")
         lines.append(f"*Generated by Truth Core v{self.version}*")
-        
+
         return "\n".join(lines)
-    
+
     def _format_verdict(self) -> str:
         """Format verdict with emoji."""
         if self.verdict == VerdictStatus.SHIP:
@@ -417,7 +430,7 @@ class VerdictResult:
             return "🚫 NO_SHIP"
         else:
             return "⚠️ CONDITIONAL"
-    
+
     def _severity_emoji(self, severity: SeverityLevel) -> str:
         """Get emoji for severity."""
         return {
@@ -427,13 +440,13 @@ class VerdictResult:
             SeverityLevel.LOW: "🔵",
             SeverityLevel.INFO: "⚪",
         }.get(severity, "⚪")
-    
+
     def _generate_svg_chart(self) -> str:
         """Generate simple inline SVG pie chart of findings by severity."""
         total = self.blockers + self.highs + self.mediums + self.lows
         if total == 0:
             return "No findings to display."
-        
+
         # Colors for each severity
         colors = {
             "blockers": "#dc2626",  # red
@@ -441,7 +454,7 @@ class VerdictResult:
             "mediums": "#ca8a04",   # yellow
             "lows": "#2563eb",      # blue
         }
-        
+
         # Calculate angles
         angles = {}
         start_angle = 0
@@ -455,14 +468,14 @@ class VerdictResult:
                 angle = (count / total) * 360
                 angles[key] = (start_angle, start_angle + angle)
                 start_angle += angle
-        
+
         # Generate SVG
         svg_parts = [
             '<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">',
             '  <!-- Legend -->',
-            f'  <text x="220" y="30" font-family="sans-serif" font-size="14" font-weight="bold">Findings by Severity</text>',
+            '  <text x="220" y="30" font-family="sans-serif" font-size="14" font-weight="bold">Findings by Severity</text>',
         ]
-        
+
         legend_y = 55
         legend_items = [
             ("Blockers", self.blockers, colors["blockers"]),
@@ -470,7 +483,7 @@ class VerdictResult:
             ("Medium", self.mediums, colors["mediums"]),
             ("Low", self.lows, colors["lows"]),
         ]
-        
+
         for label, count, color in legend_items:
             if count > 0:
                 svg_parts.extend([
@@ -478,20 +491,20 @@ class VerdictResult:
                     f'  <text x="238" y="{legend_y + 10}" font-family="sans-serif" font-size="12">{label}: {count}</text>',
                 ])
                 legend_y += 20
-        
+
         svg_parts.extend([
             '</svg>',
         ])
-        
+
         return "\n".join(svg_parts)
-    
+
     def write_json(self, path: Path) -> None:
         """Write verdict to JSON file."""
         import json
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2, sort_keys=True)
-    
+
     def write_markdown(self, path: Path) -> None:
         """Write verdict to Markdown file."""
         path.parent.mkdir(parents=True, exist_ok=True)

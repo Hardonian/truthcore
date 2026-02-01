@@ -11,8 +11,7 @@ from typing import Any
 
 import click
 
-from truthcore.verdict.aggregator import VerdictAggregator, aggregate_verdict
-from truthcore.verdict.models import Mode, VerdictThresholds
+from truthcore.verdict.aggregator import aggregate_verdict
 
 
 def register_verdict_commands(cli: click.Group) -> None:
@@ -21,7 +20,7 @@ def register_verdict_commands(cli: click.Group) -> None:
     Args:
         cli: The Click CLI group to add commands to
     """
-    
+
     @cli.command(name="verdict")
     @click.option(
         "--inputs", "-i",
@@ -83,11 +82,11 @@ def register_verdict_commands(cli: click.Group) -> None:
         - verdict.md: Human-readable report
         """
         debug = ctx.obj.get("debug", False)
-        
+
         try:
             # Collect input files
             input_files: list[Path] = []
-            
+
             if include:
                 # Use explicitly included files
                 for pattern in include:
@@ -104,20 +103,20 @@ def register_verdict_commands(cli: click.Group) -> None:
                 ]
                 for pattern in known_files:
                     input_files.extend(inputs.glob(pattern))
-            
+
             # Remove duplicates and sort
             input_files = sorted(set(input_files))
-            
+
             if not input_files:
                 click.echo("Warning: No input files found", err=True)
                 click.echo(f"Searched in: {inputs}", err=True)
                 # Create empty verdict
                 input_files = []
-            
+
             click.echo(f"Aggregating verdict from {len(input_files)} input(s)...")
             for f in input_files:
                 click.echo(f"  - {f.name}")
-            
+
             # Load custom thresholds if provided
             custom_thresholds: dict[str, Any] | None = None
             if thresholds:
@@ -125,7 +124,7 @@ def register_verdict_commands(cli: click.Group) -> None:
                 with open(thresholds, encoding="utf-8") as f:
                     custom_thresholds = json.load(f)
                 click.echo(f"Loaded custom thresholds from: {thresholds}")
-            
+
             # Aggregate verdict
             result = aggregate_verdict(
                 input_paths=input_files,
@@ -133,38 +132,38 @@ def register_verdict_commands(cli: click.Group) -> None:
                 profile=profile,
                 custom_thresholds=custom_thresholds,
             )
-            
+
             # Write outputs
             out.mkdir(parents=True, exist_ok=True)
-            
+
             result.write_json(out / "verdict.json")
             click.echo(f"  Written: {out / 'verdict.json'}")
-            
+
             result.write_markdown(out / "verdict.md")
             click.echo(f"  Written: {out / 'verdict.md'}")
-            
+
             # Print summary
             click.echo(f"\nVerdict: {result.verdict.value}")
             click.echo(f"  Total findings: {result.total_findings}")
             click.echo(f"  Blockers: {result.blockers}")
             click.echo(f"  Highs: {result.highs}")
             click.echo(f"  Total points: {result.total_points}")
-            
+
             if result.no_ship_reasons:
                 click.echo("\nNo-ship reasons:")
                 for reason in result.no_ship_reasons:
                     click.echo(f"  - {reason}")
-            
+
             # Exit with error code if no-ship
             if result.verdict.value == "NO_SHIP":
                 ctx.exit(1)
-                
+
         except Exception as e:
             if debug:
                 raise
             click.echo(f"Error: {e}", err=True)
             ctx.exit(1)
-    
+
     # Store the command for potential reference
     cli.commands["verdict"] = verdict_build
 
@@ -191,39 +190,39 @@ def generate_verdict_for_judge(
     try:
         # Look for input files
         input_files: list[Path] = []
-        
+
         # Readiness output
         readiness_json = output_dir / "readiness.json"
         if readiness_json.exists():
             input_files.append(readiness_json)
-        
+
         # Policy findings
         policy_json = output_dir / "policy_findings.json"
         if policy_json.exists():
             input_files.append(policy_json)
-        
+
         # Invariants results
         invariants_json = inputs_dir / "invariants.json"
         if invariants_json.exists():
             input_files.append(invariants_json)
-        
+
         # If no files found, skip
         if not input_files:
             return None
-        
+
         # Aggregate verdict
         result = aggregate_verdict(
             input_paths=input_files,
             mode=mode,
             profile=profile,
         )
-        
+
         # Write outputs
         result.write_json(output_dir / "verdict.json")
         result.write_markdown(output_dir / "verdict.md")
-        
+
         return output_dir / "verdict.json"
-        
+
     except Exception:
         # Silently fail - verdict is optional for judge
         return None
