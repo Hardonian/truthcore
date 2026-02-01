@@ -15,7 +15,7 @@ from truthcore.contracts.metadata import (
     inject_metadata,
     update_metadata,
 )
-from truthcore.contracts.registry import ContractVersion, get_registry
+from truthcore.contracts.registry import get_registry
 from truthcore.contracts.validate import ValidationError, validate_artifact_or_raise
 from truthcore.migrations.engine import MigrationNotFoundError, migrate
 
@@ -167,7 +167,6 @@ def convert_directory(
         Summary dict with conversion results
     """
     import json
-    import os
     from pathlib import Path
     
     input_path = Path(input_dir)
