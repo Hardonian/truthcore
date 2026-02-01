@@ -380,7 +380,7 @@ class BuildLogParser(RegexLogParser):
         """Parse build log with multiline support."""
         findings = []
 
-        for match in self.pattern.finditer(content, re.MULTILINE):
+        for match in self.pattern.finditer(content):
             groups = match.groupdict()
 
             severity_str = groups.get("severity", "").upper()
