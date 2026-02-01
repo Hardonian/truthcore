@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import platform
 import sys
 from dataclasses import dataclass, field
@@ -148,10 +147,10 @@ class RunManifest:
     config_hash: str  # Configuration
     
     # Optional fields with defaults
-    engine_versions: dict[str, str] = field(default_factory=dict)
+    engine_versions: dict[str, str] = field(default_factory=lambda: {})
     config_path: str | None = None
     profile: str | None = None
-    input_files: list[InputFileInfo] = field(default_factory=list)
+    input_files: list[InputFileInfo] = field(default_factory=lambda: [])
     input_directory: str | None = None
     python_version: str = field(default_factory=lambda: sys.version)
     python_implementation: str = field(default_factory=lambda: platform.python_implementation())
@@ -170,7 +169,7 @@ class RunManifest:
     exit_code: int = 0
     
     # Additional metadata
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=lambda: {})
     
     def __post_init__(self):
         """Normalize timestamp after initialization."""
