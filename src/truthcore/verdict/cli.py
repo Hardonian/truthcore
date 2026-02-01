@@ -55,6 +55,11 @@ def register_verdict_commands(cli: click.Group) -> None:
         multiple=True,
         help="Include specific files (can be used multiple times)",
     )
+    @click.option(
+        "--compat",
+        is_flag=True,
+        help="Enable backward compatibility mode (v1 output format)",
+    )
     @click.pass_context
     def verdict_build(
         ctx: click.Context,
@@ -64,6 +69,7 @@ def register_verdict_commands(cli: click.Group) -> None:
         out: Path,
         thresholds: Path | None,
         include: tuple[str, ...],
+        compat: bool,
     ):
         """Build a verdict from engine outputs.
         
@@ -80,6 +86,8 @@ def register_verdict_commands(cli: click.Group) -> None:
         Outputs:
         - verdict.json: Machine-readable verdict
         - verdict.md: Human-readable report
+        
+        Use --compat for v1 output format (backward compatible with truth-core < 0.2.0).
         """
         debug = ctx.obj.get("debug", False)
 
@@ -136,8 +144,15 @@ def register_verdict_commands(cli: click.Group) -> None:
             # Write outputs
             out.mkdir(parents=True, exist_ok=True)
 
-            result.write_json(out / "verdict.json")
-            click.echo(f"  Written: {out / 'verdict.json'}")
+            # Handle compat mode for v1 output format
+            if compat:
+                from truthcore.compat import CompatOptions, write_compat_output
+                opts = CompatOptions.from_flag(True)
+                write_compat_output(result.to_dict(), out / "verdict.json", opts)
+                click.echo(f"  Written: {out / 'verdict.json'} (v1 compat format)")
+            else:
+                result.write_json(out / "verdict.json")
+                click.echo(f"  Written: {out / 'verdict.json'}")
 
             result.write_markdown(out / "verdict.md")
             click.echo(f"  Written: {out / 'verdict.md'}")

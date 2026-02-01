@@ -101,6 +101,7 @@ register_verdict_commands(cli)
 @click.option('--policy-pack', type=str, help='Policy pack to run (built-in name or path)')
 @click.option('--sign/--no-sign', default=False, help='Sign the evidence bundle (requires signing keys)')
 @click.option('--manifest/--no-manifest', default=True, help='Generate evidence manifest')
+@click.option('--compat', is_flag=True, help='Enable backward compatibility mode (legacy formats)')
 @click.pass_context
 def judge(
     ctx: click.Context,
@@ -116,6 +117,7 @@ def judge(
     policy_pack: str | None,
     sign: bool,
     manifest: bool,
+    compat: bool,
 ):
     """Run readiness check with parallel execution and UI geometry support.
     
@@ -124,6 +126,8 @@ def judge(
     
     Optionally runs policy pack (--policy-pack) and generates provenance
     (--sign, --manifest).
+    
+    Use --compat for backward compatibility with truth-core < 0.2.0.
     """
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
@@ -715,8 +719,9 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
 @click.option('--pack', '-p', required=True, help='Policy pack name (built-in: base, security, privacy, logging, agent) or path to YAML file')
 @click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
 @click.option('--config', '-c', type=click.Path(exists=True, path_type=Path), help='Policy configuration file')
+@click.option('--compat', is_flag=True, help='Enable backward compatibility mode (legacy formats, relaxed validation)')
 @click.pass_context
-def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: Path | None):
+def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: Path | None, compat: bool):
     """Run policy-as-code scanner against inputs.
     
     Built-in packs: base, security, privacy, logging, agent
