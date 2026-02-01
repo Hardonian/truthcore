@@ -122,7 +122,7 @@ def _parse_version(version: str) -> ContractVersion:
     return ContractVersion.parse(version)
 
 
-def _find_migration_chain(
+def find_migration_chain(
     artifact_type: str,
     from_version: str,
     to_version: str,
@@ -211,7 +211,7 @@ def migrate(
         return copy.deepcopy(artifact)
     
     # Find migration chain
-    chain = _find_migration_chain(artifact_type, from_version, to_version)
+    chain = find_migration_chain(artifact_type, from_version, to_version)
     
     # Apply migrations
     result = copy.deepcopy(artifact)
