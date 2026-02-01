@@ -1,0 +1,72 @@
+name: base
+description: Base policy pack with essential security and hygiene rules
+version: "1.0.0"
+metadata:
+  author: truth-core
+  category: base
+rules:
+  - id: SECRET_API_KEY_DETECTED
+    description: Detect potential API keys in code
+    severity: HIGH
+    category: security
+    target: files
+    suggestion: Remove hardcoded secrets and use environment variables or a secrets manager
+    metadata:
+      cwe: "CWE-798"
+
+  - id: SECRET_PRIVATE_KEY_DETECTED
+    description: Detect private keys in files
+    severity: BLOCKER
+    category: security
+    target: files
+    suggestion: Never commit private keys. Rotate immediately if exposed.
+    metadata:
+      cwe: "CWE-798"
+
+  - id: CONFIG_DEBUG_IN_PRODUCTION
+    description: Detect debug mode enabled in production configurations
+    severity: HIGH
+    category: config
+    target: files
+    suggestion: Disable debug mode in production environments
+    metadata:
+      cwe: "CWE-489"
+
+  - id: CONFIG_SSL_VERIFICATION_DISABLED
+    description: Detect disabled SSL verification
+    severity: HIGH
+    category: config
+    target: files
+    suggestion: Always verify SSL certificates in production
+    metadata:
+      cwe: "CWE-295"
+
+  - id: ARTIFACT_OVERSIZED_FILE
+    description: Detect oversized files that may impact performance
+    severity: MEDIUM
+    category: artifact
+    target: files
+    threshold:
+      count: 1
+    metadata:
+      max_file_size_mb: 50
+
+  - id: ARTIFACT_PATH_TRAVERSAL
+    description: Detect path traversal patterns in filenames
+    severity: HIGH
+    category: artifact
+    target: files
+    matchers:
+      - type: regex
+        pattern: "\\.\\.[\\\\/]|%2e%2e"
+        flags: ["i"]
+    suggestion: Sanitize filenames to prevent path traversal attacks
+    metadata:
+      cwe: "CWE-22"
+
+  - id: ARTIFACT_SUSPICIOUS_BINARY
+    description: Detect suspicious binary payloads in non-binary files
+    severity: MEDIUM
+    category: artifact
+    target: files
+    suggestion: Review binary content and ensure it belongs in the repository

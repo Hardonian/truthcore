@@ -1,0 +1,123 @@
+name: logging
+description: Logging and observability policy pack
+version: "1.0.0"
+metadata:
+  author: truth-core
+  category: logging
+rules:
+  - id: LOG_SENSITIVE_DATA
+    description: Detect logging of potentially sensitive data
+    severity: HIGH
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.\\w+|console\\.log|print)\\s*\\(.*password"
+    suggestion: Never log passwords or secrets
+    metadata:
+      cwe: "CWE-532"
+
+  - id: LOG_SECRET_EXPOSURE
+    description: Detect secrets in log statements
+    severity: BLOCKER
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.\\w+|console\\.log|print)\\s*\\(.*token"
+    suggestion: Remove secret logging immediately
+    metadata:
+      cwe: "CWE-532"
+
+  - id: LOG_PII_EXPOSURE
+    description: Detect potential PII in logs
+    severity: MEDIUM
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.\\w+|console\\.log|print)\\s*\\(.*(email|phone|ssn)"
+    suggestion: Review and sanitize logged PII
+    metadata:
+      gdpr: "relevant"
+
+  - id: LOG_DEBUG_IN_PRODUCTION
+    description: Detect debug logging that may leak information
+    severity: MEDIUM
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.debug|console\\.debug|DEBUG).*"
+    suggestion: Ensure debug logs are disabled in production or don't contain sensitive data
+
+  - id: LOG_STRUCTURED_FORMAT
+    description: Recommend structured logging
+    severity: LOW
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "print\\s*\\("
+    suggestion: Use structured logging (JSON) instead of print statements
+    metadata:
+      best_practice: true
+
+  - id: LOG_LEVEL_CONFIG
+    description: Check log level configuration
+    severity: LOW
+    category: logging
+    target: json_fields
+    matchers:
+      - type: regex
+        pattern: "(?i)log[_-]?level"
+    suggestion: Ensure appropriate log levels are configured for production
+
+  - id: LOG_RETENTION_POLICY
+    description: Check log retention configuration
+    severity: LOW
+    category: logging
+    target: json_fields
+    matchers:
+      - type: regex
+        pattern: "(?i)retention[_-]?days|log[_-]?retention"
+    suggestion: Configure log retention according to compliance requirements
+    metadata:
+      gdpr: "relevant"
+      hipaa: "relevant"
+
+  - id: LOG_INJECTION_VULNERABILITY
+    description: Detect potential log injection vulnerabilities
+    severity: MEDIUM
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.\\w+|console\\.log)\\s*\\(\\s*[^\"']*\\+"
+    suggestion: Sanitize user input before logging to prevent injection
+    metadata:
+      cwe: "CWE-117"
+
+  - id: LOG_ERROR_EXPOSURE
+    description: Detect potential information exposure through error logs
+    severity: MEDIUM
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.error|console\\.error)\\s*\\(.*\\be\\."
+    suggestion: Ensure error logs don't expose sensitive stack traces in production
+    metadata:
+      cwe: "CWE-209"
+
+  - id: LOG_INSUFFICIENT_CONTEXT
+    description: Detect log statements with insufficient context
+    severity: LOW
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(log\\.\\w+|console\\.log)\\s*\\([\"'][^\"']{0,10}[\"']\\s*\\)"
+    suggestion: Include request IDs, user context, and timestamps in logs
+    metadata:
+      best_practice: true

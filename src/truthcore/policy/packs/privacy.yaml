@@ -1,0 +1,128 @@
+name: privacy
+description: Privacy and PII detection policy pack
+version: "1.0.0"
+metadata:
+  author: truth-core
+  category: privacy
+rules:
+  - id: PII_EMAIL_ADDRESS
+    description: Detect email addresses
+    severity: MEDIUM
+    category: privacy
+    target: files
+    suggestion: Review if email storage complies with privacy policy
+    metadata:
+      gdpr: "relevant"
+
+  - id: PII_PHONE_NUMBER
+    description: Detect phone numbers (US format)
+    severity: MEDIUM
+    category: privacy
+    target: files
+    suggestion: Ensure phone numbers are properly protected per privacy requirements
+    metadata:
+      gdpr: "relevant"
+
+  - id: PII_SSN_LIKE
+    description: Detect SSN-like patterns
+    severity: HIGH
+    category: privacy
+    target: files
+    suggestion: SSNs require strong protection - encrypt and limit access
+    metadata:
+      gdpr: "special_category"
+      pii_type: "ssn"
+
+  - id: PII_CREDIT_CARD
+    description: Detect credit card numbers
+    severity: BLOCKER
+    category: privacy
+    target: files
+    suggestion: Never store credit card numbers. Use PCI-compliant payment processors.
+    metadata:
+      pci_dss: "required"
+      pii_type: "payment"
+
+  - id: PII_IP_ADDRESS
+    description: Detect IP addresses
+    severity: LOW
+    category: privacy
+    target: files
+    suggestion: IP addresses may be personal data under GDPR - document usage
+    metadata:
+      gdpr: "relevant"
+
+  - id: PII_NAME_PATTERN
+    description: Detect potential name patterns in logs
+    severity: LOW
+    category: privacy
+    target: logs
+    matchers:
+      - type: regex
+        pattern: "(?i)(first[_-]?name|last[_-]?name|full[_-]?name)[\"']?\\s*[:=]"
+    suggestion: Minimize logging of personal names
+    metadata:
+      gdpr: "relevant"
+
+  - id: PII_ADDRESS_PATTERN
+    description: Detect address patterns
+    severity: MEDIUM
+    category: privacy
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(street[_-]?address|postal[_-]?code|zip[_-]?code)[\"']?\\s*[:=]"
+    suggestion: Review address storage for compliance requirements
+    metadata:
+      gdpr: "relevant"
+      pii_type: "address"
+
+  - id: PII_BIRTHDATE
+    description: Detect birthdate patterns
+    severity: MEDIUM
+    category: privacy
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(birth[_-]?date|date[_-]?of[_-]?birth|dob)[\"']?\\s*[:=]"
+    suggestion: Birthdates are sensitive - ensure proper protection
+    metadata:
+      gdpr: "special_category"
+
+  - id: PII_HEALTH_INFO
+    description: Detect health information patterns
+    severity: HIGH
+    category: privacy
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(medical|health|diagnosis|patient)[\"']?\\s*[:=]"
+    suggestion: Health data is special category under GDPR - requires enhanced protection
+    metadata:
+      gdpr: "special_category"
+      hipaa: "relevant"
+
+  - id: PII_BIOMETRIC
+    description: Detect biometric data references
+    severity: BLOCKER
+    category: privacy
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(fingerprint|face[_-]?print|retina|iris|biometric)[\"']?\\s*[:=]"
+    suggestion: Biometric data requires highest protection - special category under GDPR
+    metadata:
+      gdpr: "special_category"
+
+  - id: PII_FINANCIAL_ACCOUNT
+    description: Detect financial account numbers
+    severity: HIGH
+    category: privacy
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(bank[_-]?account|routing[_-]?number|iban)[\"']?\\s*[:=]"
+    suggestion: Financial data requires encryption and access controls
+    metadata:
+      gdpr: "relevant"
+      pii_type: "financial"

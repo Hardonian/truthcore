@@ -1,0 +1,192 @@
+name: agent
+description: AI agent safety and governance policy pack
+version: "1.0.0"
+metadata:
+  author: truth-core
+  category: agent
+rules:
+  - id: AGENT_UNBOUND_TOOL_ACCESS
+    description: Detect agents with potentially unbounded tool access
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(tool[_-]?access|allow[_-]?all[_-]?tools)\\s*[:=]\\s*true"
+    suggestion: Implement least privilege - grant only necessary tools
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_UNSAFE_CODE_EXECUTION
+    description: Detect agents that can execute arbitrary code
+    severity: BLOCKER
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(exec_code|run_shell|subprocess)\\s*[:=]\\s*true"
+    suggestion: Restrict code execution capabilities to sandboxed environments
+    metadata:
+      agent_safety: true
+      cwe: "CWE-78"
+
+  - id: AGENT_FILE_SYSTEM_ACCESS
+    description: Detect agents with unrestricted file system access
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(fs[_-]?access|file[_-]?access|root[_-]?access)\\s*[:=]\\s*true"
+    suggestion: Limit file system access to specific directories with strict permissions
+    metadata:
+      agent_safety: true
+      cwe: "CWE-22"
+
+  - id: AGENT_NETWORK_ACCESS_UNRESTRICTED
+    description: Detect agents with unrestricted network access
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(network[_-]?access|internet[_-]?access|all[_-]?urls)\\s*[:=]\\s*true"
+    suggestion: Restrict network access to specific allowlisted domains
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_NO_HUMAN_IN_THE_LOOP
+    description: Detect agents configured without human oversight for critical actions
+    severity: MEDIUM
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(human[_-]?approval|require[_-]?confirmation)\\s*[:=]\\s*false"
+    suggestion: Require human approval for high-impact actions
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_NO_RATE_LIMITING
+    description: Detect agents without rate limiting
+    severity: MEDIUM
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(rate[_-]?limit|throttle)\\s*[:=]\\s*false|none"
+    suggestion: Implement rate limiting to prevent abuse and resource exhaustion
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_MISSING_TIMEOUT
+    description: Detect agent operations without timeouts
+    severity: MEDIUM
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(timeout|max[_-]?duration)\\s*[:=]\\s*(none|null|0|false)"
+    suggestion: Set appropriate timeouts for all agent operations
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_UNSAFE_PROMPT_INJECTION
+    description: Detect insufficient prompt injection protection
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(system[_-]?prompt|base[_-]?prompt).*\\{.*\\}"
+    suggestion: Use parameterized prompts and validate all user input
+    metadata:
+      agent_safety: true
+      cwe: "CWE-94"
+
+  - id: AGENT_INSUFFICIENT_LOGGING
+    description: Detect agents without adequate audit logging
+    severity: MEDIUM
+    category: logging
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(audit[_-]?log|action[_-]?log)\\s*[:=]\\s*false"
+    suggestion: Enable comprehensive audit logging for all agent actions
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_NO_ROLLBACK_CAPABILITY
+    description: Detect agents without rollback or undo functionality
+    severity: MEDIUM
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(allow[_-]?undo|rollback[_-]?enabled)\\s*[:=]\\s*false"
+    suggestion: Implement rollback capabilities for destructive operations
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_STATE_PERSISTENCE_UNSAFE
+    description: Detect unsafe state persistence mechanisms
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(state[_-]?file|session[_-]?file).*\\.(json|txt|log)"
+    suggestion: Encrypt persisted state and store in secure locations
+    metadata:
+      agent_safety: true
+      cwe: "CWE-312"
+
+  - id: AGENT_MODEL_VERSION_UNSPECIFIED
+    description: Detect agents with unspecified model versions
+    severity: LOW
+    category: governance
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(model[_-]?version|api[_-]?version)\\s*[:=]\\s*[\"']?latest[\"']?"
+    suggestion: Pin specific model versions for reproducibility and safety
+    metadata:
+      agent_safety: true
+      best_practice: true
+
+  - id: AGENT_OUTPUT_VALIDATION_MISSING
+    description: Detect agents without output validation
+    severity: MEDIUM
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(validate[_-]?output|output[_-]?schema)\\s*[:=]\\s*false|none"
+    suggestion: Validate all agent outputs against expected schemas
+    metadata:
+      agent_safety: true
+
+  - id: AGENT_DETERMINISM_NOT_VERIFIED
+    description: Detect agents with non-deterministic configurations
+    severity: LOW
+    category: governance
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(temperature)\\s*[:=]\\s*(0\\.[5-9]|[1-9])"
+    suggestion: Use temperature=0 for deterministic outputs when reproducibility matters
+    metadata:
+      agent_safety: true
+      best_practice: true
+
+  - id: AGENT_NO_COST_LIMITS
+    description: Detect agents without cost or token limits
+    severity: MEDIUM
+    category: governance
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(max[_-]?tokens|cost[_-]?limit)\\s*[:=]\\s*(none|null|unlimited)"
+    suggestion: Set appropriate token and cost limits to prevent runaway expenses
+    metadata:
+      agent_safety: true

@@ -1,0 +1,166 @@
+name: security
+description: Comprehensive security-focused policy pack
+version: "1.0.0"
+metadata:
+  author: truth-core
+  category: security
+rules:
+  - id: SECRET_AWS_ACCESS_KEY
+    description: Detect AWS access keys
+    severity: BLOCKER
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "AKIA[0-9A-Z]{16}"
+    suggestion: Remove AWS credentials and use IAM roles or AWS Secrets Manager
+    metadata:
+      cwe: "CWE-798"
+      owasp: "A07:2021"
+
+  - id: SECRET_AWS_SECRET_KEY
+    description: Detect AWS secret access keys
+    severity: BLOCKER
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)aws[_-]?secret[_-]?access[_-]?key[\"']?\\s*[:=]\\s*[\"']?([a-zA-Z0-9/+=]{40})[\"']?"
+    suggestion: Remove AWS credentials and use IAM roles or AWS Secrets Manager
+    metadata:
+      cwe: "CWE-798"
+
+  - id: SECRET_GITHUB_TOKEN
+    description: Detect GitHub tokens
+    severity: BLOCKER
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "gh[pousr]_[A-Za-z0-9_]{36,}"
+    suggestion: Revoke the token immediately and use environment variables
+    metadata:
+      cwe: "CWE-798"
+
+  - id: SECRET_SLACK_TOKEN
+    description: Detect Slack tokens
+    severity: BLOCKER
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "xox[baprs]-[0-9a-zA-Z]{10,}"
+    suggestion: Revoke the token and regenerate
+    metadata:
+      cwe: "CWE-798"
+
+  - id: SECRET_JWT_TOKEN
+    description: Detect JWT tokens
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "eyJ[A-Za-z0-9_-]*\\.eyJ[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]*"
+    suggestion: Review JWT handling and ensure tokens are not hardcoded
+    metadata:
+      cwe: "CWE-798"
+
+  - id: SECRET_BEARER_TOKEN
+    description: Detect Bearer tokens
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)bearer\\s+([a-zA-Z0-9_\\-\\.]{20,})"
+    suggestion: Use secure token storage and never commit tokens
+    metadata:
+      cwe: "CWE-798"
+
+  - id: CONFIG_WEAK_CRYPTO
+    description: Detect usage of weak cryptographic algorithms
+    severity: HIGH
+    category: config
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(md5|sha1|des|rc4)\\b"
+    suggestion: Use modern cryptographic algorithms (SHA-256, AES, etc.)
+    metadata:
+      cwe: "CWE-327"
+
+  - id: CONFIG_PERMISSIVE_CORS
+    description: Detect overly permissive CORS configuration
+    severity: MEDIUM
+    category: config
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(access[_-]?control[_-]?allow[_-]?origin)\\s*[=:]\\s*\\*"
+    suggestion: Restrict CORS to specific trusted domains
+    metadata:
+      cwe: "CWE-942"
+      owasp: "A05:2021"
+
+  - id: CONFIG_HARDCODED_PASSWORD
+    description: Detect hardcoded passwords
+    severity: HIGH
+    category: config
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(password|passwd|pwd)[\"']?\\s*[:=]\\s*[\"'][^\"']{8,}[\"']"
+    suggestion: Use environment variables or secrets manager for passwords
+    metadata:
+      cwe: "CWE-798"
+
+  - id: CONFIG_WILDCARD_PERMISSION
+    description: Detect wildcard permissions
+    severity: MEDIUM
+    category: config
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?i)(permission|allow|grant)\\s*[=:]\\s*[\"']?\\*[\"']?"
+    suggestion: Use least privilege principle - specify exact permissions
+    metadata:
+      cwe: "CWE-250"
+
+  - id: SQL_INJECTION_PATTERN
+    description: Detect potential SQL injection vulnerabilities
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(SELECT|INSERT|UPDATE|DELETE).*\\+.*\\$|\\$.*\\+.*(SELECT|INSERT|UPDATE|DELETE)"
+        flags: ["i"]
+    suggestion: Use parameterized queries or ORM
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+
+  - id: EVAL_USAGE
+    description: Detect dangerous eval usage
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?<![a-zA-Z0-9_])eval\\s*\\("
+    suggestion: Avoid eval. Use safer alternatives like JSON.parse or function constructors
+    metadata:
+      cwe: "CWE-94"
+
+  - id: EXEC_USAGE
+    description: Detect dangerous exec usage
+    severity: HIGH
+    category: security
+    target: files
+    matchers:
+      - type: regex
+        pattern: "(?<![a-zA-Z0-9_])exec\\s*\\("
+    suggestion: Avoid exec. Use subprocess with proper input validation
+    metadata:
+      cwe: "CWE-78"
