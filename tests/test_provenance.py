@@ -108,15 +108,22 @@ class TestEvidenceManifest:
         assert manifest.compute_manifest_hash() is not None
 
     def test_security_limits(self, tmp_path: Path):
-        """Test security limits are enforced."""
+        """Test security limits skip oversized files."""
         # Create a large file
         large_file = tmp_path / "large.bin"
         large_file.write_bytes(b"0" * (200 * 1024 * 1024))  # 200MB
 
+        # Create a normal file
+        (tmp_path / "normal.txt").write_text("small content")
+
         limits = SecurityLimits(max_file_size=100 * 1024 * 1024)  # 100MB limit
 
-        with pytest.raises(SecurityError):
-            EvidenceManifest.generate(tmp_path, limits=limits)
+        # Generate manifest - should skip oversized file without raising error
+        manifest = EvidenceManifest.generate(tmp_path, limits=limits)
+
+        # Should only have the normal file, not the large one
+        assert len(manifest.entries) == 1
+        assert manifest.entries[0].path == "normal.txt"
 
     def test_max_files_limit(self, tmp_path: Path):
         """Test max files limit."""
@@ -296,6 +303,7 @@ class TestBundleVerifier:
         assert len(result.files_added) == 1
         assert "extra.txt" in result.files_added
 
+    @pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason="cryptography library not installed")
     def test_verify_with_signature(self, tmp_path: Path):
         """Test verifying with signature."""
         # Create keys
@@ -320,6 +328,7 @@ class TestBundleVerifier:
         assert result.valid is True
         assert result.signature_valid is True
 
+    @pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason="cryptography library not installed")
     def test_signature_tampering(self, tmp_path: Path):
         """Test detecting signature tampering."""
         # Create keys
@@ -377,7 +386,7 @@ class TestVerificationResult:
         result.write_markdown(md_path)
 
         assert md_path.exists()
-        content = md_path.read_text()
+        content = md_path.read_text(encoding="utf-8")
         assert "INVALID" in content
         assert "file.txt" in content
 
