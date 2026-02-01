@@ -12,6 +12,16 @@ from truthcore.provenance.signing import Signer, Signature, SigningError
 from truthcore.provenance.verifier import BundleVerifier, VerificationResult
 from truthcore.security import SecurityLimits, SecurityError
 
+# Check if cryptography is available for signature tests
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+        Ed25519PrivateKey,
+        Ed25519PublicKey,
+    )
+    HAS_CRYPTOGRAPHY = True
+except ImportError:
+    HAS_CRYPTOGRAPHY = False
+
 
 class TestManifestEntry:
     """Test the ManifestEntry class."""

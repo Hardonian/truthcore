@@ -219,15 +219,12 @@ class Signer:
             except Exception:
                 return False
         else:
-            # HMAC verification
-            expected_sig = self._deterministic_sign(message)
-            # Compare constant-time
-            if len(signature.signature) != len(expected_sig):
-                return False
-            result = 0
-            for a, b in zip(signature.signature, expected_sig):
-                result |= a ^ b
-            return result == 0
+            # Without cryptography library, we cannot do proper signature verification
+            # The HMAC-based approach requires the private key, which the verifier doesn't have
+            raise VerificationError(
+                "Signature verification requires the 'cryptography' library. "
+                "Install with: pip install cryptography"
+            )
 
     def sign_file(self, file_path: Path, output_path: Path | None = None) -> Path:
         """Sign a file and write signature.
