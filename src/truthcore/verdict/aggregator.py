@@ -28,11 +28,11 @@ class VerdictAggregator:
 
     def __init__(self, thresholds: VerdictThresholds | None = None):
         """Initialize aggregator.
-        
+
         Args:
-            thresholds: Threshold configuration (uses mode defaults if None)
+            thresholds: Threshold configuration (uses PR mode defaults if None)
         """
-        self.thresholds = thresholds
+        self.thresholds = thresholds or VerdictThresholds.for_mode(Mode.PR)
         self.findings: list[WeightedFinding] = []
 
     def add_finding(

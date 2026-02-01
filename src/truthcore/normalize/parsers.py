@@ -288,7 +288,7 @@ class ESLintTextParser(RegexLogParser):
     """Parser for ESLint text output."""
 
     # Pattern: file:line:column: severity message [rule]
-    PATTERN = r"(?P<file>[^:]+):(?P<line>\d+):(?P<column>\d+):\s*(?P<severity>error|warning)\s+(?P<message>.+?)(?:\s*\[(?P<rule>[^\]]+)\])?$"
+    PATTERN = r"(?P<file>[^:]+):(?P<line>\d+):(?P<column>\d+):\s*(?P<severity>error|warning)\s+(?P<message>.+?)(?:\s*\[(?P<rule>[^\]]+)\])?(?=\n|$)"
 
     def __init__(self):
         severity_map = {
@@ -301,7 +301,7 @@ class ESLintTextParser(RegexLogParser):
         """Parse ESLint text output."""
         findings = []
 
-        for match in self.pattern.finditer(content):
+        for match in self.pattern.finditer(content, re.MULTILINE):
             groups = match.groupdict()
 
             severity_str = groups.get("severity", "").upper()
@@ -324,7 +324,7 @@ class TypeScriptCompilerParser(RegexLogParser):
     """Parser for TypeScript compiler (tsc) output."""
 
     # Pattern: file(line,column): error TS####: message
-    PATTERN = r"(?P<file>[^\(]+)\((?P<line>\d+),(?P<column>\d+)\):\s*(?P<severity>error|warning)\s+(?P<code>TS\d+):\s*(?P<message>.+)$"
+    PATTERN = r"(?P<file>[^(]+)\((?P<line>\d+),(?P<column>\d+)\):\s*(?P<severity>error|warning)\s+(?P<code>TS\d+):\s*(?P<message>.+?)(?=\n|$)"
 
     def __init__(self):
         severity_map = {
@@ -361,7 +361,7 @@ class BuildLogParser(RegexLogParser):
     """Generic build log parser."""
 
     # Pattern: [timestamp] severity: message
-    PATTERN = r"(?:\[?[^\]]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>.+)$"
+    PATTERN = r"(?:\[?[^\]]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>.+?)(?=\n|$)"
 
     def __init__(self, tool_name: str = "build"):
         severity_map = {
@@ -375,6 +375,27 @@ class BuildLogParser(RegexLogParser):
             "SUCCESS": SeverityLevel.INFO,
         }
         super().__init__(tool_name, self.PATTERN, severity_map)
+
+    def parse(self, content: str) -> list[ParsedFinding]:
+        """Parse build log with multiline support."""
+        findings = []
+
+        for match in self.pattern.finditer(content, re.MULTILINE):
+            groups = match.groupdict()
+
+            severity_str = groups.get("severity", "").upper()
+            severity = self.severity_map.get(severity_str, SeverityLevel.UNKNOWN)
+
+            finding = ParsedFinding(
+                tool=self.tool_name,
+                severity=severity,
+                message=groups.get("message", "").strip(),
+                rule_id=None,
+                category=None,
+            )
+            findings.append(finding)
+
+        return findings
 
 
 class PlaywrightJSONParser(BaseLogParser):

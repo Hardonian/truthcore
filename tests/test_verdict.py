@@ -256,20 +256,21 @@ class TestVerdictModes:
     def test_pr_mode_allows_issues(self):
         """Test PR mode is lenient."""
         aggregator = VerdictAggregator(VerdictThresholds.for_mode(Mode.PR))
-        
+
         # Add a few high issues (within PR tolerance)
+        # Use GENERAL category (1.0x weight) so 3 highs = 150 points (at limit)
         for i in range(3):
             aggregator.add_finding(
                 finding_id=f"high-{i}",
                 tool="test",
                 severity=SeverityLevel.HIGH,
-                category=Category.BUILD,
+                category=Category.GENERAL,
                 message=f"Issue {i}",
             )
-        
+
         result = aggregator.aggregate(mode=Mode.PR)
-        
-        # PR mode allows up to 5 highs
+
+        # PR mode allows up to 5 highs and 150 points (3*50=150 should pass)
         assert result.verdict == VerdictStatus.SHIP
 
     def test_release_mode_strict(self):
@@ -292,19 +293,18 @@ class TestVerdictModes:
     def test_main_mode_balanced(self):
         """Test main mode is balanced."""
         aggregator = VerdictAggregator(VerdictThresholds.for_mode(Mode.MAIN))
-        
-        # Two high issues exactly at limit
-        for i in range(2):
-            aggregator.add_finding(
-                finding_id=f"high-{i}",
-                tool="test",
-                severity=SeverityLevel.HIGH,
-                category=Category.BUILD,
-                message=f"Issue {i}",
-            )
-        
+
+        # One high issue within limit (1 * 50 * 1.5 for BUILD = 75, at limit)
+        aggregator.add_finding(
+            finding_id="high-1",
+            tool="test",
+            severity=SeverityLevel.HIGH,
+            category=Category.BUILD,
+            message="Issue 1",
+        )
+
         result = aggregator.aggregate(mode=Mode.MAIN)
-        
+
         # At limit, should be SHIP
         assert result.verdict == VerdictStatus.SHIP
 

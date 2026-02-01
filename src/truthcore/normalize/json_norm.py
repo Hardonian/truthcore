@@ -291,16 +291,16 @@ class JSONNormalizer:
 
 def canonical_json(data: Any, **kwargs: Any) -> str:
     """Quick canonical JSON for content hashing.
-    
+
     Uses compact, sorted representation suitable for hashing.
-    
+
     Args:
         data: Data to serialize
         **kwargs: Optional configuration overrides
-        
+
     Returns:
         Canonical JSON string
-        
+
     Example:
         >>> canonical_json({"b": 1, "a": 2})
         '{"a":1,"b":1}'
@@ -310,6 +310,7 @@ def canonical_json(data: Any, **kwargs: Any) -> str:
         indent=None,
         separators=(",", ":"),
         ensure_ascii=True,
+        numeric_format="float",
         **kwargs,
     )
     normalizer = JSONNormalizer(config)
