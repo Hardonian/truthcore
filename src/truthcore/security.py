@@ -121,7 +121,8 @@ def safe_read_text(
     
     # Check decoded length
     text = content.decode("utf-8", errors="replace")
-    if len(text) > limits.max_string_length if limits else DEFAULT_MAX_STRING_LENGTH:
+    max_len = limits.max_string_length if limits else DEFAULT_MAX_STRING_LENGTH
+    if len(text) > max_len:
         raise SecurityError(
             f"Text content too long: {path} ({len(text)} chars)"
         )

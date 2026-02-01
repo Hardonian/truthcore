@@ -3,7 +3,7 @@
 
 This script validates that contract changes follow the versioning policy:
 - Breaking changes require MAJOR version bump
-- New features require MINOR version bump  
+- New features require MINOR version bump
 - Bug fixes require PATCH version bump
 
 Usage:
@@ -16,7 +16,6 @@ Exit codes:
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -31,19 +30,19 @@ def get_schema_version(schema_path: Path) -> str:
 
 def check_schema_changes() -> list[str]:
     """Check schema files for proper versioning.
-    
+
     Returns list of error messages.
     """
     errors = []
-    
+
     schemas_dir = Path("src/truthcore/schemas")
     if not schemas_dir.exists():
         return errors
-    
+
     for artifact_dir in schemas_dir.iterdir():
         if not artifact_dir.is_dir():
             continue
-        
+
         versions = []
         for version_dir in artifact_dir.iterdir():
             if not version_dir.is_dir():
@@ -55,7 +54,7 @@ def check_schema_changes() -> list[str]:
                 versions.append((major, minor, patch, version_str))
             except ValueError:
                 errors.append(f"Invalid version format: {version_dir.name} in {artifact_dir.name}")
-        
+
         # Check version ordering
         versions.sort()
         
@@ -76,11 +75,11 @@ def check_schema_changes() -> list[str]:
 
 def check_migration_coverage() -> list[str]:
     """Check that migrations exist for version gaps.
-    
+
     Returns list of error messages.
     """
     errors = []
-    
+
     # Import migrations to check coverage
     try:
         from truthcore.migrations.engine import list_available_migrations
@@ -92,7 +91,7 @@ def check_migration_coverage() -> list[str]:
         for artifact_dir in schemas_dir.iterdir():
             if not artifact_dir.is_dir():
                 continue
-            
+
             artifact_type = artifact_dir.name
             migrations = list_available_migrations(artifact_type)
             
@@ -113,10 +112,10 @@ def check_migration_coverage() -> list[str]:
             # For now, just warn if there are gaps
             # Full validation would require checking all possible paths
             
-    except ImportError:
-        # truthcore not installed, skip this check
-        pass
-    
+        except ImportError:
+            # truthcore not installed, skip this check
+            pass
+
     return errors
 
 
