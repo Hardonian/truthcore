@@ -114,6 +114,12 @@ truthctl intel --inputs ./history --mode readiness --out ./intel-results
 
 # Compact old history
 truthctl intel --compact --retention 90 --inputs ./history --out ./intel-results
+
+# Start the HTTP server with web interface
+truthctl serve
+
+# Server with caching enabled
+truthctl serve --cache-dir .truthcache --port 8080
 ```
 
 ## Commands
