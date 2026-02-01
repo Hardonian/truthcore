@@ -28,6 +28,15 @@ from truthcore.security import safe_load_json, safe_read_text
 from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
 from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 from truthcore.verdict.cli import register_verdict_commands, generate_verdict_for_judge
+from truthcore.replay import (
+    ReplayBundle,
+    BundleExporter,
+    ReplayEngine,
+    ReplayReporter,
+    SimulationEngine,
+    SimulationChanges,
+    SimulationReporter,
+)
 
 
 def handle_error(error: Exception, debug: bool) -> None:
@@ -964,6 +973,354 @@ def generate_keys():
     click.echo("\nOr save to a file (keep private key secure!):")
     click.echo(f"echo '{priv_b64}' > signing_key.private")
     click.echo(f"echo '{pub_b64}' > signing_key.public")
+
+
+@cli.group(name="bundle")
+def bundle_group():
+    """Manage replay bundles for deterministic replay and simulation."""
+    pass
+
+
+@bundle_group.command(name="export")
+@click.option(
+    "--run-dir", "-r",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Directory containing run outputs (with run_manifest.json)",
+)
+@click.option(
+    "--inputs", "-i",
+    type=click.Path(exists=True, path_type=Path),
+    help="Original inputs directory (if separate from run_dir)",
+)
+@click.option(
+    "--out", "-o",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="Output directory for the bundle",
+)
+@click.option(
+    "--profile", "-p",
+    help="Profile used for the run",
+)
+@click.option(
+    "--mode", "-m",
+    type=click.Choice(["pr", "main", "release"]),
+    help="Mode used for the run",
+)
+@click.pass_context
+def bundle_export(
+    ctx: click.Context,
+    run_dir: Path,
+    inputs: Path | None,
+    out: Path,
+    profile: str | None,
+    mode: str | None,
+):
+    """Export a run into a replay bundle.
+    
+    Captures all inputs, configuration, and outputs needed for
+    deterministic replay and counterfactual simulation.
+    
+    Examples:
+      truthctl bundle export --run-dir ./results --out ./my-bundle
+      truthctl bundle export --run-dir ./results --inputs ./test-data --out ./bundle --profile ui
+    """
+    debug = ctx.obj.get("debug", False)
+    
+    try:
+        exporter = BundleExporter()
+        bundle = exporter.export(
+            run_dir=run_dir,
+            original_inputs_dir=inputs,
+            out_bundle_dir=out,
+            profile=profile,
+            mode=mode,
+        )
+        
+        click.echo(f"✅ Bundle exported to: {out}")
+        click.echo(f"\nBundle contents:")
+        click.echo(f"  - Run ID: {bundle.manifest.run_id}")
+        click.echo(f"  - Command: {bundle.manifest.command}")
+        click.echo(f"  - Inputs: {bundle.get_input_files().__len__()} files")
+        click.echo(f"  - Configs: {bundle.get_config_files().__len__()} files")
+        click.echo(f"  - Outputs: {bundle.get_output_files().__len__()} files")
+        
+        if bundle.evidence_manifest:
+            click.echo(f"  - Evidence manifest: ✓ (with provenance)")
+        
+    except Exception as e:
+        handle_error(e, debug)
+
+
+@cli.command()
+@click.option(
+    "--bundle", "-b",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to replay bundle directory",
+)
+@click.option(
+    "--out", "-o",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="Output directory for replay results",
+)
+@click.option(
+    "--mode", "-m",
+    type=click.Choice(["pr", "main", "release"]),
+    help="Override mode (uses bundle mode if not specified)",
+)
+@click.option(
+    "--profile", "-p",
+    help="Override profile (uses bundle profile if not specified)",
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Fail if any differences found (even allowed fields)",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Verify bundle integrity before replay",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Proceed even if bundle verification fails",
+)
+@click.pass_context
+def replay(
+    ctx: click.Context,
+    bundle: Path,
+    out: Path,
+    mode: str | None,
+    profile: str | None,
+    strict: bool,
+    verify: bool,
+    force: bool,
+):
+    """Replay a bundle and verify deterministic behavior.
+    
+    Re-runs the verdict using stored inputs and configuration,
+    then compares outputs to verify identical results.
+    
+    Examples:
+      truthctl replay --bundle ./my-bundle --out ./replay-results
+      truthctl replay --bundle ./my-bundle --out ./replay-results --strict
+      truthctl replay --bundle ./my-bundle --out ./replay-results --mode main
+    """
+    debug = ctx.obj.get("debug", False)
+    
+    try:
+        # Load bundle
+        click.echo(f"Loading bundle: {bundle}")
+        replay_bundle = ReplayBundle.load(bundle)
+        
+        # Verify bundle integrity if requested
+        if verify and replay_bundle.evidence_manifest:
+            click.echo("Verifying bundle integrity...")
+            verification = replay_bundle.verify_integrity()
+            
+            if not verification.valid:
+                click.echo("❌ Bundle verification failed!", err=True)
+                click.echo(f"   Files tampered: {len(verification.files_tampered)}", err=True)
+                click.echo(f"   Files missing: {len(verification.files_missing)}", err=True)
+                
+                if not force:
+                    click.echo("\nUse --force to proceed anyway.", err=True)
+                    sys.exit(1)
+                else:
+                    click.echo("⚠️  Proceeding with --force despite verification failure.", err=True)
+            else:
+                click.echo("✅ Bundle integrity verified")
+        
+        # Run replay
+        click.echo(f"\nReplaying with mode={mode or replay_bundle.manifest.profile or 'pr'}...")
+        engine = ReplayEngine(strict=strict)
+        result = engine.replay(
+            bundle=replay_bundle,
+            output_dir=out,
+            mode=mode,
+            profile=profile,
+        )
+        
+        # Write reports
+        reporter = ReplayReporter()
+        paths = reporter.write_reports(result, out)
+        
+        click.echo(f"\n✅ Replay complete")
+        click.echo(f"\nReports:")
+        click.echo(f"  - JSON: {paths['json']}")
+        click.echo(f"  - Markdown: {paths['markdown']}")
+        
+        # Show summary
+        click.echo(f"\nResults:")
+        click.echo(f"  - Files compared: {len(result.file_diffs)}")
+        click.echo(f"  - Identical: {sum(1 for d in result.file_diffs if d.diff.identical)}")
+        click.echo(f"  - Different: {sum(1 for d in result.file_diffs if not d.diff.identical)}")
+        
+        if result.identical:
+            click.echo(f"\n✅ Outputs are identical (content-wise)")
+        else:
+            if strict:
+                click.echo(f"\n❌ Differences found (--strict mode)")
+                sys.exit(1)
+            else:
+                content_diffs = sum(1 for d in result.file_diffs if d.diff.content_differences > 0)
+                if content_diffs > 0:
+                    click.echo(f"\n❌ Content differences found in {content_diffs} files")
+                    sys.exit(1)
+                else:
+                    click.echo(f"\n✅ Content identical (allowed fields differ)")
+        
+    except Exception as e:
+        handle_error(e, debug)
+
+
+@cli.command()
+@click.option(
+    "--bundle", "-b",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to replay bundle directory",
+)
+@click.option(
+    "--out", "-o",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="Output directory for simulation results",
+)
+@click.option(
+    "--changes", "-c",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="YAML file with changes to apply",
+)
+@click.option(
+    "--mode", "-m",
+    type=click.Choice(["pr", "main", "release"]),
+    help="Override mode (uses bundle mode if not specified)",
+)
+@click.option(
+    "--profile", "-p",
+    help="Override profile (uses bundle profile if not specified)",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Verify bundle integrity before simulation",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Proceed even if bundle verification fails",
+)
+@click.pass_context
+def simulate(
+    ctx: click.Context,
+    bundle: Path,
+    out: Path,
+    changes: Path,
+    mode: str | None,
+    profile: str | None,
+    verify: bool,
+    force: bool,
+):
+    """Run counterfactual simulation with modified configuration.
+    
+    Applies changes to thresholds, weights, or rules and re-runs
+    the verdict to see how results would differ.
+    
+    The changes YAML file can specify:
+      - thresholds: Override threshold values
+      - severity_weights: Override severity weights
+      - category_weights: Override category weights
+      - disabled_engines: List of engines to disable
+      - disabled_rules: List of rules to disable
+      - suppressions: Findings to suppress
+    
+    Examples:
+      truthctl simulate --bundle ./my-bundle --out ./sim-results --changes ./changes.yaml
+    
+    Example changes.yaml:
+      thresholds:
+        max_highs: 10
+        max_total_points: 200
+      severity_weights:
+        HIGH: 75.0
+      disabled_engines:
+        - "ui_geometry"
+    """
+    debug = ctx.obj.get("debug", False)
+    
+    try:
+        # Load bundle
+        click.echo(f"Loading bundle: {bundle}")
+        replay_bundle = ReplayBundle.load(bundle)
+        
+        # Verify bundle integrity if requested
+        if verify and replay_bundle.evidence_manifest:
+            click.echo("Verifying bundle integrity...")
+            verification = replay_bundle.verify_integrity()
+            
+            if not verification.valid:
+                click.echo("❌ Bundle verification failed!", err=True)
+                
+                if not force:
+                    click.echo("\nUse --force to proceed anyway.", err=True)
+                    sys.exit(1)
+                else:
+                    click.echo("⚠️  Proceeding with --force despite verification failure.", err=True)
+            else:
+                click.echo("✅ Bundle integrity verified")
+        
+        # Load changes
+        click.echo(f"Loading changes from: {changes}")
+        sim_changes = SimulationChanges.from_yaml(changes)
+        
+        # Run simulation
+        click.echo(f"\nRunning simulation...")
+        engine = SimulationEngine()
+        result = engine.simulate(
+            bundle=replay_bundle,
+            output_dir=out,
+            changes=sim_changes,
+            mode=mode,
+            profile=profile,
+        )
+        
+        # Write reports
+        reporter = SimulationReporter()
+        paths = reporter.write_reports(result, out)
+        
+        click.echo(f"\n✅ Simulation complete")
+        click.echo(f"\nReports:")
+        click.echo(f"  - JSON: {paths['json']}")
+        click.echo(f"  - Markdown: {paths['markdown']}")
+        if "diff" in paths:
+            click.echo(f"  - Diff: {paths['diff']}")
+        
+        # Show comparison
+        if result.original_verdict and result.simulated_verdict:
+            orig = result.original_verdict
+            sim = result.simulated_verdict
+            
+            click.echo(f"\nVerdict Comparison:")
+            click.echo(f"  Original:  {orig.verdict.value} ({orig.total_findings} findings, {orig.total_points} points)")
+            click.echo(f"  Simulated: {sim.verdict.value} ({sim.total_findings} findings, {sim.total_points} points)")
+            
+            if orig.verdict != sim.verdict:
+                click.echo(f"\n⚠️  VERDICT CHANGED: {orig.verdict.value} → {sim.verdict.value}")
+        
+        if result.errors:
+            click.echo(f"\n⚠️  Errors encountered:")
+            for error in result.errors:
+                click.echo(f"  - {error}")
+        
+    except Exception as e:
+        handle_error(e, debug)
 
 
 def main() -> None:

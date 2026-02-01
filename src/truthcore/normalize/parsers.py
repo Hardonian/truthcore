@@ -42,7 +42,7 @@ class ParsedFinding:
     location: str | None = None
     rule_id: str | None = None
     category: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=lambda: {})
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -141,7 +141,7 @@ class RegexLogParser(BaseLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse using regex pattern."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         for match in self.pattern.finditer(content):
             groups = match.groupdict()
@@ -193,7 +193,7 @@ class BlockParser(BaseLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse content into blocks."""
-        findings = []
+        findings: list[ParsedFinding] = []
         blocks = self._extract_blocks(content)
 
         for block in blocks:
@@ -214,8 +214,8 @@ class BlockParser(BaseLogParser):
     def _extract_blocks(self, content: str) -> list[str]:
         """Extract blocks from content."""
         lines = content.split("\n")
-        blocks = []
-        current_block = []
+        blocks: list[str] = []
+        current_block: list[str] = []
         in_block = False
 
         for line in lines:
@@ -252,7 +252,7 @@ class ESLintJSONParser(BaseLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse ESLint JSON output."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         try:
             data = json.loads(content)
@@ -299,7 +299,7 @@ class ESLintTextParser(RegexLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse ESLint text output."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         for match in self.pattern.finditer(content):
             groups = match.groupdict()
@@ -335,7 +335,7 @@ class TypeScriptCompilerParser(RegexLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse tsc output."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         for match in self.pattern.finditer(content):
             groups = match.groupdict()
@@ -381,7 +381,7 @@ class BuildLogParser(RegexLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse build log with multiline support."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         for match in self.pattern.finditer(content):
             groups = match.groupdict()

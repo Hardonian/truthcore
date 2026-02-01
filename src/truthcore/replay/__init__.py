@@ -4,8 +4,8 @@ Provides deterministic replay and counterfactual simulation capabilities.
 """
 
 from truthcore.replay.bundle import ReplayBundle, BundleExporter
-from truthcore.replay.replayer import ReplayEngine, ReplayResult
-from truthcore.replay.simulator import SimulationEngine, SimulationChanges, SimulationResult
+from truthcore.replay.replayer import ReplayEngine, ReplayResult, ReplayReporter
+from truthcore.replay.simulator import SimulationEngine, SimulationChanges, SimulationResult, SimulationReporter
 from truthcore.replay.diff import DeterministicDiff
 
 __all__ = [
@@ -13,8 +13,10 @@ __all__ = [
     "BundleExporter",
     "ReplayEngine",
     "ReplayResult",
+    "ReplayReporter",
     "SimulationEngine",
     "SimulationChanges",
     "SimulationResult",
+    "SimulationReporter",
     "DeterministicDiff",
 ]
