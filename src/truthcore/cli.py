@@ -37,6 +37,16 @@ from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands
 
 
+def register_spine_commands(cli: click.Group) -> None:
+    """Register spine CLI commands."""
+    try:
+        from truthcore.spine.cli import register_spine_commands as _register
+        _register(cli)
+    except ImportError:
+        # Spine module not available
+        pass
+
+
 def handle_error(error: Exception, debug: bool) -> None:
     """Handle errors with structured output.
     
@@ -84,6 +94,9 @@ def cli(ctx: click.Context, cache_dir: Path | None, no_cache: bool, cache_readon
 
 # Register verdict commands
 register_verdict_commands(cli)
+
+# Register spine commands (read-only truth spine)
+register_spine_commands(cli)
 
 
 @cli.command()
