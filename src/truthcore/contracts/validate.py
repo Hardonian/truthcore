@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from truthcore.contracts.metadata import extract_metadata, has_metadata
+from truthcore.contracts.metadata import extract_metadata
 from truthcore.contracts.registry import get_registry
 
 
@@ -90,11 +90,11 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
                 errors.append(f"{path}: missing required property '{prop}'")
         
         # Validate properties
-        for prop, prop_value in value.items():
-            prop_path = f"{path}.{prop}" if path else prop
+        for prop_name, prop_val in value.items():
+            prop_path: str = f"{path}.{prop_name}" if path else str(prop_name)
             
-            if prop in properties:
-                errors.extend(_validate_value(prop_value, properties[prop], prop_path))
+            if prop_name in properties:
+                errors.extend(_validate_value(prop_val, properties[prop_name], prop_path))
             elif not additional_properties:
                 errors.append(f"{prop_path}: additional property not allowed")
     
@@ -190,19 +190,19 @@ def validate_artifact(
         required = schema.get("required", [])
         
         # Check required properties (including _contract if present)
-        for prop in required:
-            if prop not in artifact:
-                errors.append(f"<root>: missing required property '{prop}'")
+        for req_prop in required:
+            if req_prop not in artifact:
+                errors.append(f"<root>: missing required property '{req_prop}'")
         
         # Validate all properties
-        for prop, value in artifact.items():
-            if prop in properties:
-                prop_schema = properties[prop]
+        for art_prop, art_value in artifact.items():
+            if art_prop in properties:
+                prop_schema: dict[str, Any] = properties[art_prop]
                 if strict and prop_schema.get("type") == "object":
                     prop_schema = {**prop_schema, "additionalProperties": False}
-                errors.extend(_validate_value(value, prop_schema, prop))
+                errors.extend(_validate_value(art_value, prop_schema, str(art_prop)))
             elif schema.get("additionalProperties") is False:
-                errors.append(f"<root>: additional property '{prop}' not allowed")
+                errors.append(f"<root>: additional property '{art_prop}' not allowed")
     
     return errors
 
