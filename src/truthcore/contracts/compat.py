@@ -17,7 +17,7 @@ from truthcore.contracts.metadata import (
 )
 from truthcore.contracts.registry import get_registry
 from truthcore.contracts.validate import ValidationError, validate_artifact_or_raise
-from truthcore.migrations.engine import MigrationNotFoundError, migrate
+from truthcore.migrations.engine import MigrationNotFoundError, find_migration_chain, migrate
 
 
 class CompatError(Exception):
@@ -68,8 +68,7 @@ def check_compat_possible(
     # Check if migration exists
     try:
         # Try to find migration path
-        from truthcore.migrations.engine import _find_migration_chain
-        _find_migration_chain(artifact_type, current_version, target_version)
+        find_migration_chain(artifact_type, current_version, target_version)
         return True, "Migration path found"
     except MigrationNotFoundError as e:
         return False, str(e)
