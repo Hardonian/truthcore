@@ -305,6 +305,11 @@ class TestVerdictModes:
 
         result = aggregator.aggregate(mode=Mode.MAIN)
 
+        # Debug
+        print(f"\nDEBUG: total_points={result.total_points}, highs={result.highs}")
+        print(f"DEBUG: categories={[(c.category.value, c.points_contributed, c.max_allowed) for c in result.categories]}")
+        print(f"DEBUG: no_ship_reasons={result.no_ship_reasons}")
+
         # At limit, should be SHIP
         assert result.verdict == VerdictStatus.SHIP
 
