@@ -59,11 +59,11 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
     
     Returns list of error messages.
     """
-    errors = []
+    errors: list[str] = []
     
     # Check type
     if "type" in schema:
-        expected_type = schema["type"]
+        expected_type: str | list[str] = schema["type"]
         if isinstance(expected_type, list):
             # Union type - value must match at least one
             type_matched = any(
