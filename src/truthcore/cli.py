@@ -1409,6 +1409,560 @@ def serve(
         handle_error(e, debug or ctx.obj.get('debug', False))
 
 
+@cli.group(name="dashboard")
+def dashboard_group():
+    """Build and serve the Truth Core dashboard."""
+    pass
+
+
+@dashboard_group.command(name="build")
+@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
+@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
+@click.option('--embedded/--no-embedded', default=True, help='Embed run data in dashboard')
+@click.pass_context
+def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
+    """Build the dashboard as static files.
+    
+    Creates a production-ready static dashboard that can be hosted
+    on GitHub Pages or any static hosting.
+    
+    Examples:
+      truthctl dashboard build --runs ./my-runs --out ./dashboard-dist
+      truthctl dashboard build --runs ./runs --out ./dist --no-embedded
+    """
+    import json
+    import shutil
+    import subprocess
+    
+    debug = ctx.obj.get('debug', False)
+    
+    try:
+        dashboard_dir = Path(__file__).parent.parent.parent.parent / "dashboard"
+        
+        if not dashboard_dir.exists():
+            click.echo(f"Error: Dashboard directory not found at {dashboard_dir}", err=True)
+            sys.exit(1)
+        
+        click.echo(f"Building dashboard from {dashboard_dir}...")
+        
+        # Build the dashboard
+        result = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=dashboard_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        
+        # Copy built files
+        dist_dir = dashboard_dir / "dist"
+        if not dist_dir.exists():
+            click.echo("Error: Dashboard build failed - dist directory not created", err=True)
+            sys.exit(1)
+        
+        out.mkdir(parents=True, exist_ok=True)
+        
+        # Copy dashboard files
+        for item in dist_dir.iterdir():
+            dest = out / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, dest)
+        
+        # If embedded mode, copy and embed runs
+        if embedded:
+            click.echo(f"Embedding run data from {runs}...")
+            
+            # Load all runs
+            runs_data = []
+            for run_dir in runs.iterdir():
+                if run_dir.is_dir():
+                    run_data = load_run_data(run_dir)
+                    if run_data:
+                        runs_data.append(run_data)
+            
+            # Create embedded data file
+            embedded_js = f"window.__EMBEDDED_RUNS__ = {json.dumps(runs_data, indent=2)};"
+            
+            with open(out / "embedded-runs.js", "w") as f:
+                f.write(embedded_js)
+            
+            # Inject into index.html
+            index_path = out / "index.html"
+            if index_path.exists():
+                with open(index_path) as f:
+                    html = f.read()
+                
+                # Add script tag before closing body
+                html = html.replace(
+                    "</body>",
+                    f'<script src="embedded-runs.js"></script>\n  </body>'
+                )
+                
+                with open(index_path, "w") as f:
+                    f.write(html)
+            
+            click.echo(f"  Embedded {len(runs_data)} runs")
+        
+        click.echo(f"Dashboard built successfully: {out}")
+        click.echo(f"  Open {out / 'index.html'} in a browser")
+        
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Build failed: {e.stderr}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        handle_error(e, debug)
+
+
+@dashboard_group.command(name="serve")
+@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
+@click.option('--port', '-p', default=8787, help='Port to serve on')
+@click.option('--host', '-h', default='127.0.0.1', help='Host to bind to')
+@click.option('--open/--no-open', default=True, help='Open browser automatically')
+@click.pass_context
+def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: bool):
+    """Serve the dashboard locally.
+    
+    Builds and serves the dashboard with hot-reload for development.
+    
+    Examples:
+      truthctl dashboard serve --runs ./my-runs
+      truthctl dashboard serve --runs ./runs --port 8080
+    """
+    import subprocess
+    import webbrowser
+    import time
+    
+    debug = ctx.obj.get('debug', False)
+    
+    # Warn if binding to all interfaces
+    if host == '0.0.0.0':
+        click.echo("⚠️  Warning: Binding to 0.0.0.0 exposes the dashboard on all network interfaces", err=True)
+    
+    try:
+        dashboard_dir = Path(__file__).parent.parent.parent.parent / "dashboard"
+        
+        if not dashboard_dir.exists():
+            click.echo(f"Error: Dashboard directory not found at {dashboard_dir}", err=True)
+            sys.exit(1)
+        
+        click.echo(f"Starting dashboard server on http://{host}:{port}")
+        click.echo(f"Using runs from: {runs}")
+        click.echo("Press Ctrl+C to stop")
+        
+        # Open browser after a short delay
+        if open and host == '127.0.0.1':
+            url = f"http://{host}:{port}"
+            time.sleep(1)
+            webbrowser.open(url)
+        
+        # Start dev server
+        env = {
+            **subprocess.os.environ,
+            'VITE_RUNS_DIR': str(runs),
+        }
+        
+        subprocess.run(
+            ["npm", "run", "dev"],
+            cwd=dashboard_dir,
+            env=env,
+            check=True,
+        )
+        
+    except subprocess.CalledProcessError:
+        click.echo("Server stopped", err=True)
+    except KeyboardInterrupt:
+        click.echo("\nServer stopped")
+    except Exception as e:
+        handle_error(e, debug)
+
+
+@dashboard_group.command(name="snapshot")
+@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
+@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
+@click.option('--name', '-n', help='Snapshot name (default: timestamp)')
+@click.pass_context
+def dashboard_snapshot(ctx: click.Context, runs: Path, out: Path, name: str | None):
+    """Create a portable snapshot of runs + dashboard.
+    
+    Creates a self-contained directory with:
+    - All run data (JSON files)
+    - Dashboard (built with embedded data)
+    - Can be hosted on GitHub Pages or shared as a ZIP
+    
+    Examples:
+      truthctl dashboard snapshot --runs ./my-runs --out ./snapshot
+      truthctl dashboard snapshot --runs ./runs --out ./export --name v1.0-results
+    """
+    import json
+    import shutil
+    import subprocess
+    
+    debug = ctx.obj.get('debug', False)
+    
+    try:
+        snapshot_name = name or f"truthcore-snapshot-{int(time.time())}"
+        snapshot_dir = out / snapshot_name
+        
+        click.echo(f"Creating snapshot: {snapshot_name}")
+        
+        # Create directories
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+        runs_out = snapshot_dir / "runs"
+        dashboard_out = snapshot_dir / "dashboard"
+        runs_out.mkdir(exist_ok=True)
+        dashboard_out.mkdir(exist_ok=True)
+        
+        # Copy runs
+        click.echo(f"Copying runs from {runs}...")
+        run_count = 0
+        for run_dir in runs.iterdir():
+            if run_dir.is_dir():
+                dest = runs_out / run_dir.name
+                shutil.copytree(run_dir, dest, dirs_exist_ok=True)
+                run_count += 1
+        
+        click.echo(f"  Copied {run_count} runs")
+        
+        # Build dashboard
+        dashboard_dir = Path(__file__).parent.parent.parent.parent / "dashboard"
+        
+        if dashboard_dir.exists():
+            click.echo("Building dashboard...")
+            
+            # Build
+            subprocess.run(
+                ["npm", "run", "build"],
+                cwd=dashboard_dir,
+                capture_output=True,
+                check=True,
+            )
+            
+            # Copy built files
+            dist_dir = dashboard_dir / "dist"
+            for item in dist_dir.iterdir():
+                dest = dashboard_out / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, dest)
+            
+            # Load and embed runs data
+            runs_data = []
+            for run_dir in runs.iterdir():
+                if run_dir.is_dir():
+                    run_data = load_run_data(run_dir)
+                    if run_data:
+                        runs_data.append(run_data)
+            
+            embedded_js = f"window.__EMBEDDED_RUNS__ = {json.dumps(runs_data, indent=2)};"
+            with open(dashboard_out / "embedded-runs.js", "w") as f:
+                f.write(embedded_js)
+            
+            # Inject into index.html
+            index_path = dashboard_out / "index.html"
+            if index_path.exists():
+                with open(index_path) as f:
+                    html = f.read()
+                html = html.replace("</body>", '<script src="embedded-runs.js"></script>\n  </body>')
+                with open(index_path, "w") as f:
+                    f.write(html)
+        
+        # Create README
+        readme_content = f"""# Truth Core Snapshot: {snapshot_name}
+
+This is a self-contained snapshot of Truth Core verification results.
+
+## Contents
+
+- `runs/` - All verification run data (JSON)
+- `dashboard/` - Static dashboard with embedded data
+
+## Viewing
+
+Open `dashboard/index.html` in any modern browser.
+
+Or serve locally:
+  python -m http.server 8000 --directory dashboard
+
+Created: {time.strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        with open(snapshot_dir / "README.txt", "w") as f:
+            f.write(readme_content)
+        
+        click.echo(f"Snapshot created: {snapshot_dir}")
+        click.echo(f"  Runs: {run_count}")
+        click.echo(f"  Dashboard: {dashboard_out / 'index.html'}")
+        
+    except Exception as e:
+        handle_error(e, debug)
+
+
+def load_run_data(run_dir: Path) -> dict | None:
+    """Load run data from a directory."""
+    import json
+    
+    run_id = run_dir.name
+    run_data = {"run_id": run_id, "files": []}
+    
+    # Load manifest (required)
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.exists():
+        return None
+    
+    with open(manifest_path) as f:
+        run_data["manifest"] = json.load(f)
+    
+    # Load optional files
+    files_to_load = {
+        "verdict": "verdict.json",
+        "readiness": "readiness.json",
+        "invariants": "invariants.json",
+        "policy": "policy_findings.json",
+        "provenance": "verification_report.json",
+        "intel_scorecard": "intel_scorecard.json",
+    }
+    
+    for key, filename in files_to_load.items():
+        path = run_dir / filename
+        if path.exists():
+            with open(path) as f:
+                run_data[key] = json.load(f)
+            run_data["files"].append(filename)
+    
+    return run_data
+
+
+@dashboard_group.command(name="demo")
+@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
+@click.option('--open/--no-open', default=True, help='Open browser after building')
+@click.pass_context
+def dashboard_demo(ctx: click.Context, out: Path, open: bool):
+    """Run demo and build dashboard.
+    
+    Creates a complete demo with:
+    - Sample verification runs
+    - All artifact types (verdict, policy, provenance)
+    - Built dashboard
+    
+    Examples:
+      truthctl dashboard demo --out ./demo-out
+      truthctl dashboard demo --out ./demo --no-open
+    """
+    import json
+    import shutil
+    import subprocess
+    import webbrowser
+    import time
+    
+    debug = ctx.obj.get('debug', False)
+    
+    try:
+        click.echo("Creating demo...")
+        
+        # Create runs directory
+        runs_dir = out / "runs"
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create sample run
+        run_id = f"demo-run-{int(time.time())}"
+        run_dir = runs_dir / run_id
+        run_dir.mkdir(exist_ok=True)
+        
+        timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        
+        # Create manifest
+        manifest = {
+            "version": "1.0.0",
+            "run_id": run_id,
+            "command": "judge",
+            "timestamp": timestamp,
+            "duration_ms": 1234,
+            "profile": "demo",
+            "config": {"strict": True},
+            "input_hash": "sha256:demo",
+            "config_hash": "sha256:demo",
+            "metadata": {},
+        }
+        
+        with open(run_dir / "run_manifest.json", "w") as f:
+            json.dump(manifest, f, indent=2)
+        
+        # Create verdict
+        verdict = {
+            "version": "2.0.0",
+            "timestamp": timestamp,
+            "run_id": run_id,
+            "verdict": "CONDITIONAL",
+            "score": 85,
+            "threshold": 90,
+            "total_findings": 3,
+            "findings_by_severity": {
+                "BLOCKER": 0,
+                "CRITICAL": 0,
+                "HIGH": 1,
+                "MEDIUM": 2,
+                "LOW": 0,
+                "INFO": 0,
+            },
+            "findings": [
+                {
+                    "id": "demo-1",
+                    "severity": "HIGH",
+                    "category": "quality",
+                    "engine": "demo",
+                    "rule": "test_coverage",
+                    "message": "Test coverage below threshold (75% < 80%)",
+                },
+                {
+                    "id": "demo-2",
+                    "severity": "MEDIUM",
+                    "category": "style",
+                    "engine": "demo",
+                    "rule": "line_length",
+                    "message": "3 lines exceed 100 characters",
+                },
+                {
+                    "id": "demo-3",
+                    "severity": "MEDIUM",
+                    "category": "security",
+                    "engine": "demo",
+                    "rule": "dependency_check",
+                    "message": "2 dependencies have known vulnerabilities",
+                },
+            ],
+            "subscores": {
+                "security": 90,
+                "quality": 75,
+                "performance": 95,
+                "style": 85,
+            },
+        }
+        
+        with open(run_dir / "verdict.json", "w") as f:
+            json.dump(verdict, f, indent=2)
+        
+        # Create invariants
+        invariants = {
+            "version": "1.0.0",
+            "timestamp": timestamp,
+            "results": [
+                {
+                    "rule_id": "no_blockers",
+                    "name": "No Blocker Issues",
+                    "passed": True,
+                    "severity": "BLOCKER",
+                },
+                {
+                    "rule_id": "tests_pass",
+                    "name": "All Tests Pass",
+                    "passed": True,
+                    "severity": "CRITICAL",
+                },
+                {
+                    "rule_id": "coverage_threshold",
+                    "name": "Coverage >= 80%",
+                    "passed": False,
+                    "severity": "HIGH",
+                    "message": "Current coverage: 75%",
+                },
+            ],
+        }
+        
+        with open(run_dir / "invariants.json", "w") as f:
+            json.dump(invariants, f, indent=2)
+        
+        # Create policy findings
+        policy = {
+            "version": "1.0.0",
+            "timestamp": timestamp,
+            "pack_name": "demo",
+            "rules_evaluated": 10,
+            "rules_triggered": 2,
+            "findings": [
+                {
+                    "rule_id": "DEPRECATED_API",
+                    "severity": "MEDIUM",
+                    "message": "Using deprecated API: old_function()",
+                    "file": "src/example.py",
+                },
+            ],
+        }
+        
+        with open(run_dir / "policy_findings.json", "w") as f:
+            json.dump(policy, f, indent=2)
+        
+        # Create provenance
+        provenance = {
+            "version": "1.0.0",
+            "timestamp": timestamp,
+            "bundle_hash": "sha256:demo-bundle",
+            "files": [
+                {"path": "verdict.json", "hash": "sha256:abc", "algorithm": "sha256", "size": 1234},
+                {"path": "invariants.json", "hash": "sha256:def", "algorithm": "sha256", "size": 567},
+            ],
+        }
+        
+        with open(run_dir / "verification_report.json", "w") as f:
+            json.dump(provenance, f, indent=2)
+        
+        click.echo(f"Created demo run: {run_id}")
+        
+        # Build dashboard
+        dashboard_dir = Path(__file__).parent.parent.parent.parent / "dashboard"
+        dashboard_out = out / "dashboard"
+        
+        if dashboard_dir.exists():
+            click.echo("Building dashboard...")
+            
+            subprocess.run(
+                ["npm", "run", "build"],
+                cwd=dashboard_dir,
+                capture_output=True,
+                check=True,
+            )
+            
+            # Copy built files
+            dist_dir = dashboard_dir / "dist"
+            dashboard_out.mkdir(exist_ok=True)
+            
+            for item in dist_dir.iterdir():
+                dest = dashboard_out / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, dest)
+            
+            # Embed demo data
+            run_data = load_run_data(run_dir)
+            if run_data:
+                embedded_js = f"window.__EMBEDDED_RUNS__ = {json.dumps([run_data], indent=2)};"
+                with open(dashboard_out / "embedded-runs.js", "w") as f:
+                    f.write(embedded_js)
+                
+                # Inject into index.html
+                index_path = dashboard_out / "index.html"
+                with open(index_path) as f:
+                    html = f.read()
+                html = html.replace("</body>", '<script src="embedded-runs.js"></script>\n  </body>')
+                with open(index_path, "w") as f:
+                    f.write(html)
+            
+            click.echo(f"Dashboard built: {dashboard_out / 'index.html'}")
+            
+            if open:
+                url = f"file://{dashboard_out / 'index.html'}"
+                webbrowser.open(url)
+        
+        click.echo(f"Demo created successfully in: {out}")
+        click.echo(f"  Run: {run_dir}")
+        click.echo(f"  Dashboard: {dashboard_out / 'index.html'}")
+        
+    except Exception as e:
+        handle_error(e, debug)
+
+
 def main() -> None:
     """Entry point."""
     cli()

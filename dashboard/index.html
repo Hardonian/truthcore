@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truth Core Dashboard</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="header">
+      <div class="header-left">
+        <a href="#" class="logo">🔍 Truth Core</a>
+        <nav class="nav">
+          <button class="nav-btn active" data-view="runs">Runs</button>
+          <button class="nav-btn" data-view="settings">Settings</button>
+        </nav>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-sm" id="import-btn">📁 Import Runs</button>
+        <button class="btn btn-sm" id="export-btn">💾 Export Snapshot</button>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌓</button>
+      </div>
+    </header>
+    
+    <main class="main">
+      <!-- Runs List View -->
+      <div id="runs-view" class="view">
+        <div class="stats-grid" id="stats-grid">
+          <!-- Stats populated by JS -->
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Verification Runs</h2>
+            <span id="runs-count">0 runs</span>
+          </div>
+          <div id="runs-list" class="run-list">
+            <!-- Runs populated by JS -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Run Detail View -->
+      <div id="run-detail-view" class="view" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <button class="btn btn-sm" id="back-btn">← Back to Runs</button>
+              <h2 class="card-title" id="detail-title" style="margin-top: var(--space-md);">Run Details</h2>
+            </div>
+            <span id="detail-verdict" class="badge badge-pass">PASS</span>
+          </div>
+          
+          <div class="stats-grid" id="detail-stats">
+            <!-- Detail stats populated by JS -->
+          </div>
+          
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="overview">Overview</button>
+            <button class="tab-btn" data-tab="findings">Findings</button>
+            <button class="tab-btn" data-tab="invariants">Invariants</button>
+            <button class="tab-btn" data-tab="policy">Policy</button>
+            <button class="tab-btn" data-tab="provenance">Provenance</button>
+            <button class="tab-btn" data-tab="files">Files</button>
+          </div>
+          
+          <div id="tab-content">
+            <!-- Tab content populated by JS -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Settings View -->
+      <div id="settings-view" class="view" style="display: none;">
+        <div class="card">
+          <h2 class="card-title">Settings</h2>
+          <p style="margin-top: var(--space-md);">Theme and display preferences are saved automatically.</p>
+        </div>
+      </div>
+      
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">📂</div>
+        <h2>No Runs Loaded</h2>
+        <p>Import a runs directory to view verification results</p>
+        <button class="btn btn-primary" id="empty-import-btn" style="margin-top: var(--space-md);">Import Runs</button>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Hidden file input for import -->
+  <input type="file" id="file-input" webkitdirectory directory style="display: none;">
+  
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

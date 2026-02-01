@@ -1,0 +1,19 @@
+{
+  "name": "truthcore-dashboard",
+  "version": "1.0.0",
+  "description": "Offline static dashboard for Truth Core verification results",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
