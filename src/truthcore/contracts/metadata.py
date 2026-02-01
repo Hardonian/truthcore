@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from truthcore.contracts.registry import ContractVersion, get_registry
+from truthcore.contracts.registry import get_registry
 
 
 @dataclass
