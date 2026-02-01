@@ -6,7 +6,7 @@ import hashlib
 import json
 import mimetypes
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+
 from pathlib import Path
 from typing import Any
 
@@ -111,12 +111,12 @@ class EvidenceManifest:
 
     version: str = "1.0.0"
     timestamp: str = field(default_factory=lambda: normalize_timestamp())
-    entries: list[ManifestEntry] = field(default_factory=list)
+    entries: list[ManifestEntry] = field(default_factory=lambda: list())
     run_manifest_hash: str | None = None
     config_hash: str | None = None
-    engine_versions: dict[str, str] = field(default_factory=dict)
+    engine_versions: dict[str, str] = field(default_factory=lambda: dict())
     truthcore_version: str = field(default_factory=lambda: __version__)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=lambda: dict())
 
     def add_entry(self, entry: ManifestEntry) -> None:
         """Add an entry to the manifest."""

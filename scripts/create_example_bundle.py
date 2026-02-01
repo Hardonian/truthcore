@@ -372,7 +372,7 @@ The simulated verdict should show improved results.
 """)
     
     print(f"README: {readme}")
-    print("\n✅ Example bundle fixture created successfully!")
+    print("\nExample bundle fixture created successfully!")
     print(f"\nNext steps:")
     print(f"  1. Replay: truthctl replay --bundle {bundle_dir} --out /tmp/replay")
     print(f"  2. Simulate: truthctl simulate --bundle {bundle_dir} --out /tmp/sim --changes {changes_file}")
