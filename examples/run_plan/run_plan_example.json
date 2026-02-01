@@ -1,0 +1,127 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2026-01-31T15:30:00Z",
+  "source": "examples/run_plan/sample.diff",
+  "source_type": "git_diff",
+  "cache_key": "a1b2c3d4e5f6789012345678901234567890abcd",
+  "impact_summary": {
+    "total_changes": 3,
+    "impact_distribution": {
+      "none": 0,
+      "low": 1,
+      "medium": 0,
+      "high": 2,
+      "critical": 0
+    },
+    "max_impact": "high",
+    "affected_entities_count": 8
+  },
+  "engines": [
+    {
+      "engine_id": "security",
+      "include": true,
+      "reason": "High impact changes detected in API layer",
+      "priority": 0,
+      "impact_level": "high",
+      "affected_files": ["src/api/users.py", "src/models/user.py"]
+    },
+    {
+      "engine_id": "readiness",
+      "include": true,
+      "reason": "Matched 2 files, 4 entities (routes, components)",
+      "priority": 1,
+      "impact_level": "high",
+      "affected_files": ["src/api/users.py", "src/models/user.py"]
+    },
+    {
+      "engine_id": "reconciliation",
+      "include": true,
+      "reason": "Matched 1 files, 0 entities (model changes)",
+      "priority": 2,
+      "impact_level": "high",
+      "affected_files": ["src/models/user.py"]
+    },
+    {
+      "engine_id": "agent_trace",
+      "include": false,
+      "reason": "No matching patterns or entities",
+      "priority": 3,
+      "impact_level": "high",
+      "affected_files": []
+    },
+    {
+      "engine_id": "knowledge",
+      "include": true,
+      "reason": "Matched 1 files, 0 entities (documentation)",
+      "priority": 4,
+      "impact_level": "high",
+      "affected_files": ["README.md"]
+    },
+    {
+      "engine_id": "ui_geometry",
+      "include": false,
+      "reason": "No matching patterns or entities",
+      "priority": 5,
+      "impact_level": "high",
+      "affected_files": []
+    }
+  ],
+  "invariants": [
+    {
+      "rule_id": "no_critical_errors",
+      "include": true,
+      "reason": "Applicable to engines: readiness, reconciliation",
+      "impact_level": "high",
+      "affected_files": []
+    },
+    {
+      "rule_id": "api_contract_compliance",
+      "include": true,
+      "reason": "Applicable to engines: readiness (API changes detected)",
+      "impact_level": "high",
+      "affected_files": ["src/api/users.py"]
+    },
+    {
+      "rule_id": "data_integrity",
+      "include": true,
+      "reason": "Applicable to engines: reconciliation (model changes)",
+      "impact_level": "high",
+      "affected_files": ["src/models/user.py"]
+    },
+    {
+      "rule_id": "agent_safety",
+      "include": false,
+      "reason": "Not applicable to selected engines (security, readiness, reconciliation, knowledge)",
+      "impact_level": "high",
+      "affected_files": []
+    },
+    {
+      "rule_id": "determinism_check",
+      "include": true,
+      "reason": "Applicable to engines: readiness, reconciliation (general coverage)",
+      "impact_level": "high",
+      "affected_files": []
+    }
+  ],
+  "exclusions": [
+    {
+      "type": "engine",
+      "id": "agent_trace",
+      "reason": "No matching patterns or entities"
+    },
+    {
+      "type": "engine",
+      "id": "ui_geometry",
+      "reason": "No matching patterns or entities"
+    },
+    {
+      "type": "invariant",
+      "id": "agent_safety",
+      "reason": "Not applicable to selected engines"
+    }
+  ],
+  "metadata": {
+    "profile": "default",
+    "analyzer_version": "1.0.0"
+  }
+}

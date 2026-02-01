@@ -1,0 +1,64 @@
+diff --git a/src/api/users.py b/src/api/users.py
+index 3f5c8a2..8b9d1e4 100644
+--- a/src/api/users.py
++++ b/src/api/users.py
+@@ -1,8 +1,12 @@
+ from truthcore.security import validate_token
++from truthcore.validation import validate_user_input
+ 
+-@route("/api/v1/users")
+-def get_users():
++@route("/api/v2/users")
++def list_users():
+     """Get all users."""
++    # Validate inputs
++    if not validate_user_input(request.args):
++        return error_response("Invalid input")
+     return db.query(User).all()
+ 
+@@ -15,6 +19,7 @@
+ def create_user():
+     """Create a new user."""
+     data = request.json
++    validate_user_input(data)
+     user = User(**data)
+     db.session.add(user)
+     db.session.commit()
+diff --git a/src/models/user.py b/src/models/user.py
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/models/user.py
++++ b/src/models/user.py
+@@ -5,6 +5,7 @@ class User(BaseModel):
+     email: str
+     name: str
+     role: str = "user"
++    validated: bool = False
+     
+     def validate_email(self):
+         if "@" not in self.email:
+@@ -12,6 +13,9 @@ class User(BaseModel):
+     
+     def to_dict(self):
+-        return {"id": self.id, "email": self.email, "name": self.name}
++        return {"id": self.id, "email": self.email, "name": self.name, "validated": self.validated}
++
++    def mark_validated(self):
++        self.validated = True
+ 
+ 
+diff --git a/README.md b/README.md
+index 9a8b1c2..2b4d6e8 100644
+--- a/README.md
++++ b/README.md
+@@ -10,6 +10,10 @@ Truth Core provides deterministic verification for software systems.
+ - Security hardening
+ - Run manifests
+ 
++## New Features
++
++- Change Impact Engine for selective testing
++- Truth Graph for relationship analysis
++
+ ## Installation
+ 
+ ```bash
