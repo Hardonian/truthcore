@@ -150,8 +150,8 @@ class InvariantDSL:
     
     def _resolve_value(self, value: Any) -> Any:
         """Resolve a value - either a path or literal."""
-        if isinstance(value, str) and "." in value:
-            # Might be a path
+        if isinstance(value, str):
+            # Try as a path (handles both "key" and "path.to.key")
             resolved = self.get_path(value)
             if resolved is not None:
                 return resolved

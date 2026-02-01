@@ -184,6 +184,10 @@ class BundleVerifier:
                     sig_bytes = f.read()
                 signature = Signature.from_bytes(sig_bytes)
 
+                # Set the public key from verifier if not in signature
+                if not signature.public_key and self.public_key:
+                    signature.public_key = self.public_key
+
                 # Load manifest content
                 with open(manifest_path, "rb") as f:
                     manifest_content = f.read()
@@ -198,7 +202,7 @@ class BundleVerifier:
                 result.signature_valid = False
                 result.errors.append(f"Signature verification error: {e}")
             except Exception as e:
-                result.signature_valid = None
+                result.signature_valid = False
                 result.errors.append(f"Error reading signature: {e}")
         elif signature_path.exists():
             result.signature_valid = None
