@@ -120,7 +120,7 @@ class InputFileInfo:
             "path": self.path,
             "size": self.size,
             "content_hash": self.content_hash,
-            "modified_time": normalize_timestamp(self.modified_time) if isinstance(self.modified_time, str) else self.modified_time,
+            "modified_time": normalize_timestamp(self.modified_time),
         }
 
 
