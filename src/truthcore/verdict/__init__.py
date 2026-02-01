@@ -1,6 +1,6 @@
-"""Verdict Aggregator v2 (M6).
+"""Verdict Aggregator v3 - Governance-Enhanced (M7).
 
-Multi-engine weighted ship/no-ship decision system.
+Multi-engine weighted ship/no-ship decision system with full governance.
 
 Example:
     >>> from truthcore.verdict import aggregate_verdict
@@ -8,24 +8,29 @@ Example:
     >>> result = aggregate_verdict(
     ...     [Path("readiness.json"), Path("policy_findings.json")],
     ...     mode="main",
+    ...     expected_engines=["readiness", "policy"],
+    ...     run_id="build-123",
     ... )
     >>> print(result.verdict.value)
-    'SHIP'
+    'NO_SHIP'  # Not optimistic by default!
 """
 
 from truthcore.verdict.aggregator import VerdictAggregator, aggregate_verdict
-from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands
 from truthcore.verdict.models import (
-    Category,
     CategoryBreakdown,
     EngineContribution,
     Mode,
-    SeverityLevel,
     VerdictResult,
     VerdictStatus,
     VerdictThresholds,
     WeightedFinding,
 )
+
+# Import unified enums from severity module
+from truthcore.severity import Category, Severity
+
+# Backwards compatibility alias
+SeverityLevel = Severity
 
 __all__ = [
     # Models
@@ -35,13 +40,20 @@ __all__ = [
     "WeightedFinding",
     "EngineContribution",
     "CategoryBreakdown",
-    "SeverityLevel",
-    "Category",
     "Mode",
+    # Unified enums (from severity module)
+    "Severity",
+    "SeverityLevel",  # Backwards compatibility
+    "Category",
     # Aggregator
     "VerdictAggregator",
     "aggregate_verdict",
-    # CLI
-    "register_verdict_commands",
-    "generate_verdict_for_judge",
 ]
+
+# Optional CLI imports (requires click)
+try:
+    from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands
+
+    __all__.extend(["register_verdict_commands", "generate_verdict_for_judge"])
+except ImportError:
+    pass  # CLI not available without click

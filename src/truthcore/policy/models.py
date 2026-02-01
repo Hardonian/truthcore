@@ -13,27 +13,8 @@ from typing import Any, Literal
 
 import yaml
 
-from truthcore.findings import Severity as FindingSeverity
 from truthcore.security import safe_read_text
-
-
-class Severity(Enum):
-    """Policy severity levels."""
-
-    BLOCKER = "BLOCKER"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-
-    def to_finding_severity(self) -> FindingSeverity:
-        """Convert to finding severity."""
-        mapping = {
-            Severity.BLOCKER: FindingSeverity.BLOCKER,
-            Severity.HIGH: FindingSeverity.HIGH,
-            Severity.MEDIUM: FindingSeverity.MEDIUM,
-            Severity.LOW: FindingSeverity.LOW,
-        }
-        return mapping[self]
+from truthcore.severity import Severity
 
 
 @dataclass
