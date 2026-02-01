@@ -479,8 +479,6 @@ class TestDeterminism:
                 message=f"Issue {i}",
             )
 
-        result = aggregator.aggregate(mode=Mode.PR)
-
         # Run multiple times and check order
         severities_list = []
         for _ in range(3):
