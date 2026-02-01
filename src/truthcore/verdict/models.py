@@ -1,6 +1,12 @@
-"""Verdict Aggregator v2 - Models (M6).
+"""Verdict Aggregator v3 - Governance-Enhanced Models.
 
-Unified verdict model for multi-engine weighted ship/no-ship decisions.
+Unified verdict model with full governance:
+- Type-safe severity levels (unified with findings)
+- Category assignment audit trails
+- Override governance with expiration
+- Temporal tracking for chronic issues
+- Engine health checks
+- Configurable category weights with review cycles
 """
 
 from __future__ import annotations
@@ -10,38 +16,29 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from truthcore.severity import (
+    Category,
+    CategoryAssignment,
+    CategoryWeightConfig,
+    EngineHealth,
+    Override,
+    Severity,
+    TemporalFinding,
+)
+
 
 class VerdictStatus(Enum):
     """Final verdict status."""
+
     SHIP = "SHIP"
     NO_SHIP = "NO_SHIP"
     CONDITIONAL = "CONDITIONAL"
-
-
-class SeverityLevel(Enum):
-    """Severity levels for findings."""
-    BLOCKER = "BLOCKER"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-    INFO = "INFO"
-
-
-class Category(Enum):
-    """Finding categories."""
-    UI = "ui"
-    BUILD = "build"
-    TYPES = "types"
-    SECURITY = "security"
-    PRIVACY = "privacy"
-    FINANCE = "finance"
-    AGENT = "agent"
-    KNOWLEDGE = "knowledge"
-    GENERAL = "general"
+    DEGRADED = "DEGRADED"  # New: Some engines failed health checks
 
 
 class Mode(Enum):
     """Execution modes."""
+
     PR = "pr"
     MAIN = "main"
     RELEASE = "release"
@@ -53,8 +50,8 @@ class WeightedFinding:
 
     finding_id: str
     tool: str
-    severity: SeverityLevel
-    category: Category
+    severity: Severity  # Now using unified Severity
+    category: Category  # Now using unified Category
     message: str
     location: str | None = None
     rule_id: str | None = None
@@ -63,12 +60,18 @@ class WeightedFinding:
     weight: float = 1.0
     points: int = 0
 
+    # Governance tracking
+    category_assignment: CategoryAssignment | None = None
+    temporal_record: TemporalFinding | None = None
+    escalated_from: Severity | None = None  # If escalated due to chronicity
+
     # Source info
     source_file: str | None = None
     source_engine: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        """Convert to dictionary."""
+        result = {
             "finding_id": self.finding_id,
             "tool": self.tool,
             "severity": self.severity.value,
@@ -81,11 +84,18 @@ class WeightedFinding:
             "source_file": self.source_file,
             "source_engine": self.source_engine,
         }
+        if self.category_assignment:
+            result["category_assignment"] = self.category_assignment.to_dict()
+        if self.temporal_record:
+            result["temporal_record"] = self.temporal_record.to_dict()
+        if self.escalated_from:
+            result["escalated_from"] = self.escalated_from.value
+        return result
 
 
 @dataclass
 class EngineContribution:
-    """Contribution from a single engine."""
+    """Contribution from a single engine with health status."""
 
     engine_id: str
     findings_count: int = 0
@@ -94,10 +104,12 @@ class EngineContribution:
     mediums: int = 0
     lows: int = 0
     points_contributed: int = 0
-    passed: bool = True
+    passed: bool = True  # Engine-level pass/fail
+    health: EngineHealth | None = None  # Health check status
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        """Convert to dictionary."""
+        result = {
             "engine_id": self.engine_id,
             "findings_count": self.findings_count,
             "blockers": self.blockers,
@@ -107,32 +119,38 @@ class EngineContribution:
             "points_contributed": self.points_contributed,
             "passed": self.passed,
         }
+        if self.health:
+            result["health"] = self.health.to_dict()
+        return result
 
 
 @dataclass
 class CategoryBreakdown:
-    """Breakdown by category."""
+    """Breakdown by category with governance."""
 
     category: Category
     weight: float
     findings_count: int = 0
     points_contributed: int = 0
     max_allowed: int | None = None
+    assignments: list[CategoryAssignment] = field(default_factory=list)  # Audit trail
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
         return {
             "category": self.category.value,
             "weight": self.weight,
             "findings_count": self.findings_count,
             "points_contributed": self.points_contributed,
             "max_allowed": self.max_allowed,
+            "assignments": [a.to_dict() for a in self.assignments],
         }
 
 
 @dataclass
 class VerdictThresholds:
-    """Thresholds for verdict determination.
-    
+    """Thresholds for verdict determination with governance.
+
     Different modes have different thresholds:
     - PR: More lenient, allows some issues
     - MAIN: Balanced, moderate tolerance
@@ -146,35 +164,34 @@ class VerdictThresholds:
 
     # High severity limits
     max_highs: int = 0
-    max_highs_with_override: int = 3
 
     # Points-based thresholds
     max_total_points: int = 100
 
     # Category-specific limits (points)
-    category_limits: dict[Category, int] = field(default_factory=lambda: dict())
+    category_limits: dict[Category, int] = field(default_factory=dict)
 
-    # Weight multipliers per severity
-    severity_weights: dict[SeverityLevel, float] = field(default_factory=lambda: {
-        SeverityLevel.BLOCKER: float('inf'),
-        SeverityLevel.HIGH: 50.0,
-        SeverityLevel.MEDIUM: 10.0,
-        SeverityLevel.LOW: 1.0,
-        SeverityLevel.INFO: 0.0,
-    })
+    # Weight configuration (governed, not frozen)
+    category_weight_config: CategoryWeightConfig = field(default_factory=CategoryWeightConfig.create_default)
 
-    # Default category weights
-    category_weights: dict[Category, float] = field(default_factory=lambda: {
-        Category.SECURITY: 2.0,
-        Category.PRIVACY: 2.0,
-        Category.FINANCE: 1.5,
-        Category.BUILD: 1.5,
-        Category.TYPES: 1.2,
-        Category.UI: 1.0,
-        Category.AGENT: 1.0,
-        Category.KNOWLEDGE: 1.0,
-        Category.GENERAL: 1.0,
-    })
+    # Severity weights
+    severity_weights: dict[Severity, float] = field(
+        default_factory=lambda: {
+            Severity.BLOCKER: float("inf"),
+            Severity.HIGH: 50.0,
+            Severity.MEDIUM: 10.0,
+            Severity.LOW: 1.0,
+            Severity.INFO: 0.0,
+        }
+    )
+
+    # Engine health requirements
+    require_all_engines_healthy: bool = True  # Fail if any expected engine is unhealthy
+    min_engines_required: int = 1  # Minimum number of engines that must run
+
+    # Temporal escalation settings
+    escalation_threshold_occurrences: int = 3  # Escalate after N occurrences
+    escalation_severity_bump: bool = True  # Bump severity when escalating
 
     @classmethod
     def for_mode(cls, mode: Mode | str) -> VerdictThresholds:
@@ -188,12 +205,13 @@ class VerdictThresholds:
                 mode=mode,
                 max_blockers=0,
                 max_highs=5,
-                max_highs_with_override=10,
                 max_total_points=150,
                 category_limits={
                     Category.SECURITY: 100,
                     Category.BUILD: 50,
                 },
+                require_all_engines_healthy=False,  # More lenient
+                min_engines_required=1,
             )
 
         elif mode == Mode.MAIN:
@@ -202,13 +220,14 @@ class VerdictThresholds:
                 mode=mode,
                 max_blockers=0,
                 max_highs=2,
-                max_highs_with_override=5,
                 max_total_points=75,
                 category_limits={
                     Category.SECURITY: 50,
                     Category.BUILD: 25,
                     Category.TYPES: 30,
                 },
+                require_all_engines_healthy=True,
+                min_engines_required=2,
             )
 
         else:  # RELEASE
@@ -217,7 +236,6 @@ class VerdictThresholds:
                 mode=mode,
                 max_blockers=0,
                 max_highs=0,
-                max_highs_with_override=1,
                 max_total_points=20,
                 category_limits={
                     Category.SECURITY: 0,
@@ -225,13 +243,15 @@ class VerdictThresholds:
                     Category.BUILD: 10,
                     Category.TYPES: 10,
                 },
+                require_all_engines_healthy=True,
+                min_engines_required=3,
             )
 
     def get_category_weight(self, category: Category) -> float:
-        """Get weight for a category."""
-        return self.category_weights.get(category, 1.0)
+        """Get weight for a category from governed config."""
+        return self.category_weight_config.get_weight(category)
 
-    def get_severity_weight(self, severity: SeverityLevel) -> float:
+    def get_severity_weight(self, severity: Severity) -> float:
         """Get weight for a severity level."""
         return self.severity_weights.get(severity, 1.0)
 
@@ -241,26 +261,29 @@ class VerdictThresholds:
             "mode": self.mode.value,
             "max_blockers": self.max_blockers,
             "max_highs": self.max_highs,
-            "max_highs_with_override": self.max_highs_with_override,
             "max_total_points": self.max_total_points,
             "category_limits": {k.value: v for k, v in self.category_limits.items()},
             "severity_weights": {k.value: v for k, v in self.severity_weights.items()},
-            "category_weights": {k.value: v for k, v in self.category_weights.items()},
+            "category_weight_config": self.category_weight_config.to_dict(),
+            "require_all_engines_healthy": self.require_all_engines_healthy,
+            "min_engines_required": self.min_engines_required,
+            "escalation_threshold_occurrences": self.escalation_threshold_occurrences,
+            "escalation_severity_bump": self.escalation_severity_bump,
         }
 
 
 @dataclass
 class VerdictResult:
-    """Complete verdict result."""
+    """Complete verdict result with full governance."""
 
     # Basic info
     verdict: VerdictStatus
-    version: str = "2.0"
+    version: str = "3.0"  # Bumped version for governance enhancements
     timestamp: str = ""
     mode: Mode = Mode.PR
 
     # Inputs processed
-    inputs: list[str] = field(default_factory=lambda: list())
+    inputs: list[str] = field(default_factory=list)
 
     # Summary counts
     total_findings: int = 0
@@ -270,21 +293,30 @@ class VerdictResult:
     lows: int = 0
     total_points: int = 0
 
-    # Engine contributions
-    engines: list[EngineContribution] = field(default_factory=lambda: list())
+    # Engine contributions with health
+    engines: list[EngineContribution] = field(default_factory=list)
+    engines_failed: int = 0
+    engines_expected: int = 0
+    engines_ran: int = 0
 
-    # Category breakdowns
-    categories: list[CategoryBreakdown] = field(default_factory=lambda: list())
+    # Category breakdowns with audit trails
+    categories: list[CategoryBreakdown] = field(default_factory=list)
 
     # Top findings (for explainability)
-    top_findings: list[WeightedFinding] = field(default_factory=lambda: list())
+    top_findings: list[WeightedFinding] = field(default_factory=list)
 
     # Reasons for decision
-    ship_reasons: list[str] = field(default_factory=lambda: list())
-    no_ship_reasons: list[str] = field(default_factory=lambda: list())
+    ship_reasons: list[str] = field(default_factory=list)
+    no_ship_reasons: list[str] = field(default_factory=list)
+    degradation_reasons: list[str] = field(default_factory=list)
 
     # Configuration used
     thresholds: VerdictThresholds | None = None
+
+    # Governance records
+    overrides_applied: list[Override] = field(default_factory=list)
+    temporal_escalations: list[TemporalFinding] = field(default_factory=list)
+    category_assignments: list[CategoryAssignment] = field(default_factory=list)
 
     # Optional: profile used
     profile: str | None = None
@@ -305,6 +337,11 @@ class VerdictResult:
                 "lows": self.lows,
                 "total_points": self.total_points,
             },
+            "engine_health": {
+                "engines_expected": self.engines_expected,
+                "engines_ran": self.engines_ran,
+                "engines_failed": self.engines_failed,
+            },
             "inputs": self.inputs,
             "engines": [e.to_dict() for e in self.engines],
             "categories": [c.to_dict() for c in self.categories],
@@ -312,6 +349,12 @@ class VerdictResult:
             "reasoning": {
                 "ship_reasons": self.ship_reasons,
                 "no_ship_reasons": self.no_ship_reasons,
+                "degradation_reasons": self.degradation_reasons,
+            },
+            "governance": {
+                "overrides_applied": [o.to_dict() for o in self.overrides_applied],
+                "temporal_escalations": [t.to_dict() for t in self.temporal_escalations],
+                "category_assignments": [c.to_dict() for c in self.category_assignments],
             },
             "thresholds": self.thresholds.to_dict() if self.thresholds else None,
         }
@@ -325,6 +368,7 @@ class VerdictResult:
             f"**Mode:** {self.mode.value}",
             f"**Profile:** {self.profile or 'default'}",
             f"**Timestamp:** {self.timestamp}",
+            f"**Version:** {self.version}",
             "",
             "## Summary",
             "",
@@ -335,22 +379,29 @@ class VerdictResult:
             f"- **Low Severity:** {self.lows}",
             f"- **Total Points:** {self.total_points}",
             "",
+            "## Engine Health",
+            "",
+            f"- **Expected:** {self.engines_expected}",
+            f"- **Ran:** {self.engines_ran}",
+            f"- **Failed:** {self.engines_failed}",
+            "",
         ]
 
-        # Engine breakdown
+        # Engine breakdown with health
         if self.engines:
             lines.extend([
                 "## Engine Contributions",
                 "",
-                "| Engine | Findings | Blockers | Highs | Points | Status |",
-                "|--------|----------|----------|-------|--------|--------|",
+                "| Engine | Findings | Blockers | Highs | Points | Pass | Health |",
+                "|--------|----------|----------|-------|--------|------|--------|",
             ])
             for engine in sorted(self.engines, key=lambda e: -e.points_contributed):
-                status = "✅ Pass" if engine.passed else "❌ Fail"
+                status = "✅" if engine.passed else "❌"
+                health = "✅" if engine.health and engine.health.is_healthy() else "❌"
                 lines.append(
                     f"| {engine.engine_id} | {engine.findings_count} | "
                     f"{engine.blockers} | {engine.highs} | "
-                    f"{engine.points_contributed} | {status} |"
+                    f"{engine.points_contributed} | {status} | {health} |"
                 )
             lines.append("")
 
@@ -359,16 +410,49 @@ class VerdictResult:
             lines.extend([
                 "## Category Breakdown",
                 "",
-                "| Category | Weight | Findings | Points | Limit |",
-                "|----------|--------|----------|--------|-------|",
+                "| Category | Weight | Findings | Points | Limit | Assignments |",
+                "|----------|--------|----------|--------|-------|-------------|",
             ])
             for cat in sorted(self.categories, key=lambda c: -c.points_contributed):
                 limit_str = str(cat.max_allowed) if cat.max_allowed is not None else "∞"
                 lines.append(
                     f"| {cat.category.value} | {cat.weight:.1f} | "
-                    f"{cat.findings_count} | {cat.points_contributed} | {limit_str} |"
+                    f"{cat.findings_count} | {cat.points_contributed} | "
+                    f"{limit_str} | {len(cat.assignments)} |"
                 )
             lines.append("")
+
+        # Governance section
+        if self.overrides_applied or self.temporal_escalations:
+            lines.extend([
+                "## Governance",
+                "",
+            ])
+
+            if self.overrides_applied:
+                lines.extend([
+                    "### Overrides Applied",
+                    "",
+                ])
+                for override in self.overrides_applied:
+                    lines.append(f"- **{override.scope}** (approved by {override.approved_by})")
+                    lines.append(f"  - Reason: {override.reason}")
+                    lines.append(f"  - Expires: {override.expires_at}")
+                lines.append("")
+
+            if self.temporal_escalations:
+                lines.extend([
+                    "### Chronic Issues Escalated",
+                    "",
+                ])
+                for temp in self.temporal_escalations:
+                    lines.append(
+                        f"- **{temp.finding_fingerprint}** "
+                        f"({temp.occurrences} occurrences)"
+                    )
+                    lines.append(f"  - First seen: {temp.first_seen}")
+                    lines.append(f"  - Escalation: {temp.escalation_reason}")
+                lines.append("")
 
         # Top findings
         if self.top_findings:
@@ -379,14 +463,17 @@ class VerdictResult:
             for i, finding in enumerate(self.top_findings[:10], 1):
                 severity_emoji = self._severity_emoji(finding.severity)
                 lines.append(
-                    f"{i}. {severity_emoji} **[{finding.severity.value}]** "
-                    f"{finding.message}"
+                    f"{i}. {severity_emoji} **[{finding.severity.value}]** " f"{finding.message}"
                 )
                 if finding.location:
                     lines.append(f"   - Location: `{finding.location}`")
                 if finding.rule_id:
                     lines.append(f"   - Rule: `{finding.rule_id}`")
                 lines.append(f"   - Points: {finding.points} (weight: {finding.weight:.1f})")
+                if finding.escalated_from:
+                    lines.append(
+                        f"   - ⬆️ Escalated from {finding.escalated_from.value} (chronic issue)"
+                    )
                 lines.append("")
 
         # Reasons
@@ -408,14 +495,14 @@ class VerdictResult:
                 lines.append(f"- ❌ {reason}")
             lines.append("")
 
-        # Add SVG chart if there are findings
-        if self.total_findings > 0:
+        if self.degradation_reasons:
             lines.extend([
-                "## Visual Breakdown",
-                "",
-                self._generate_svg_chart(),
+                "## Degradation Reasons",
                 "",
             ])
+            for reason in self.degradation_reasons:
+                lines.append(f"- ⚠️ {reason}")
+            lines.append("")
 
         lines.append("---")
         lines.append(f"*Generated by Truth Core v{self.version}*")
@@ -428,79 +515,25 @@ class VerdictResult:
             return "🚢 SHIP"
         elif self.verdict == VerdictStatus.NO_SHIP:
             return "🚫 NO_SHIP"
+        elif self.verdict == VerdictStatus.DEGRADED:
+            return "⚠️ DEGRADED"
         else:
             return "⚠️ CONDITIONAL"
 
-    def _severity_emoji(self, severity: SeverityLevel) -> str:
+    def _severity_emoji(self, severity: Severity) -> str:
         """Get emoji for severity."""
         return {
-            SeverityLevel.BLOCKER: "🔴",
-            SeverityLevel.HIGH: "🟠",
-            SeverityLevel.MEDIUM: "🟡",
-            SeverityLevel.LOW: "🔵",
-            SeverityLevel.INFO: "⚪",
+            Severity.BLOCKER: "🔴",
+            Severity.HIGH: "🟠",
+            Severity.MEDIUM: "🟡",
+            Severity.LOW: "🔵",
+            Severity.INFO: "⚪",
         }.get(severity, "⚪")
-
-    def _generate_svg_chart(self) -> str:
-        """Generate simple inline SVG pie chart of findings by severity."""
-        total = self.blockers + self.highs + self.mediums + self.lows
-        if total == 0:
-            return "No findings to display."
-
-        # Colors for each severity
-        colors = {
-            "blockers": "#dc2626",  # red
-            "highs": "#ea580c",     # orange
-            "mediums": "#ca8a04",   # yellow
-            "lows": "#2563eb",      # blue
-        }
-
-        # Calculate angles
-        angles = {}
-        start_angle = 0
-        for key, count in [
-            ("blockers", self.blockers),
-            ("highs", self.highs),
-            ("mediums", self.mediums),
-            ("lows", self.lows),
-        ]:
-            if count > 0:
-                angle = (count / total) * 360
-                angles[key] = (start_angle, start_angle + angle)
-                start_angle += angle
-
-        # Generate SVG
-        svg_parts = [
-            '<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">',
-            '  <!-- Legend -->',
-            '  <text x="220" y="30" font-family="sans-serif" font-size="14" font-weight="bold">Findings by Severity</text>',
-        ]
-
-        legend_y = 55
-        legend_items = [
-            ("Blockers", self.blockers, colors["blockers"]),
-            ("High", self.highs, colors["highs"]),
-            ("Medium", self.mediums, colors["mediums"]),
-            ("Low", self.lows, colors["lows"]),
-        ]
-
-        for label, count, color in legend_items:
-            if count > 0:
-                svg_parts.extend([
-                    f'  <rect x="220" y="{legend_y}" width="12" height="12" fill="{color}"/>',
-                    f'  <text x="238" y="{legend_y + 10}" font-family="sans-serif" font-size="12">{label}: {count}</text>',
-                ])
-                legend_y += 20
-
-        svg_parts.extend([
-            '</svg>',
-        ])
-
-        return "\n".join(svg_parts)
 
     def write_json(self, path: Path) -> None:
         """Write verdict to JSON file."""
         import json
+
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2, sort_keys=True)

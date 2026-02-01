@@ -9,28 +9,10 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
 from pathlib import Path
 from typing import Any
 
-
-class Severity(Enum):
-    """Severity levels for findings."""
-
-    BLOCKER = "BLOCKER"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
-    INFO = "INFO"
-
-    @classmethod
-    def from_string(cls, value: str) -> Severity:
-        """Parse severity from string."""
-        value = value.upper()
-        for member in cls:
-            if member.value == value:
-                return member
-        raise ValueError(f"Unknown severity: {value}")
+from truthcore.severity import Category, CategoryAssignment, Severity, severity_order
 
 
 @dataclass
@@ -65,6 +47,8 @@ class Finding:
         excerpt: Snippet of content that triggered the finding (may be hashed/redacted)
         excerpt_hash: SHA-256 hash of the original excerpt
         suggestion: Optional suggestion for remediation
+        category: Optional category assignment (governance-tracked)
+        category_assignment: Optional audit record for category assignment
         metadata: Additional context-specific data
         timestamp: When the finding was created (ISO format)
     """
@@ -77,6 +61,8 @@ class Finding:
     excerpt: str | None = None
     excerpt_hash: str | None = None
     suggestion: str | None = None
+    category: Category | None = None
+    category_assignment: CategoryAssignment | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
@@ -89,7 +75,7 @@ class Finding:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert finding to dictionary with stable ordering."""
-        return {
+        result = {
             "rule_id": self.rule_id,
             "severity": self.severity.value,
             "target": self.target,
@@ -101,10 +87,23 @@ class Finding:
             "metadata": dict(sorted(self.metadata.items())),
             "timestamp": self.timestamp,
         }
+        if self.category:
+            result["category"] = self.category.value
+        if self.category_assignment:
+            result["category_assignment"] = self.category_assignment.to_dict()
+        return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Finding:
         """Create finding from dictionary."""
+        category = None
+        if "category" in data:
+            category = Category.from_string(data["category"])
+
+        category_assignment = None
+        if "category_assignment" in data:
+            category_assignment = CategoryAssignment.from_dict(data["category_assignment"])
+
         return cls(
             rule_id=data["rule_id"],
             severity=Severity.from_string(data["severity"]),
@@ -119,6 +118,8 @@ class Finding:
             excerpt=data.get("excerpt"),
             excerpt_hash=data.get("excerpt_hash"),
             suggestion=data.get("suggestion"),
+            category=category,
+            category_assignment=category_assignment,
             metadata=data.get("metadata", {}),
             timestamp=data.get("timestamp", datetime.now(UTC).isoformat()),
         )
@@ -134,6 +135,8 @@ class Finding:
             excerpt="[REDACTED]",
             excerpt_hash=self.excerpt_hash,
             suggestion=self.suggestion,
+            category=self.category,
+            category_assignment=self.category_assignment,
             metadata=self.metadata,
             timestamp=self.timestamp,
         )
@@ -281,15 +284,3 @@ class FindingReport:
                 ])
 
 
-def severity_order(severity: Severity | str) -> int:
-    """Get numeric order for severity (higher = more severe)."""
-    order = {
-        Severity.INFO: 0,
-        Severity.LOW: 1,
-        Severity.MEDIUM: 2,
-        Severity.HIGH: 3,
-        Severity.BLOCKER: 4,
-    }
-    if isinstance(severity, str):
-        severity = Severity.from_string(severity)
-    return order.get(severity, 0)
