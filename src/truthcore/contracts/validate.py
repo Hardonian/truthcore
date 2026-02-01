@@ -100,10 +100,11 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
     
     # Check array items
     if schema.get("type") == "array" and isinstance(value, list):
-        items_schema = schema.get("items")
+        items_schema: dict[str, Any] | None = schema.get("items")
         if items_schema:
-            for i, item in enumerate(value):
-                item_path = f"{path}[{i}]"
+            arr_value: list[Any] = value
+            for i, item in enumerate(arr_value):
+                item_path: str = f"{path}[{i}]"
                 errors.extend(_validate_value(item, items_schema, item_path))
         
         # Check minItems/maxItems
