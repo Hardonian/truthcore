@@ -1327,6 +1327,88 @@ def simulate(
         handle_error(e, debug)
 
 
+@cli.command()
+@click.option('--host', '-h', default='127.0.0.1', help='Host to bind to')
+@click.option('--port', '-p', default=8000, help='Port to listen on')
+@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory')
+@click.option('--static-dir', type=click.Path(path_type=Path), help='Static files directory for GUI')
+@click.option('--reload', is_flag=True, help='Enable auto-reload for development')
+@click.option('--workers', '-w', default=1, help='Number of worker processes')
+@click.option('--debug', is_flag=True, help='Enable debug mode')
+@click.pass_context
+def serve(
+    ctx: click.Context,
+    host: str,
+    port: int,
+    cache_dir: Path | None,
+    static_dir: Path | None,
+    reload: bool,
+    workers: int,
+    debug: bool,
+):
+    """Start the Truth Core HTTP server.
+
+    Provides a REST API and optional HTML GUI for all Truth Core commands.
+
+    Examples:
+      truthctl serve                           # Start server on default port
+      truthctl serve --port 8080               # Start on port 8080
+      truthctl serve --host 0.0.0.0            # Bind to all interfaces
+      truthctl serve --cache-dir ./cache       # Enable caching
+      truthctl serve --static-dir ./gui        # Serve GUI static files
+      truthctl serve --reload                  # Development mode with auto-reload
+    """
+    import uvicorn
+
+    from truthcore.server import create_app
+
+    # Use cache dir from context if not specified
+    effective_cache_dir = cache_dir or ctx.obj.get('cache_dir')
+
+    try:
+        click.echo(f"Starting Truth Core server on http://{host}:{port}")
+        click.echo(f"API documentation: http://{host}:{port}/docs")
+
+        if effective_cache_dir:
+            click.echo(f"Cache enabled: {effective_cache_dir}")
+        if static_dir:
+            click.echo(f"Static files: {static_dir}")
+        if debug or reload:
+            click.echo("Debug mode enabled")
+
+        # Create the app with configuration
+        app = create_app(
+            cache_dir=effective_cache_dir,
+            static_dir=static_dir,
+            debug=debug or reload,
+        )
+
+        # Configure uvicorn
+        config_kwargs = {
+            "host": host,
+            "port": port,
+            "reload": reload,
+        }
+
+        # Only set workers if not reloading (reload implies single process)
+        if not reload:
+            config_kwargs["workers"] = workers
+
+        if debug:
+            config_kwargs["log_level"] = "debug"
+
+        click.echo("\nPress Ctrl+C to stop the server\n")
+
+        uvicorn.run(app, **config_kwargs)
+
+    except ImportError as e:
+        click.echo(f"Error: Server dependencies not installed: {e}", err=True)
+        click.echo("Install with: pip install 'truth-core[server]'", err=True)
+        sys.exit(1)
+    except Exception as e:
+        handle_error(e, debug or ctx.obj.get('debug', False))
+
+
 def main() -> None:
     """Entry point."""
     cli()
