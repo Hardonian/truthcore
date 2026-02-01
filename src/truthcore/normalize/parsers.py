@@ -361,7 +361,7 @@ class BuildLogParser(RegexLogParser):
     """Generic build log parser."""
 
     # Pattern: [timestamp] severity: message
-    PATTERN = r"(?:\[?[^\]]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>.+?)(?=\n|$)"
+    PATTERN = r"(?:\[?[^\]]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>[^\n]+)"
 
     def __init__(self, tool_name: str = "build"):
         severity_map = {
@@ -374,7 +374,9 @@ class BuildLogParser(RegexLogParser):
             "DEBUG": SeverityLevel.LOW,
             "SUCCESS": SeverityLevel.INFO,
         }
-        super().__init__(tool_name, self.PATTERN, severity_map)
+        # Compile with MULTILINE so ^ and $ work per line
+        pattern = re.compile(self.PATTERN, re.MULTILINE)
+        super().__init__(tool_name, pattern, severity_map)
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse build log with multiline support."""
