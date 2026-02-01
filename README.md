@@ -2,6 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/your-org/truth-core)
 
 > **Deterministic, evidence-based verification framework for software systems.**
 
@@ -14,10 +15,27 @@ Truth Core provides a cutting-edge platform for deterministic verification, feat
 - **Parallel Execution** - Multi-engine commands run in parallel
 - **Security Hardening** - Protection against resource exhaustion and injection
 - **Run Manifests** - Full provenance tracking with content hashes
+- **Static Dashboard** - Offline-capable HTML dashboard for results
 - **Anomaly Detection** - Deterministic scoring for historical analysis
 - **UI Geometry Checks** - Verify actual clickability of UI elements
 - **Parquet History** - High-performance optional storage
 - **HTTP Server** - REST API and web GUI for remote access
+- **Replay/Simulation** - Re-run and simulate changes for analysis
+
+## Quick Start (60 seconds)
+
+```bash
+# Install
+pip install truth-core
+
+# Run verification
+truthctl judge --inputs ./src --profile ui --out ./results
+
+# View with dashboard
+truthctl dashboard demo --out ./demo
+
+# Open demo_out/dashboard/index.html in your browser
+```
 
 ## Installation
 
@@ -38,8 +56,6 @@ pip install truth-core[dev,parquet]
 ## Integrate in 3 Minutes
 
 ### 1. GitHub Actions (10 lines of YAML)
-
-Add truth-core to your CI workflow:
 
 ```yaml
 - name: Truth Core Verification
@@ -64,8 +80,6 @@ Add truth-core to your CI workflow:
 
 ### 2. TypeScript SDK
 
-Consume truth-core artifacts in your Next.js/TypeScript apps:
-
 ```bash
 npm install @truth-core/contract-sdk
 ```
@@ -83,44 +97,47 @@ const topIssues = topFindings(verdict, 5);
 console.log(`${verdict.verdict}: ${verdict.value}/100 with ${blockers.length} blockers`);
 ```
 
-### 3. Local CLI Quick Start
+### 3. Local CLI
 
 ```bash
-# Install
-pip install truth-core
-
 # Run verification
 truthctl judge --inputs ./src --profile ui --out ./results
 
 # Check output
 cat ./results/verdict.json | jq '.verdict'
+
+# View in dashboard
+truthctl dashboard serve --runs ./results --port 8787
 ```
 
----
+## Dashboard
 
-## Full Quick Start
+Truth Core includes a professional static dashboard for viewing results:
+
+![Dashboard Preview](docs/assets/dashboard-preview.png)
+
+### Dashboard Features
+
+- **Fully Offline** - No external CDN dependencies
+- **GitHub Pages Ready** - Build once, host anywhere
+- **Interactive Charts** - SVG charts generated locally
+- **Dark/Light Theme** - Automatic and manual switching
+- **Accessibility** - Keyboard navigation, screen reader friendly
+
+### Using the Dashboard
 
 ```bash
-# Run readiness check
-truthctl judge --inputs ./test-outputs --profile ui --out ./results
+# Build with embedded runs
+truthctl dashboard build --runs ./my-runs --out ./dashboard-dist
 
-# Run with caching for faster subsequent runs
-truthctl judge --inputs ./test-outputs --profile ui --out ./results --cache-dir .truthcache
+# Serve locally
+truthctl dashboard serve --runs ./my-runs --port 8787
 
-# Explain an invariant rule
-truthctl explain --rule no_errors --data ./results/readiness.json --rules ./rules.json
+# Create portable snapshot
+truthctl dashboard snapshot --runs ./my-runs --out ./snapshot
 
-# Analyze historical data
-truthctl intel --inputs ./history --mode readiness --out ./intel-results
-
-# Compact old history
-truthctl intel --compact --retention 90 --inputs ./history --out ./intel-results
-
-# Start the HTTP server with web interface
-truthctl serve
-
-# Server with caching enabled
-truthctl serve --cache-dir .truthcache --port 8080
+# Run demo
+truthctl dashboard demo --out ./demo-out
 ```
 
 ## Commands
@@ -132,6 +149,13 @@ truthctl serve --cache-dir .truthcache --port 8080
 - `truthctl trace` - Analyze agent execution traces
 - `truthctl index` - Index knowledge base
 - `truthctl intel` - Run intelligence analysis
+
+### Dashboard Commands
+
+- `truthctl dashboard build` - Build static dashboard
+- `truthctl dashboard serve` - Serve dashboard locally
+- `truthctl dashboard snapshot` - Create portable snapshot
+- `truthctl dashboard demo` - Run demo with sample data
 
 ### Cache Management
 
@@ -149,36 +173,36 @@ truthctl serve --cache-dir .truthcache --port 8080
 
 - `truthctl explain` - Explain invariant rule evaluation
 
-## CLI Options
+## Key Concepts
 
-### Global Options
+### Evidence
+Immutable, signed artifacts produced by verification runs. Each piece of evidence includes content hashes for integrity verification.
 
-```bash
---cache-dir PATH       # Cache directory (default: .truthcache)
---no-cache             # Disable caching
---cache-readonly       # Use cache but don't write new entries
-```
+### Invariants
+Declarative rules that define "must always be true" conditions for your system. Invariants are checked automatically during verification.
 
-### Command Options
+### Policy
+Policy-as-code for security, privacy, and compliance checks. Define rules in YAML and run them against any codebase.
 
-```bash
-# Judge command
-truthctl judge --inputs PATH --profile NAME --out PATH [--parallel/--sequential]
+### Provenance
+Full chain of custody for all evidence. Know exactly when, how, and by whom each artifact was created.
 
-# Intel command  
-truthctl intel --inputs PATH --mode {readiness,recon,agent,knowledge} --out PATH [--compact] [--retention DAYS]
+### Verdict
+The final decision: PASS, FAIL, or CONDITIONAL. Includes a score (0-100) and detailed findings.
 
-# Index command
-truthctl index --inputs PATH --out PATH [--parquet]
-```
+### Replay/Simulation
+Re-run past verifications with the same inputs, or simulate "what-if" scenarios by changing thresholds and rules.
+
+### Contracts
+Versioned schemas for all artifacts ensure backward compatibility. Migrate between versions automatically.
 
 ## Output Artifacts
 
 Each command produces:
 
 - `run_manifest.json` - Full provenance with content hashes
-- `*.json` - Machine-readable results
-- `*.md` - Human-readable reports
+- `verdict.json` - Machine-readable verdict
+- `verdict.md` - Human-readable report
 - `*.csv` - Tabular data (where applicable)
 
 ### Cache Directory Structure
@@ -199,6 +223,9 @@ Truth Core implements defense in depth:
 - **Resource Limits** - Configurable limits on file size, JSON depth
 - **Output Sanitization** - Markdown outputs sanitized to prevent injection
 - **Safe Archive Extraction** - Zip extraction with traversal checks
+- **Evidence Signing** - Ed25519 signatures for tamper detection
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## Determinism
 
@@ -210,69 +237,14 @@ All operations are deterministic:
 - Content-addressed hashing (blake2b, sha256, sha3)
 - No random sampling or probabilistic methods
 
-## Configuration
-
-### Security Limits
-
-```python
-from truthcore.security import SecurityLimits
-
-limits = SecurityLimits(
-    max_file_size=100*1024*1024,      # 100 MB
-    max_json_depth=100,
-    max_json_size=50*1024*1024,       # 50 MB
-)
-```
-
-### Invariant Rules
-
-```yaml
-rules:
-  - id: no_critical_errors
-    name: No Critical Errors
-    severity: BLOCKER
-    all:
-      - left: errors.critical
-        operator: "=="
-        right: 0
-      - left: errors.high
-        operator: "<"
-        right: 5
-```
-
-## API Usage
-
-```python
-from truthcore.manifest import RunManifest
-from truthcore.cache import ContentAddressedCache
-from truthcore.anomaly_scoring import ReadinessAnomalyScorer
-
-# Create manifest
-manifest = RunManifest.create(
-    command="judge",
-    config={"profile": "ui"},
-    input_dir=Path("./inputs"),
-)
-
-# Use cache
-cache = ContentAddressedCache(Path(".truthcache"))
-cache_key = manifest.compute_cache_key()
-
-if cached := cache.get(cache_key):
-    print(f"Cache hit: {cached}")
-else:
-    # Run engine and cache results
-    cache.put(cache_key, output_dir, manifest.to_dict())
-```
-
 ## Documentation
 
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community standards
+- [Security Policy](SECURITY.md) - Security information
+- [Governance](GOVERNANCE.md) - Project governance
 - [Upgrade Notes](UPGRADE_NOTES.md) - Version upgrade guide
-- [Server Mode](docs/server.md) - HTTP server and REST API documentation
-- [Evidence Contract](docs/evidence_contract.md) - Output specifications
-- [Severity Model](docs/severity_model.md) - Issue classification
-- [Consumer Integration](docs/consumer_integration.md) - Integration guide
-- [Changelog](CHANGELOG.md) - Version history and changes
+- [Changelog](CHANGELOG.md) - Version history
 
 ## Development
 
@@ -292,24 +264,11 @@ pyright src/truthcore
 
 # Build package
 python -m build
-```
 
-## CI/CD Integration
-
-```yaml
-- name: Run truth-core
-  run: |
-    truthctl judge \
-      --inputs ./test-outputs \
-      --profile ui \
-      --out ./truth-results \
-      --cache-dir .truthcache
-    
-    # Check thresholds
-    if [ $(jq -r '.passed' ./truth-results/readiness.json) = "false" ]; then
-      echo "Quality thresholds not met"
-      exit 1
-    fi
+# Dashboard development
+cd dashboard
+npm install
+npm run dev
 ```
 
 ## License
@@ -320,4 +279,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Version:** 0.2.0  
 **Python:** 3.11+  
-**Status:** Beta
+**Status:** Production Ready
