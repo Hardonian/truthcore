@@ -174,12 +174,11 @@ def convert_directory(
     # Create output directory
     output_path.mkdir(parents=True, exist_ok=True)
     
-    results = {
-        "converted": 0,
-        "skipped": 0,
-        "failed": 0,
-        "errors": [],
-    }
+    # Use explicit variables to avoid typing issues
+    converted_count: int = 0
+    skipped_count: int = 0
+    failed_count: int = 0
+    errors_list: list[str] = []
     
     # Find all JSON files
     for json_file in input_path.glob("*.json"):
@@ -190,12 +189,12 @@ def convert_directory(
             # Check if this is an artifact with metadata
             metadata = extract_metadata(artifact)
             if metadata is None:
-                results["skipped"] += 1
+                skipped_count += 1
                 continue
             
             # Filter by artifact type if specified
             if artifact_types and metadata.artifact_type not in artifact_types:
-                results["skipped"] += 1
+                skipped_count += 1
                 continue
             
             # Check if already at target version
@@ -203,7 +202,7 @@ def convert_directory(
                 # Just copy file
                 with open(output_path / json_file.name, "w", encoding="utf-8") as f:
                     json.dump(artifact, f, indent=2)
-                results["skipped"] += 1
+                skipped_count += 1
                 continue
             
             # Convert
@@ -213,16 +212,21 @@ def convert_directory(
             with open(output_path / json_file.name, "w", encoding="utf-8") as f:
                 json.dump(converted, f, indent=2)
             
-            results["converted"] += 1
+            converted_count += 1
             
         except CompatError as e:
-            results["failed"] += 1
-            results["errors"].append(f"{json_file.name}: {e}")
+            failed_count += 1
+            errors_list.append(f"{json_file.name}: {e}")
         except Exception as e:
-            results["failed"] += 1
-            results["errors"].append(f"{json_file.name}: {type(e).__name__}: {e}")
+            failed_count += 1
+            errors_list.append(f"{json_file.name}: {type(e).__name__}: {e}")
     
-    return results
+    return {
+        "converted": converted_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+        "errors": errors_list,
+    }
 
 
 def get_compat_versions(artifact_type: str) -> list[str]:
