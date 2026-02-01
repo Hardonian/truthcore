@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "schemas/readiness/v1.0.0/readiness.schema.json",
+  "title": "Truth Core Readiness Check",
+  "description": "Readiness check results from truth-core",
+  "type": "object",
+  "required": ["_contract", "ready", "checks"],
+  "properties": {
+    "_contract": {
+      "type": "object",
+      "required": ["artifact_type", "contract_version", "truthcore_version", "created_at", "schema"],
+      "properties": {
+        "artifact_type": {
+          "type": "string",
+          "const": "readiness"
+        },
+        "contract_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "truthcore_version": {
+          "type": "string"
+        },
+        "engine_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/check"
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "check": {
+      "type": "object",
+      "required": ["name", "passed"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}
