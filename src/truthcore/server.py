@@ -529,8 +529,14 @@ def create_app(
             raise HTTPException(status_code=404, detail="Job not found")
         return jobs[job_id]
 
-    # Serve static files if directory provided
+    # Serve static files if directory provided, or use default GUI
     if static_dir and static_dir.exists():
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    else:
+        # Use built-in GUI as default
+        from truthcore.gui import GUI_DIR
+
+        if GUI_DIR.exists() and (GUI_DIR / "index.html").exists():
+            app.mount("/static", StaticFiles(directory=GUI_DIR), name="static")
 
     return app
