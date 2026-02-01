@@ -301,7 +301,7 @@ class ESLintTextParser(RegexLogParser):
         """Parse ESLint text output."""
         findings = []
 
-        for match in self.pattern.finditer(content, re.MULTILINE):
+        for match in self.pattern.finditer(content):
             groups = match.groupdict()
 
             severity_str = groups.get("severity", "").upper()
