@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-rc.1] - Launch Candidate - 2026-02-01
+
+### Added
+- **Static Dashboard** - Professional offline-capable HTML dashboard
+  - Run browser with filtering and sorting
+  - Finding tables with severity/category/engine filters
+  - SVG charts generated locally (no external dependencies)
+  - Dark/light theme support
+  - Import/export for runs and snapshots
+  - GitHub Pages ready
+  - Accessibility features (keyboard nav, screen reader)
+- Dashboard CLI commands:
+  - `truthctl dashboard build` - Build static dashboard
+  - `truthctl dashboard serve` - Serve locally
+  - `truthctl dashboard snapshot` - Create portable snapshot
+  - `truthctl dashboard demo` - Run demo with sample data
+- **Governance & Community**:
+  - CONTRIBUTING.md - Development guidelines
+  - CODE_OF_CONDUCT.md - Community standards
+  - SECURITY.md - Security policy and reporting
+  - GOVERNANCE.md - Project governance model
+  - Issue templates (bug, feature, security)
+  - Pull request template
+- **GitHub Actions** - Release automation workflow
+
+### Changed
+- README.md - Complete overhaul with dashboard section
+- Project status changed from "Beta" to "Production Ready"
+- Enhanced documentation with key concepts section
+
+### Security
+- Dashboard content sanitization (HTML escaping)
+- Path traversal protection in file browser
+- Markdown preview sanitization
+- CSP-friendly implementation
+
+### Performance
+- Deterministic output ordering everywhere
+- Streaming reads for large files
+- SVG chart optimization
+
 ## [Unreleased]
 
 ### Added
