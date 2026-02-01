@@ -17,6 +17,7 @@ Truth Core provides a cutting-edge platform for deterministic verification, feat
 - **Anomaly Detection** - Deterministic scoring for historical analysis
 - **UI Geometry Checks** - Verify actual clickability of UI elements
 - **Parquet History** - High-performance optional storage
+- **HTTP Server** - REST API and web GUI for remote access
 
 ## Installation
 
