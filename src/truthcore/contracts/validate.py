@@ -35,9 +35,9 @@ def _validate_type(value: Any, expected_type: str, path: str) -> list[str]:
     
     Returns list of error messages.
     """
-    errors = []
+    errors: list[str] = []
     
-    type_validators = {
+    type_validators: dict[str, Any] = {
         "string": lambda v: isinstance(v, str),
         "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
         "number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
