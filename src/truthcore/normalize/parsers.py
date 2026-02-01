@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Pattern
+from re import Pattern
+from typing import Any
 
-from truthcore.normalize.text import TextNormalizer, TextNormalizationConfig
+from truthcore.normalize.text import TextNormalizationConfig, TextNormalizer
 
 
 class ParserError(Exception):

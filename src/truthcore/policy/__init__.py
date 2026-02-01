@@ -9,22 +9,22 @@ This module provides a YAML-based policy rule system with:
 
 from __future__ import annotations
 
+from truthcore.policy.engine import PolicyEngine
 from truthcore.policy.models import (
-    PolicyRule,
-    PolicyPack,
     Matcher,
+    PolicyPack,
+    PolicyRule,
     Severity,
     Suppression,
     Threshold,
 )
 from truthcore.policy.scanners import (
+    ArtifactScanner,
+    ConfigScanner,
+    PIIScanner,
     PolicyScanner,
     SecretScanner,
-    PIIScanner,
-    ConfigScanner,
-    ArtifactScanner,
 )
-from truthcore.policy.engine import PolicyEngine
 from truthcore.policy.validator import PolicyValidator
 
 __all__ = [

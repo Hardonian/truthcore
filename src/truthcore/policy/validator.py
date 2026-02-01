@@ -9,7 +9,6 @@ import yaml
 
 from truthcore.security import safe_read_text
 
-
 # JSON Schema for policy rules
 POLICY_RULE_SCHEMA = {
     "type": "object",

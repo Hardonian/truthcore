@@ -1,10 +1,11 @@
 """Quick debug script for signature verification."""
 
-from truthcore.provenance.signing import Signer
-from truthcore.provenance.manifest import EvidenceManifest
-from truthcore.provenance.verifier import BundleVerifier
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+from truthcore.provenance.manifest import EvidenceManifest
+from truthcore.provenance.signing import Signer
+from truthcore.provenance.verifier import BundleVerifier
 
 # Create a temp directory
 tmp_path = Path(tempfile.mkdtemp())
@@ -42,4 +43,5 @@ print(f"Errors: {result.errors}")
 
 # Cleanup
 import shutil
+
 shutil.rmtree(tmp_path)

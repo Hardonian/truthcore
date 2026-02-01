@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -78,7 +78,7 @@ class Finding:
     excerpt_hash: str | None = None
     suggestion: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def __post_init__(self):
         """Ensure timestamp is ISO format and compute excerpt hash if needed."""
@@ -120,7 +120,7 @@ class Finding:
             excerpt_hash=data.get("excerpt_hash"),
             suggestion=data.get("suggestion"),
             metadata=data.get("metadata", {}),
-            timestamp=data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            timestamp=data.get("timestamp", datetime.now(UTC).isoformat()),
         )
 
     def with_redacted_excerpt(self) -> Finding:
@@ -152,7 +152,7 @@ class FindingReport:
     tool: str = "unknown"
     tool_version: str = "unknown"
     run_id: str | None = None
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):

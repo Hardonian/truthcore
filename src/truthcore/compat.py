@@ -26,9 +26,9 @@ class CompatOptions:
     skip_normalization: bool = False
     relaxed_paths: bool = False
     no_provenance: bool = False
-    
+
     @classmethod
-    def from_flag(cls, enabled: bool) -> "CompatOptions":
+    def from_flag(cls, enabled: bool) -> CompatOptions:
         """Create compatibility options from a single flag.
         
         When --compat is enabled, all compatibility options are enabled
@@ -73,27 +73,27 @@ def transform_output_for_compat(data: dict[str, Any], opts: CompatOptions) -> di
     """
     if not opts.legacy_format:
         return data
-    
+
     result = dict(data)
-    
+
     # Legacy format modifications
     if "verdict" in result and opts.v1_output:
         # Convert v2 format to v1 format
         result = _convert_verdict_v2_to_v1(result)
-    
+
     # Remove newer fields for legacy compatibility
     newer_fields = ["version", "engines", "categories", "top_findings", "reasoning"]
     for field in newer_fields:
         if field in result:
             del result[field]
-    
+
     return result
 
 
 def _convert_verdict_v2_to_v1(data: dict[str, Any]) -> dict[str, Any]:
     """Convert v2 verdict format to v1 format."""
     summary = data.get("summary", {})
-    
+
     return {
         "verdict": data.get("verdict", "NO_SHIP"),
         "mode": data.get("mode", "pr"),
@@ -122,7 +122,7 @@ def write_compat_output(
         opts: Compatibility options
     """
     transformed = transform_output_for_compat(data, opts)
-    
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(transformed, f, indent=2, sort_keys=True)
@@ -159,5 +159,5 @@ Compatibility mode (--compat) affects the policy command:
   - Maintains output compatible with truth-core < 0.2.0
 """,
     }
-    
+
     return help_texts.get(command_name, "")

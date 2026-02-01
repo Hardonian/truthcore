@@ -3,6 +3,8 @@
 This module provides artifact migration between contract versions.
 """
 
+# Import migration definitions to register them
+from truthcore.migrations import verdict
 from truthcore.migrations.engine import (
     Migration,
     MigrationNotFoundError,
@@ -12,9 +14,6 @@ from truthcore.migrations.engine import (
     migrate,
     register_migration,
 )
-
-# Import migration definitions to register them
-from truthcore.migrations import verdict
 
 __all__ = [
     "Migration",

@@ -16,7 +16,7 @@ def _migrate_v0_to_v1(artifact: dict[str, Any]) -> dict[str, Any]:
     - Ensure required fields exist with defaults
     """
     result = copy.deepcopy(artifact)
-    
+
     # Ensure verdict field exists
     if "verdict" not in result:
         # If there's a 'result' field, use that
@@ -24,15 +24,15 @@ def _migrate_v0_to_v1(artifact: dict[str, Any]) -> dict[str, Any]:
             result["verdict"] = result.pop("result")
         else:
             result["verdict"] = "UNKNOWN"
-    
+
     # Ensure score field exists
     if "score" not in result:
         result["score"] = 0.0
-    
+
     # Ensure findings field exists
     if "findings" not in result:
         result["findings"] = []
-    
+
     return result
 
 
@@ -43,11 +43,11 @@ def _migrate_v1_to_v1_1(artifact: dict[str, Any]) -> dict[str, Any]:
     - Add optional evidence_refs field (empty list by default)
     """
     result = copy.deepcopy(artifact)
-    
+
     # Add evidence_refs if not present
     if "evidence_refs" not in result:
         result["evidence_refs"] = []
-    
+
     return result
 
 
@@ -61,29 +61,29 @@ def _migrate_v1_1_to_v2(artifact: dict[str, Any]) -> dict[str, Any]:
     - Remove deprecated 'notes' field
     """
     result = copy.deepcopy(artifact)
-    
+
     # Rename score to value
     if "score" in result:
         result["value"] = result.pop("score")
     else:
         result["value"] = 0.0
-    
+
     # Add confidence field (calculate from score if needed)
     if "confidence" not in result:
         # Simple heuristic: higher score = higher confidence
         score = result.get("value", 0.0)
         result["confidence"] = min(1.0, abs(score) / 100.0) if score else 0.5
-    
+
     # Rename findings to items
     if "findings" in result:
         result["items"] = result.pop("findings")
     else:
         result["items"] = []
-    
+
     # Remove deprecated fields
     result.pop("notes", None)
     result.pop("legacy_notes", None)
-    
+
     return result
 
 

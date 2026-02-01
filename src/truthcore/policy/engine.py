@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from truthcore.findings import Finding, FindingReport
-from truthcore.policy.models import PolicyPack, PolicyRule, Severity
+from truthcore.policy.models import PolicyPack, PolicyRule
 from truthcore.policy.scanners import (
     ArtifactScanner,
     ConfigScanner,
@@ -270,8 +268,8 @@ class PolicyPackLoader:
         # Check if built-in
         if name_or_path in cls.BUILT_IN_PACKS:
             # Try to find in package
-            import importlib.util
             import importlib
+            import importlib.util
 
             try:
                 spec = importlib.util.find_spec("truthcore")

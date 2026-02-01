@@ -9,7 +9,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Pattern
+from re import Pattern
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -18,15 +19,15 @@ class TextNormalizationConfig:
     
     All settings default to safe, deterministic values.
     """
-    
+
     # Whitespace handling
     collapse_whitespace: bool = True
     trim_lines: bool = True
     trim_final: bool = True
-    
+
     # Newline handling
     newline_style: str = "lf"  # "lf", "crlf", "native"
-    
+
     # Timestamp redaction (for stable hashing)
     redact_timestamps: bool = False
     timestamp_patterns: tuple[str, ...] = (
@@ -36,14 +37,14 @@ class TextNormalizationConfig:
         r"\[?\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\]?",
     )
     timestamp_replacement: str = "[TIMESTAMP]"
-    
+
     # Path normalization
     normalize_paths: bool = True
     path_separator: str = "/"  # Normalize to forward slashes
-    
+
     # Line ending
     ensure_trailing_newline: bool = False
-    
+
     def __post_init__(self):
         """Validate configuration."""
         if self.newline_style not in ("lf", "crlf", "native"):
@@ -56,11 +57,11 @@ class TextNormalizer:
     Normalizes text to a canonical form suitable for content hashing
     and comparison. All operations are deterministic and stable.
     """
-    
+
     # Pre-compiled patterns for performance
     _whitespace_pattern: Pattern[str] = re.compile(r"[ \t]+")
     _blank_line_pattern: Pattern[str] = re.compile(r"\n\s*\n")
-    
+
     def __init__(self, config: TextNormalizationConfig | None = None):
         """Initialize with configuration.
         
@@ -71,7 +72,7 @@ class TextNormalizer:
         self._timestamp_patterns: list[Pattern[str]] = [
             re.compile(p) for p in self.config.timestamp_patterns
         ]
-    
+
     def normalize(self, text: str) -> str:
         """Normalize text to canonical form.
         
@@ -87,36 +88,36 @@ class TextNormalizer:
             'hello world'
         """
         result = text
-        
+
         # Normalize newlines first
         result = self._normalize_newlines(result)
-        
+
         # Redact timestamps if configured
         if self.config.redact_timestamps:
             result = self._redact_timestamps(result)
-        
+
         # Normalize paths
         if self.config.normalize_paths:
             result = self._normalize_paths(result)
-        
+
         # Collapse whitespace
         if self.config.collapse_whitespace:
             result = self._collapse_whitespace(result)
-        
+
         # Trim lines
         if self.config.trim_lines:
             result = self._trim_lines(result)
-        
+
         # Final trim
         if self.config.trim_final:
             result = result.strip()
-        
+
         # Ensure trailing newline if configured
         if self.config.ensure_trailing_newline and not result.endswith("\n"):
             result += "\n"
-        
+
         return result
-    
+
     def normalize_lines(self, lines: list[str]) -> list[str]:
         """Normalize a list of lines.
         
@@ -127,13 +128,13 @@ class TextNormalizer:
             List of normalized lines (empty lines removed if collapsing)
         """
         normalized = [self.normalize(line) for line in lines]
-        
+
         if self.config.collapse_whitespace:
             # Remove empty lines that resulted from normalization
             normalized = [line for line in normalized if line]
-        
+
         return normalized
-    
+
     def normalize_file(self, path: Path) -> str:
         """Normalize content of a file.
         
@@ -149,12 +150,12 @@ class TextNormalizer:
         """
         content = path.read_text(encoding="utf-8")
         return self.normalize(content)
-    
+
     def _normalize_newlines(self, text: str) -> str:
         """Normalize line endings to configured style."""
         # First, normalize all line endings to \n
         text = text.replace("\r\n", "\n").replace("\r", "\n")
-        
+
         # Then apply configured style
         if self.config.newline_style == "crlf":
             text = text.replace("\n", "\r\n")
@@ -163,15 +164,15 @@ class TextNormalizer:
             if os.linesep != "\n":
                 text = text.replace("\n", os.linesep)
         # "lf" style keeps \n
-        
+
         return text
-    
+
     def _redact_timestamps(self, text: str) -> str:
         """Redact timestamps for stable comparison."""
         for pattern in self._timestamp_patterns:
             text = pattern.sub(self.config.timestamp_replacement, text)
         return text
-    
+
     def _normalize_paths(self, text: str) -> str:
         """Normalize path separators."""
         if self.config.path_separator == "/":
@@ -181,7 +182,7 @@ class TextNormalizer:
             # Normalize forward slashes to backslashes
             text = text.replace("/", "\\")
         return text
-    
+
     def _collapse_whitespace(self, text: str) -> str:
         """Collapse multiple whitespace characters."""
         # Replace multiple spaces/tabs with single space
@@ -189,7 +190,7 @@ class TextNormalizer:
         # Collapse multiple blank lines to single blank line
         text = self._blank_line_pattern.sub("\n\n", text)
         return text
-    
+
     def _trim_lines(self, text: str) -> str:
         """Trim whitespace from each line."""
         lines = text.split("\n")

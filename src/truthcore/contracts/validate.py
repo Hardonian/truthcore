@@ -14,7 +14,7 @@ from truthcore.contracts.registry import get_registry
 
 class ValidationError(Exception):
     """Error raised when artifact validation fails."""
-    
+
     def __init__(self, message: str, errors: list[str] | None = None):
         super().__init__(message)
         self.errors = errors or []
@@ -36,7 +36,7 @@ def _validate_type(value: Any, expected_type: str, path: str) -> list[str]:
     Returns list of error messages.
     """
     errors: list[str] = []
-    
+
     type_validators: dict[str, Any] = {
         "string": lambda v: isinstance(v, str),
         "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
@@ -46,11 +46,11 @@ def _validate_type(value: Any, expected_type: str, path: str) -> list[str]:
         "object": lambda v: isinstance(v, dict),
         "null": lambda v: v is None,
     }
-    
+
     if expected_type in type_validators:
         if not type_validators[expected_type](value):
             errors.append(f"{path}: expected {expected_type}, got {type(value).__name__}")
-    
+
     return errors
 
 
@@ -60,7 +60,7 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
     Returns list of error messages.
     """
     errors: list[str] = []
-    
+
     # Check type
     if "type" in schema:
         expected_type: str | list[str] = schema["type"]
@@ -73,31 +73,31 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
                 errors.append(f"{path}: expected one of {expected_type}, got {type(value).__name__}")
         else:
             errors.extend(_validate_type(value, expected_type, path))
-    
+
     # Check enum
     if "enum" in schema and value not in schema["enum"]:
         errors.append(f"{path}: value must be one of {schema['enum']}")
-    
+
     # Check object properties
     if schema.get("type") == "object" and isinstance(value, dict):
         properties = schema.get("properties", {})
         required = schema.get("required", [])
         additional_properties = schema.get("additionalProperties", True)
-        
+
         # Check required properties
         for prop in required:
             if prop not in value:
                 errors.append(f"{path}: missing required property '{prop}'")
-        
+
         # Validate properties
         for prop_name, prop_val in value.items():
             prop_path: str = f"{path}.{prop_name}" if path else str(prop_name)
-            
+
             if prop_name in properties:
                 errors.extend(_validate_value(prop_val, properties[prop_name], prop_path))
             elif not additional_properties:
                 errors.append(f"{prop_path}: additional property not allowed")
-    
+
     # Check array items
     if schema.get("type") == "array" and isinstance(value, list):
         items_schema: dict[str, Any] | None = schema.get("items")
@@ -106,13 +106,13 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
             for i, item in enumerate(arr_value):
                 item_path: str = f"{path}[{i}]"
                 errors.extend(_validate_value(item, items_schema, item_path))
-        
+
         # Check minItems/maxItems
         if "minItems" in schema and len(value) < schema["minItems"]:
             errors.append(f"{path}: array must have at least {schema['minItems']} items")
         if "maxItems" in schema and len(value) > schema["maxItems"]:
             errors.append(f"{path}: array must have at most {schema['maxItems']} items")
-    
+
     # Check string constraints
     if schema.get("type") == "string" and isinstance(value, str):
         if "minLength" in schema and len(value) < schema["minLength"]:
@@ -123,14 +123,14 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
             import re
             if not re.match(schema["pattern"], value):
                 errors.append(f"{path}: string does not match pattern {schema['pattern']}")
-    
+
     # Check numeric constraints
     if schema.get("type") in ("integer", "number") and isinstance(value, (int, float)):
         if "minimum" in schema and value < schema["minimum"]:
             errors.append(f"{path}: value must be >= {schema['minimum']}")
         if "maximum" in schema and value > schema["maximum"]:
             errors.append(f"{path}: value must be <= {schema['maximum']}")
-    
+
     return errors
 
 
@@ -156,7 +156,7 @@ def validate_artifact(
         ContractVersionError: If contract metadata is missing/invalid
     """
     errors = []
-    
+
     # Extract metadata if available
     if artifact_type is None or version is None:
         metadata = extract_metadata(artifact)
@@ -165,12 +165,12 @@ def validate_artifact(
                 "Artifact has no contract metadata. "
                 "Provide artifact_type and version explicitly, or add metadata."
             )
-        
+
         if artifact_type is None:
             artifact_type = metadata.artifact_type
         if version is None:
             version = metadata.contract_version
-    
+
     # Load schema
     try:
         registry = get_registry()
@@ -180,21 +180,21 @@ def validate_artifact(
         raise SchemaNotFoundError(f"Schema not found for {artifact_type} v{version}: {e}")
     except FileNotFoundError as e:
         raise SchemaNotFoundError(f"Schema file not found: {e}")
-    
+
     # Validate root type
     if "type" in schema:
         errors.extend(_validate_type(artifact, schema["type"], "<root>"))
-    
+
     # Validate against schema
     if schema.get("type") == "object":
         properties = schema.get("properties", {})
         required = schema.get("required", [])
-        
+
         # Check required properties (including _contract if present)
         for req_prop in required:
             if req_prop not in artifact:
                 errors.append(f"<root>: missing required property '{req_prop}'")
-        
+
         # Validate all properties
         for art_prop, art_value in artifact.items():
             if art_prop in properties:
@@ -204,7 +204,7 @@ def validate_artifact(
                 errors.extend(_validate_value(art_value, prop_schema, str(art_prop)))
             elif schema.get("additionalProperties") is False:
                 errors.append(f"<root>: additional property '{art_prop}' not allowed")
-    
+
     return errors
 
 
@@ -271,7 +271,7 @@ def validate_file(
     Returns:
         List of validation error messages
     """
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         artifact = json.load(f)
-    
+
     return validate_artifact(artifact, artifact_type, version, strict)

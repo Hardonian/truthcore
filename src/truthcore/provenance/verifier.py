@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from truthcore.provenance.manifest import EvidenceManifest, ManifestEntry
+from truthcore.provenance.manifest import EvidenceManifest
 from truthcore.provenance.signing import Signature, Signer, VerificationError
-from truthcore.security import SecurityLimits, SecurityError, check_path_safety
+from truthcore.security import SecurityError, SecurityLimits, check_path_safety
 
 
 @dataclass
@@ -26,7 +26,7 @@ class VerificationResult:
     files_missing: list[str] = field(default_factory=list)
     files_added: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""

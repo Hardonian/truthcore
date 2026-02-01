@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from truthcore.provenance.manifest import EvidenceManifest, ManifestEntry
-from truthcore.provenance.signing import Signer, Signature, SigningError
+from truthcore.provenance.signing import Signature, Signer, SigningError
 from truthcore.provenance.verifier import BundleVerifier, VerificationResult
-from truthcore.security import SecurityLimits, SecurityError
+from truthcore.security import SecurityError, SecurityLimits
 
 # Check if cryptography is available for signature tests
 try:

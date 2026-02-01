@@ -7,7 +7,7 @@ import json
 import platform
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,17 +37,17 @@ def normalize_timestamp(ts: datetime | str | None = None) -> str:
     All timestamps are converted to UTC and formatted consistently.
     """
     if ts is None:
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
     elif isinstance(ts, str):
         # Parse and re-format to ensure consistency
         ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-    
+
     # Ensure UTC
     if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
+        ts = ts.replace(tzinfo=UTC)
     else:
-        ts = ts.astimezone(timezone.utc)
-    
+        ts = ts.astimezone(UTC)
+
     # Format: 2026-01-31T10:00:00Z (no microseconds, always UTC)
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -71,12 +71,12 @@ def hash_file(path: Path, algorithm: str = "blake2b", digest_size: int = 16) -> 
         hasher = hashlib.sha3_256()
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
-    
+
     # Read in chunks to handle large files
     with open(path, "rb") as f:
         while chunk := f.read(8192):
             hasher.update(chunk)
-    
+
     return hasher.hexdigest()
 
 
@@ -84,7 +84,7 @@ def hash_content(content: bytes | str, algorithm: str = "blake2b", digest_size: 
     """Compute hash of content."""
     if isinstance(content, str):
         content = content.encode("utf-8")
-    
+
     if algorithm == "blake2b":
         hasher = hashlib.blake2b(digest_size=digest_size)
     elif algorithm == "sha256":
@@ -93,7 +93,7 @@ def hash_content(content: bytes | str, algorithm: str = "blake2b", digest_size: 
         hasher = hashlib.sha3_256()
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
-    
+
     hasher.update(content)
     return hasher.hexdigest()
 
@@ -114,7 +114,7 @@ class InputFileInfo:
     size: int
     content_hash: str
     modified_time: str
-    
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "path": self.path,
@@ -135,17 +135,17 @@ class RunManifest:
     - Environment
     - Cache status
     """
-    
+
     # Run identification (required)
     run_id: str  # Unique run identifier
     command: str  # CLI command invoked
     timestamp: str  # ISO timestamp (normalized UTC)
-    
+
     # Software versions (required)
     truthcore_version: str
     truthcore_git_sha: str | None
     config_hash: str  # Configuration
-    
+
     # Optional fields with defaults
     engine_versions: dict[str, str] = field(default_factory=lambda: {})
     config_path: str | None = None
@@ -158,24 +158,24 @@ class RunManifest:
     os_release: str = field(default_factory=lambda: platform.release())
     cpu_arch: str = field(default_factory=lambda: platform.machine())
     timezone: str = field(default_factory=lambda: datetime.now().astimezone().tzname() or "UTC")
-    
+
     # Cache status
     cache_hit: bool = False
     cache_key: str | None = None
     cache_path: str | None = None
-    
+
     # Execution
     duration_ms: int = 0
     exit_code: int = 0
-    
+
     # Additional metadata
     metadata: dict[str, Any] = field(default_factory=lambda: {})
-    
+
     def __post_init__(self):
         """Normalize timestamp after initialization."""
         if not self.timestamp.endswith('Z'):
             self.timestamp = normalize_timestamp(self.timestamp)
-    
+
     @classmethod
     def create(
         cls,
@@ -186,20 +186,20 @@ class RunManifest:
         profile: str | None = None,
         cache_hit: bool = False,
         cache_key: str | None = None,
-    ) -> "RunManifest":
+    ) -> RunManifest:
         """Create a new run manifest."""
         import uuid
-        
+
         # Generate run ID from timestamp + random component
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         run_id = f"{now.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
-        
+
         # Hash config
         config_hash = hash_dict(config)
-        
+
         # Collect input file info
         file_infos: list[InputFileInfo] = []
-        
+
         if input_files:
             for path in sorted(input_files):  # Sort for determinism
                 if path.exists():
@@ -208,9 +208,9 @@ class RunManifest:
                         path=str(path),
                         size=stat.st_size,
                         content_hash=hash_file(path),
-                        modified_time=normalize_timestamp(datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)),
+                        modified_time=normalize_timestamp(datetime.fromtimestamp(stat.st_mtime, tz=UTC)),
                     ))
-        
+
         elif input_dir:
             # Scan directory for relevant files
             for path in sorted(input_dir.rglob("*")):
@@ -220,9 +220,9 @@ class RunManifest:
                         path=str(path.relative_to(input_dir)),
                         size=stat.st_size,
                         content_hash=hash_file(path),
-                        modified_time=normalize_timestamp(datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)),
+                        modified_time=normalize_timestamp(datetime.fromtimestamp(stat.st_mtime, tz=UTC)),
                     ))
-        
+
         return cls(
             run_id=run_id,
             command=command,
@@ -236,7 +236,7 @@ class RunManifest:
             cache_hit=cache_hit,
             cache_key=cache_key,
         )
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary with stable sorting."""
         return {
@@ -276,17 +276,17 @@ class RunManifest:
             },
             "metadata": dict(sorted(self.metadata.items())),
         }
-    
+
     def write(self, output_dir: Path) -> Path:
         """Write manifest to output directory."""
         manifest_path = output_dir / "run_manifest.json"
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2, sort_keys=True, ensure_ascii=True)
-        
+
         return manifest_path
-    
+
     def compute_cache_key(self) -> str:
         """Compute cache key from manifest content.
         

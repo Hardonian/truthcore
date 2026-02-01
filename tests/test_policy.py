@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from truthcore.policy.models import Matcher, PolicyPack, PolicyRule, Severity, Suppression, Threshold
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader, PolicyResult
+from truthcore.policy.models import (
+    Matcher,
+    PolicyPack,
+    PolicyRule,
+    Severity,
+    Suppression,
+)
+from truthcore.policy.scanners import (
+    ScanContext,
+    SecretScanner,
+)
 from truthcore.policy.validator import PolicyValidator
-from truthcore.policy.scanners import SecretScanner, PIIScanner, ConfigScanner, ArtifactScanner, ScanContext
-from truthcore.security import SecurityLimits
 
 
 class TestMatcher:

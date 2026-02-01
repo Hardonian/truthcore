@@ -7,12 +7,12 @@ between contract versions.
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from truthcore.contracts.metadata import update_metadata
 from truthcore.contracts.registry import ContractVersion
-
 
 # Type alias for migration functions
 MigrationFn = Callable[[dict[str, Any]], dict[str, Any]]
@@ -21,7 +21,7 @@ MigrationFn = Callable[[dict[str, Any]], dict[str, Any]]
 @dataclass
 class Migration:
     """Represents a single migration between versions."""
-    
+
     artifact_type: str
     from_version: str
     to_version: str
@@ -42,19 +42,19 @@ class MigrationCycleError(Exception):
 
 class MigrationRegistry:
     """Registry for all migrations."""
-    
+
     def __init__(self):
         self._migrations: dict[str, dict[tuple[str, str], Migration]] = {}
-    
+
     def register(self, migration: Migration) -> None:
         """Register a migration."""
         artifact_type = migration.artifact_type
         if artifact_type not in self._migrations:
             self._migrations[artifact_type] = {}
-        
+
         key = (migration.from_version, migration.to_version)
         self._migrations[artifact_type][key] = migration
-    
+
     def get(
         self,
         artifact_type: str,
@@ -64,16 +64,16 @@ class MigrationRegistry:
         """Get a specific migration."""
         if artifact_type not in self._migrations:
             return None
-        
+
         key = (from_version, to_version)
         return self._migrations[artifact_type].get(key)
-    
+
     def list_migrations(self, artifact_type: str) -> list[Migration]:
         """List all migrations for an artifact type."""
         if artifact_type not in self._migrations:
             return []
         return list(self._migrations[artifact_type].values())
-    
+
     def list_versions(self, artifact_type: str) -> list[str]:
         """List all versions reachable via migrations for an artifact type."""
         migrations = self.list_migrations(artifact_type)
@@ -144,24 +144,24 @@ def find_migration_chain(
     """
     from_version_parsed = _parse_version(from_version)
     to_version_parsed = _parse_version(to_version)
-    
+
     # Determine direction
     ascending = to_version_parsed > from_version_parsed
-    
+
     # BFS
     visited: set[str] = set()
     queue: list[tuple[str, list[Migration]]] = [(from_version, [])]
-    
+
     while queue:
         current, path = queue.pop(0)
-        
+
         if current == to_version:
             return path
-        
+
         if current in visited:
             continue
         visited.add(current)
-        
+
         # Find next possible migrations
         migrations = _migration_registry.list_migrations(artifact_type)
         for migration in migrations:
@@ -171,7 +171,7 @@ def find_migration_chain(
             else:
                 if migration.to_version == current:
                     queue.append((migration.from_version, path + [migration]))
-    
+
     raise MigrationNotFoundError(
         f"No migration path from {from_version} to {to_version} for {artifact_type}"
     )
@@ -205,22 +205,22 @@ def migrate(
             artifact_type = metadata.artifact_type
         else:
             raise ValueError("artifact_type required when artifact has no metadata")
-    
+
     # If already at target version, return copy
     if from_version == to_version:
         return copy.deepcopy(artifact)
-    
+
     # Find migration chain
     chain = find_migration_chain(artifact_type, from_version, to_version)
-    
+
     # Apply migrations
     result = copy.deepcopy(artifact)
     for migration in chain:
         result = migration.fn(result)
-    
+
     # Update metadata
     result = update_metadata(result, contract_version=to_version)
-    
+
     return result
 
 

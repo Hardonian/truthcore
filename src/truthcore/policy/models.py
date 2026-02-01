@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from fnmatch import fnmatch
 from pathlib import Path
@@ -14,7 +14,7 @@ from typing import Any, Literal
 import yaml
 
 from truthcore.findings import Severity as FindingSeverity
-from truthcore.security import SecurityError, safe_read_text
+from truthcore.security import safe_read_text
 
 
 class Severity(Enum):
@@ -121,7 +121,7 @@ class Suppression:
             return False
         try:
             expiry_dt = datetime.fromisoformat(self.expiry)
-            return datetime.now(timezone.utc) > expiry_dt
+            return datetime.now(UTC) > expiry_dt
         except ValueError:
             return False
 
@@ -232,9 +232,9 @@ class PolicyRule:
     category: str
     target: Literal["files", "logs", "json_fields", "findings", "traces"]
     matchers: list[Matcher] = field(default_factory=list)
-    all_of: list["PolicyRule"] = field(default_factory=list)
-    any_of: list["PolicyRule"] = field(default_factory=list)
-    not_match: "PolicyRule | None" = field(default=None)
+    all_of: list[PolicyRule] = field(default_factory=list)
+    any_of: list[PolicyRule] = field(default_factory=list)
+    not_match: PolicyRule | None = field(default=None)
     threshold: Threshold | None = None
     suppressions: list[Suppression] = field(default_factory=list)
     suggestion: str | None = None

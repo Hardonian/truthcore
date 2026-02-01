@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from truthcore.contracts.registry import get_registry
@@ -17,14 +17,14 @@ from truthcore.contracts.registry import get_registry
 @dataclass
 class ContractMetadata:
     """Contract metadata for an artifact."""
-    
+
     artifact_type: str
     contract_version: str
     truthcore_version: str
     engine_versions: dict[str, str]
     created_at: str
     schema: str
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
         return {
@@ -35,7 +35,7 @@ class ContractMetadata:
             "created_at": self.created_at,
             "schema": self.schema,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ContractMetadata:
         """Create from dictionary representation."""
@@ -68,12 +68,12 @@ def normalize_timestamp(dt: datetime | None = None) -> str:
         ISO 8601 formatted string in UTC (e.g., "2026-01-31T00:00:00Z")
     """
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     elif dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     else:
-        dt = dt.astimezone(timezone.utc)
-    
+        dt = dt.astimezone(UTC)
+
     # Format without microseconds, with Z suffix
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -97,18 +97,18 @@ def create_metadata(
     """
     if engine_versions is None:
         engine_versions = {}
-    
+
     # Build schema path
     registry = get_registry()
     schema_path = f"schemas/{artifact_type}/v{contract_version}/{artifact_type}.schema.json"
-    
+
     # Verify version exists
     try:
         registry.get_schema(artifact_type, contract_version)
     except ValueError:
         # Schema doesn't exist yet, that's ok for new artifacts
         pass
-    
+
     return ContractMetadata(
         artifact_type=artifact_type,
         contract_version=contract_version,
@@ -135,10 +135,10 @@ def inject_metadata(
         Artifact with metadata injected (returns new dict, doesn't modify original)
     """
     result = copy.deepcopy(artifact)
-    
+
     if "_contract" in result and not replace_existing:
         raise ValueError("Artifact already has _contract metadata. Use replace_existing=True to overwrite.")
-    
+
     result["_contract"] = metadata.to_dict()
     return result
 
@@ -154,7 +154,7 @@ def extract_metadata(artifact: dict[str, Any]) -> ContractMetadata | None:
     """
     if "_contract" not in artifact:
         return None
-    
+
     try:
         return ContractMetadata.from_dict(artifact["_contract"])
     except (KeyError, TypeError):
@@ -175,16 +175,16 @@ def update_metadata(
         Artifact with updated metadata
     """
     result = copy.deepcopy(artifact)
-    
+
     if "_contract" not in result:
         raise ValueError("Artifact has no _contract metadata to update")
-    
+
     for key, value in updates.items():
         if key in result["_contract"]:
             result["_contract"][key] = value
         else:
             raise ValueError(f"Unknown metadata field: {key}")
-    
+
     return result
 
 
@@ -263,7 +263,7 @@ def ensure_metadata(
     """
     if has_metadata(artifact):
         return artifact
-    
+
     metadata = create_metadata(
         artifact_type=artifact_type,
         contract_version=contract_version,

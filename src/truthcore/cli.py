@@ -7,7 +7,6 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any
 
 import click
 
@@ -24,19 +23,18 @@ from truthcore.impact import ChangeImpactEngine
 from truthcore.invariant_dsl import InvariantExplainer
 from truthcore.manifest import RunManifest, normalize_timestamp
 from truthcore.parquet_store import HistoryCompactor, ParquetStore
-from truthcore.security import safe_load_json, safe_read_text
-from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
-from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
-from truthcore.verdict.cli import register_verdict_commands, generate_verdict_for_judge
 from truthcore.replay import (
-    ReplayBundle,
     BundleExporter,
+    ReplayBundle,
     ReplayEngine,
     ReplayReporter,
-    SimulationEngine,
     SimulationChanges,
+    SimulationEngine,
     SimulationReporter,
 )
+from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
+from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
+from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands
 
 
 def handle_error(error: Exception, debug: bool) -> None:
@@ -61,11 +59,11 @@ def get_cache(cache_dir: Path | None, readonly: bool = False) -> ContentAddresse
     """Get or create cache instance."""
     if cache_dir is None:
         return None
-    
+
     cache_key = (str(cache_dir), readonly)
     if cache_key not in cache_context:
         cache_context[cache_key] = ContentAddressedCache(cache_dir)
-    
+
     return cache_context[cache_key]
 
 
@@ -131,28 +129,28 @@ def judge(
     """
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         # Setup cache
         cache = get_cache(ctx.obj.get('cache_dir'), ctx.obj.get('cache_readonly', False))
-        
+
         run_plan_path = plan_out
-        
+
         # If diff or changed-files provided, run impact analysis
         if diff or changed_files:
             click.echo("Running change impact analysis...")
             engine = ChangeImpactEngine()
-            
+
             diff_text = None
             if diff:
                 diff_text = engine.load_diff_from_file(diff)
                 click.echo(f"  Loaded diff from: {diff}")
-            
+
             changed_files_list = None
             if changed_files:
                 changed_files_list = engine.load_changed_files_from_file(changed_files)
                 click.echo(f"  Loaded {len(changed_files_list)} changed files from: {changed_files}")
-            
+
             # Generate run plan
             plan = engine.analyze(
                 diff_text=diff_text,
@@ -160,19 +158,19 @@ def judge(
                 profile=profile,
                 source=str(diff or changed_files),
             )
-            
+
             # Write run plan
             if not run_plan_path:
                 run_plan_path = out / "run_plan.json"
             plan.write(run_plan_path)
             click.echo(f"  Run plan written to: {run_plan_path}")
-            
+
             # Show summary
             selected_engines = [e.engine_id for e in plan.engines if e.include]
             selected_invariants = [i.rule_id for i in plan.invariants if i.include]
             click.echo(f"  Selected engines: {', '.join(selected_engines) or 'none'}")
             click.echo(f"  Selected invariants: {', '.join(selected_invariants) or 'none'}")
-            
+
             # Check if any engines selected
             if not selected_engines:
                 click.echo("No engines selected for execution based on changes.")
@@ -188,7 +186,7 @@ def judge(
                 manifest_obj.write(out)
                 click.echo(f"Results written to {out}")
                 return
-        
+
         # Load run plan if provided
         engines_to_run = None
         invariants_to_run = None
@@ -198,7 +196,7 @@ def judge(
             engines_to_run = [e["engine_id"] for e in plan_data.get("engines", []) if e.get("include")]
             invariants_to_run = [i["rule_id"] for i in plan_data.get("invariants", []) if i.get("include")]
             click.echo(f"Executing based on run plan: {run_plan_path}")
-        
+
         # Create manifest
         run_manifest = RunManifest.create(
             command="judge",
@@ -206,49 +204,49 @@ def judge(
             input_dir=inputs or Path("."),
             profile=profile,
         )
-        
+
         # Check cache
         cache_key = run_manifest.compute_cache_key()
         cache_path = cache.get(cache_key) if cache else None
-        
+
         if cache_path:
-            click.echo(f"Cache hit: reusing previous results")
+            click.echo("Cache hit: reusing previous results")
             run_manifest.cache_hit = True
             run_manifest.cache_key = cache_key
             run_manifest.cache_path = str(cache_path)
-            
+
             # Copy cached outputs
             import shutil
             shutil.copytree(cache_path, out, dirs_exist_ok=True)
-            
+
             # Update manifest with cache info
             run_manifest.duration_ms = int((time.time() - start_time) * 1000)
             if run_plan_path:
                 run_manifest.metadata["run_plan"] = str(run_plan_path)
             run_manifest.write(out)
-            
+
             click.echo(f"Results written to {out} (from cache)")
             return
-        
+
         # Run the actual check
         click.echo(f"Running readiness check with profile '{profile}'...")
-        
+
         # TODO: Integrate with actual readiness engine
         # For now, create sample output
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # Check for UI geometry facts
         ui_facts = inputs / "ui_facts.json" if inputs else None
         if ui_facts and ui_facts.exists():
             click.echo("UI geometry facts detected, running reachability checks...")
             parser = UIGeometryParser(ui_facts)
             checker = UIReachabilityChecker(parser)
-            
+
             ui_results = checker.run_all_checks()
-            
+
             with open(out / "ui_geometry.json", "w") as f:
                 json.dump(ui_results, f, indent=2)
-        
+
         # Create readiness output
         readiness_data = {
             "version": __version__,
@@ -257,30 +255,30 @@ def judge(
             "passed": True,
             "findings": [],
         }
-        
+
         with open(out / "readiness.json", "w") as f:
             json.dump(readiness_data, f, indent=2, sort_keys=True)
-        
+
         # Run policy pack if specified
         if policy_pack:
             click.echo(f"Running policy pack: {policy_pack}...")
             from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
-            
+
             pack = PolicyPackLoader.load_pack(policy_pack)
             policy_engine = PolicyEngine(inputs or Path("."), out)
             policy_result = policy_engine.run_pack(pack)
             policy_engine.write_outputs(policy_result)
-            
+
             click.echo(f"  Policy findings: {len(policy_result.findings)}")
             if policy_result.has_blocking():
                 click.echo("  ⚠️  Blocking policy violations detected!")
-        
+
         # Generate evidence manifest
         if manifest:
             click.echo("Generating evidence manifest...")
             from truthcore.provenance.manifest import EvidenceManifest
             from truthcore.security import SecurityLimits
-            
+
             evidence_manifest = EvidenceManifest.generate(
                 bundle_dir=out,
                 run_manifest_hash=run_manifest.compute_cache_key(),
@@ -289,11 +287,11 @@ def judge(
             )
             evidence_manifest.write_json(out / "evidence.manifest.json")
             click.echo(f"  Manifest: {out / 'evidence.manifest.json'}")
-            
+
             # Sign if requested
             if sign:
                 from truthcore.provenance.signing import Signer, SigningError
-                
+
                 signer = Signer()
                 if signer.is_configured():
                     try:
@@ -304,17 +302,17 @@ def judge(
                         click.echo(f"  Warning: Signing failed: {e}", err=True)
                 else:
                     click.echo("  Warning: Signing requested but no keys configured. Set TRUTHCORE_SIGNING_PRIVATE_KEY env var.", err=True)
-        
+
         # Write manifest
         run_manifest.duration_ms = int((time.time() - start_time) * 1000)
         if run_plan_path:
             run_manifest.metadata["run_plan"] = str(run_plan_path)
         run_manifest.write(out)
-        
+
         # Cache results
         if cache and not ctx.obj.get('cache_readonly'):
             cache.put(cache_key, out, run_manifest.to_dict())
-        
+
         # Generate verdict
         click.echo("Generating verdict...")
         verdict_path = generate_verdict_for_judge(
@@ -325,7 +323,7 @@ def judge(
         )
         if verdict_path:
             click.echo(f"  Verdict: {verdict_path}")
-        
+
         click.echo(f"Results written to {out}")
     except Exception as e:
         handle_error(e, debug)
@@ -340,10 +338,10 @@ def recon(ctx: click.Context, inputs: Path, out: Path, config: Path | None):
     """Run reconciliation with anomaly detection."""
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # TODO: Run reconciliation engine
         recon_data = {
             "version": __version__,
@@ -355,10 +353,10 @@ def recon(ctx: click.Context, inputs: Path, out: Path, config: Path | None):
                 "balance_check": True,
             },
         }
-        
+
         with open(out / "recon_run.json", "w") as f:
             json.dump(recon_data, f, indent=2, sort_keys=True)
-        
+
         # Write manifest
         manifest = RunManifest.create(
             command="recon",
@@ -367,7 +365,7 @@ def recon(ctx: click.Context, inputs: Path, out: Path, config: Path | None):
         )
         manifest.duration_ms = int((time.time() - start_time) * 1000)
         manifest.write(out)
-        
+
         click.echo(f"Reconciliation results written to {out}")
     except Exception as e:
         handle_error(e, debug)
@@ -382,10 +380,10 @@ def trace(ctx: click.Context, inputs: Path, fsm: Path, out: Path):
     """Run trace analysis with FSM validation."""
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # TODO: Run trace engine
         trace_data = {
             "version": __version__,
@@ -396,10 +394,10 @@ def trace(ctx: click.Context, inputs: Path, fsm: Path, out: Path):
                 "avg_latency_ms": 1500,
             },
         }
-        
+
         with open(out / "trace_report.json", "w") as f:
             json.dump(trace_data, f, indent=2, sort_keys=True)
-        
+
         # Write manifest
         manifest = RunManifest.create(
             command="trace",
@@ -408,7 +406,7 @@ def trace(ctx: click.Context, inputs: Path, fsm: Path, out: Path):
         )
         manifest.duration_ms = int((time.time() - start_time) * 1000)
         manifest.write(out)
-        
+
         click.echo(f"Trace analysis written to {out}")
     except Exception as e:
         handle_error(e, debug)
@@ -423,10 +421,10 @@ def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
     """Run knowledge indexing with optional Parquet storage."""
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # TODO: Run knowledge engine
         kb_data = {
             "version": __version__,
@@ -436,10 +434,10 @@ def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
                 "stale_count": 3,
             },
         }
-        
+
         with open(out / "kb_index.json", "w") as f:
             json.dump(kb_data, f, indent=2, sort_keys=True)
-        
+
         # Write to Parquet if requested
         if parquet:
             store = ParquetStore(out / "parquet_history")
@@ -448,7 +446,7 @@ def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
                 click.echo("History written to Parquet store")
             else:
                 click.echo("Warning: Parquet support not available (install pyarrow)")
-        
+
         # Write manifest
         manifest = RunManifest.create(
             command="index",
@@ -457,7 +455,7 @@ def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
         )
         manifest.duration_ms = int((time.time() - start_time) * 1000)
         manifest.write(out)
-        
+
         click.echo(f"Knowledge index written to {out}")
     except Exception as e:
         handle_error(e, debug)
@@ -474,10 +472,10 @@ def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool,
     """Run intelligence analysis with anomaly scoring."""
     start_time = time.time()
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # Load historical data
         historical_files = list(inputs.rglob("*.json"))
         history = []
@@ -487,14 +485,14 @@ def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool,
                     history.append(json.load(fp))
             except Exception:
                 pass
-        
+
         # Run compaction if requested
         if compact:
             store = ParquetStore(inputs / "parquet_history")
             compactor = HistoryCompactor(store)
             stats = compactor.compact(dry_run=False)
             click.echo(f"Compaction complete: {stats}")
-        
+
         # Generate scorecard based on mode
         if mode == "readiness":
             scorer = ReadinessAnomalyScorer(history)
@@ -504,17 +502,17 @@ def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool,
             scorer = AgentBehaviorScorer(history)
         else:  # knowledge
             scorer = KnowledgeHealthScorer(history)
-        
+
         scorecard = scorer.score()
-        
+
         # Write scorecard
         writer = ScorecardWriter(out)
         json_path, md_path = writer.write(scorecard, f"{mode}_intel")
-        
+
         click.echo(f"Scorecard written to {out}")
         click.echo(f"  JSON: {json_path}")
         click.echo(f"  Markdown: {md_path}")
-        
+
         # Write manifest
         manifest = RunManifest.create(
             command="intel",
@@ -535,20 +533,20 @@ def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool,
 def explain(ctx: click.Context, rule: str, data: Path, rules: Path):
     """Explain an invariant rule evaluation."""
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         # Load data
         with open(data) as f:
             data_dict = json.load(f)
-        
+
         # Load rules
         with open(rules) as f:
             rules_list = json.load(f)
-        
+
         # Create explainer
         explainer = InvariantExplainer(rules_list, data_dict)
         explanation = explainer.explain_rule(rule)
-        
+
         click.echo(explanation)
     except Exception as e:
         handle_error(e, debug)
@@ -568,24 +566,24 @@ def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, prof
     Output is deterministic and cacheable.
     """
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         if not diff and not changed_files:
             click.echo("Error: Must provide either --diff or --changed-files", err=True)
             sys.exit(1)
-        
+
         engine = ChangeImpactEngine()
-        
+
         diff_text = None
         if diff:
             diff_text = engine.load_diff_from_file(diff)
             click.echo(f"Loaded diff from: {diff}")
-        
+
         changed_files_list = None
         if changed_files:
             changed_files_list = engine.load_changed_files_from_file(changed_files)
             click.echo(f"Loaded {len(changed_files_list)} changed files from: {changed_files}")
-        
+
         # Generate run plan
         run_plan = engine.analyze(
             diff_text=diff_text,
@@ -593,24 +591,24 @@ def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, prof
             profile=profile,
             source=source or str(diff or changed_files),
         )
-        
+
         # Write run plan
         run_plan.write(out)
-        
+
         # Show summary
         click.echo(f"\nRun plan written to: {out}")
         click.echo(f"Cache key: {run_plan.cache_key}")
-        click.echo(f"\nImpact Summary:")
+        click.echo("\nImpact Summary:")
         click.echo(f"  Total changes: {run_plan.impact_summary['total_changes']}")
         click.echo(f"  Max impact: {run_plan.impact_summary['max_impact']}")
-        
+
         selected_engines = [e for e in run_plan.engines if e.include]
         selected_invariants = [i for i in run_plan.invariants if i.include]
-        
+
         click.echo(f"\nSelected Engines ({len(selected_engines)}):")
         for eng in selected_engines:
             click.echo(f"  [+] {eng.engine_id} (priority: {eng.priority}) - {eng.reason}")
-        
+
         if run_plan.exclusions:
             click.echo(f"\nExclusions ({len(run_plan.exclusions)}):")
             for ex in run_plan.exclusions[:5]:  # Show first 5
@@ -633,20 +631,20 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
     Creates a graph linking runs, engines, findings, evidence, and entities.
     """
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         out.mkdir(parents=True, exist_ok=True)
-        
+
         # Build graph
         builder = TruthGraphBuilder()
         truth_graph = builder.build_from_run_directory(run_dir, plan)
-        
+
         # Export to JSON
         if format in ('json', 'both'):
             json_path = out / "truth_graph.json"
             truth_graph.to_json(json_path)
             click.echo(f"Truth graph (JSON) written to: {json_path}")
-        
+
         # Export to Parquet
         if format in ('parquet', 'both'):
             try:
@@ -655,10 +653,10 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
                 click.echo(f"Truth graph (Parquet) written to: {parquet_dir}")
             except RuntimeError as e:
                 click.echo(f"Warning: Could not export to Parquet: {e}", err=True)
-        
+
         # Show stats
         stats = truth_graph.to_dict()['stats']
-        click.echo(f"\nGraph Statistics:")
+        click.echo("\nGraph Statistics:")
         click.echo(f"  Nodes: {stats['node_count']}")
         click.echo(f"  Edges: {stats['edge_count']}")
     except Exception as e:
@@ -684,14 +682,14 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
       truthctl graph-query --graph truth_graph.json --where "severity>=medium" --out results.json
     """
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         # Load graph
         truth_graph = TruthGraph.from_json(graph)
-        
+
         # Execute query
         results = truth_graph.query_simple(where)
-        
+
         # Prepare output
         output_data = {
             "query": where,
@@ -699,7 +697,7 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
             "result_count": len(results),
             "results": [n.to_dict() for n in results],
         }
-        
+
         # Output results
         if out:
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -708,7 +706,7 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
             click.echo(f"Query results written to: {out}")
         else:
             click.echo(json.dumps(output_data, indent=2))
-        
+
         click.echo(f"\nFound {len(results)} matching nodes")
     except Exception as e:
         handle_error(e, debug)
@@ -732,43 +730,44 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
       truthctl policy run --inputs ./src --pack /path/to/custom-policy.yaml --out ./results
     """
     import time
+
     from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
     from truthcore.policy.validator import PolicyValidator
-    
+
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         start_time = time.time()
-        
+
         click.echo(f"Loading policy pack: {pack}...")
         policy_pack = PolicyPackLoader.load_pack(pack)
-        
+
         # Validate pack
         validator = PolicyValidator()
         errors = validator.validate_pack(policy_pack.to_dict())
         if errors:
-            click.echo(f"Warning: Policy validation errors:", err=True)
+            click.echo("Warning: Policy validation errors:", err=True)
             for error in errors:
                 click.echo(f"  - {error}", err=True)
-        
+
         click.echo(f"Running policy scan on: {inputs}...")
         engine = PolicyEngine(inputs, out)
         result = engine.run_pack(policy_pack)
-        
+
         # Write outputs
         paths = engine.write_outputs(result, base_name="policy")
-        
+
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         click.echo(f"\nPolicy scan complete in {duration_ms}ms")
         click.echo(f"  Rules evaluated: {result.rules_evaluated}")
         click.echo(f"  Rules triggered: {result.rules_triggered}")
         click.echo(f"  Findings: {len(result.findings)}")
-        
+
         if result.has_blocking():
             blocker_count = sum(1 for f in result.findings if f.severity.value == "BLOCKER")
             click.echo(f"  ⚠️  {blocker_count} BLOCKER findings detected!")
-        
+
         click.echo(f"\nOutputs written to {out}:")
         click.echo(f"  - JSON:  {paths['json']}")
         click.echo(f"  - MD:    {paths['markdown']}")
@@ -791,20 +790,20 @@ def policy_explain(ctx: click.Context, rule: str, pack: str):
     Example:
       truthctl policy explain --rule SECRET_API_KEY_DETECTED --pack security
     """
-    from truthcore.policy.engine import PolicyPackLoader, PolicyEngine
-    
+    from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
+
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         policy_pack = PolicyPackLoader.load_pack(pack)
         policy_rule = policy_pack.get_rule(rule)
-        
+
         if not policy_rule:
             click.echo(f"Rule not found: {rule}", err=True)
             available = [r.id for r in policy_pack.get_enabled_rules()]
             click.echo(f"Available rules: {', '.join(available)}", err=True)
             sys.exit(1)
-        
+
         explanation = PolicyEngine.explain_rule(policy_rule)
         click.echo(explanation)
     except Exception as e:
@@ -827,14 +826,14 @@ def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out
       truthctl verify-bundle --bundle ./results --public-key ./public.key
       truthctl verify-bundle --bundle ./results --out ./verification-report
     """
-    from truthcore.provenance.verifier import BundleVerifier
     from truthcore.provenance.signing import Signer
-    
+    from truthcore.provenance.verifier import BundleVerifier
+
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         click.echo(f"Verifying bundle: {bundle}...")
-        
+
         # Load public key if provided
         pub_key = None
         if public_key:
@@ -847,39 +846,39 @@ def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out
             if signer._public_key:
                 pub_key = signer._public_key
                 click.echo("Using public key from TRUTHCORE_SIGNING_PUBLIC_KEY environment variable")
-        
+
         # Verify
         verifier = BundleVerifier(public_key=pub_key)
-        
+
         if out:
             result, paths = verifier.verify_and_report(bundle, out)
-            click.echo(f"\nVerification reports written to:")
+            click.echo("\nVerification reports written to:")
             click.echo(f"  - JSON: {paths['json']}")
             click.echo(f"  - MD:   {paths['markdown']}")
         else:
             result = verifier.verify(bundle)
-        
+
         # Print summary
         click.echo(f"\nVerification Result: {'✅ VALID' if result.valid else '❌ INVALID'}")
         click.echo(f"  Files checked: {result.files_checked}")
         click.echo(f"  Files valid: {result.files_valid}")
-        
+
         if result.files_tampered:
             click.echo(f"  ⚠️  Files tampered: {len(result.files_tampered)}")
             for item in result.files_tampered:
                 click.echo(f"    - {item['path']}")
-        
+
         if result.files_missing:
             click.echo(f"  ⚠️  Files missing: {len(result.files_missing)}")
             for path in result.files_missing:
                 click.echo(f"    - {path}")
-        
+
         if result.files_added:
             click.echo(f"  ℹ️  Files added (not in manifest): {len(result.files_added)}")
-        
+
         if result.signature_valid is not None:
             click.echo(f"  Signature: {'✅ VALID' if result.signature_valid else '❌ INVALID'}")
-        
+
         # Exit with error code if invalid
         if not result.valid:
             sys.exit(1)
@@ -893,7 +892,7 @@ def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out
 def cache_stats(ctx: click.Context, cache_dir: Path | None):
     """Show cache statistics."""
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
         if cache:
@@ -915,7 +914,7 @@ def cache_stats(ctx: click.Context, cache_dir: Path | None):
 def cache_compact(ctx: click.Context, cache_dir: Path | None, max_age: int):
     """Compact old cache entries."""
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
         if cache:
@@ -934,7 +933,7 @@ def cache_compact(ctx: click.Context, cache_dir: Path | None, max_age: int):
 def cache_clear(ctx: click.Context, cache_dir: Path | None):
     """Clear all cache entries."""
     debug = ctx.obj.get('debug', False)
-    
+
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
         if cache:
@@ -950,7 +949,7 @@ def cache_clear(ctx: click.Context, cache_dir: Path | None):
 def policy_list():
     """List available built-in policy packs."""
     from truthcore.policy.engine import PolicyPackLoader
-    
+
     packs = PolicyPackLoader.list_built_in()
     click.echo("Available built-in policy packs:")
     for pack in packs:
@@ -966,15 +965,15 @@ def generate_keys():
     and TRUTHCORE_SIGNING_PUBLIC_KEY.
     """
     from truthcore.provenance.signing import Signer
-    
+
     click.echo("Generating new Ed25519 key pair...")
     private_key, public_key = Signer.generate_keys()
     priv_b64, pub_b64 = Signer.keys_to_env_format(private_key, public_key)
-    
+
     click.echo("\nAdd these to your environment:")
     click.echo(f"export TRUTHCORE_SIGNING_PRIVATE_KEY={priv_b64}")
     click.echo(f"export TRUTHCORE_SIGNING_PUBLIC_KEY={pub_b64}")
-    
+
     click.echo("\nOr save to a file (keep private key secure!):")
     click.echo(f"echo '{priv_b64}' > signing_key.private")
     click.echo(f"echo '{pub_b64}' > signing_key.public")
@@ -1032,7 +1031,7 @@ def bundle_export(
       truthctl bundle export --run-dir ./results --inputs ./test-data --out ./bundle --profile ui
     """
     debug = ctx.obj.get("debug", False)
-    
+
     try:
         exporter = BundleExporter()
         bundle = exporter.export(
@@ -1042,18 +1041,18 @@ def bundle_export(
             profile=profile,
             mode=mode,
         )
-        
+
         click.echo(f"✅ Bundle exported to: {out}")
-        click.echo(f"\nBundle contents:")
+        click.echo("\nBundle contents:")
         click.echo(f"  - Run ID: {bundle.manifest.run_id}")
         click.echo(f"  - Command: {bundle.manifest.command}")
         click.echo(f"  - Inputs: {bundle.get_input_files().__len__()} files")
         click.echo(f"  - Configs: {bundle.get_config_files().__len__()} files")
         click.echo(f"  - Outputs: {bundle.get_output_files().__len__()} files")
-        
+
         if bundle.evidence_manifest:
-            click.echo(f"  - Evidence manifest: ✓ (with provenance)")
-        
+            click.echo("  - Evidence manifest: ✓ (with provenance)")
+
     except Exception as e:
         handle_error(e, debug)
 
@@ -1117,22 +1116,22 @@ def replay(
       truthctl replay --bundle ./my-bundle --out ./replay-results --mode main
     """
     debug = ctx.obj.get("debug", False)
-    
+
     try:
         # Load bundle
         click.echo(f"Loading bundle: {bundle}")
         replay_bundle = ReplayBundle.load(bundle)
-        
+
         # Verify bundle integrity if requested
         if verify and replay_bundle.evidence_manifest:
             click.echo("Verifying bundle integrity...")
             verification = replay_bundle.verify_integrity()
-            
+
             if not verification.valid:
                 click.echo("❌ Bundle verification failed!", err=True)
                 click.echo(f"   Files tampered: {len(verification.files_tampered)}", err=True)
                 click.echo(f"   Files missing: {len(verification.files_missing)}", err=True)
-                
+
                 if not force:
                     click.echo("\nUse --force to proceed anyway.", err=True)
                     sys.exit(1)
@@ -1140,7 +1139,7 @@ def replay(
                     click.echo("⚠️  Proceeding with --force despite verification failure.", err=True)
             else:
                 click.echo("✅ Bundle integrity verified")
-        
+
         # Run replay
         click.echo(f"\nReplaying with mode={mode or replay_bundle.manifest.profile or 'pr'}...")
         engine = ReplayEngine(strict=strict)
@@ -1150,27 +1149,27 @@ def replay(
             mode=mode,
             profile=profile,
         )
-        
+
         # Write reports
         reporter = ReplayReporter()
         paths = reporter.write_reports(result, out)
-        
-        click.echo(f"\n✅ Replay complete")
-        click.echo(f"\nReports:")
+
+        click.echo("\n✅ Replay complete")
+        click.echo("\nReports:")
         click.echo(f"  - JSON: {paths['json']}")
         click.echo(f"  - Markdown: {paths['markdown']}")
-        
+
         # Show summary
-        click.echo(f"\nResults:")
+        click.echo("\nResults:")
         click.echo(f"  - Files compared: {len(result.file_diffs)}")
         click.echo(f"  - Identical: {sum(1 for d in result.file_diffs if d.diff.identical)}")
         click.echo(f"  - Different: {sum(1 for d in result.file_diffs if not d.diff.identical)}")
-        
+
         if result.identical:
-            click.echo(f"\n✅ Outputs are identical (content-wise)")
+            click.echo("\n✅ Outputs are identical (content-wise)")
         else:
             if strict:
-                click.echo(f"\n❌ Differences found (--strict mode)")
+                click.echo("\n❌ Differences found (--strict mode)")
                 sys.exit(1)
             else:
                 content_diffs = sum(1 for d in result.file_diffs if d.diff.content_differences > 0)
@@ -1178,8 +1177,8 @@ def replay(
                     click.echo(f"\n❌ Content differences found in {content_diffs} files")
                     sys.exit(1)
                 else:
-                    click.echo(f"\n✅ Content identical (allowed fields differ)")
-        
+                    click.echo("\n✅ Content identical (allowed fields differ)")
+
     except Exception as e:
         handle_error(e, debug)
 
@@ -1259,20 +1258,20 @@ def simulate(
         - "ui_geometry"
     """
     debug = ctx.obj.get("debug", False)
-    
+
     try:
         # Load bundle
         click.echo(f"Loading bundle: {bundle}")
         replay_bundle = ReplayBundle.load(bundle)
-        
+
         # Verify bundle integrity if requested
         if verify and replay_bundle.evidence_manifest:
             click.echo("Verifying bundle integrity...")
             verification = replay_bundle.verify_integrity()
-            
+
             if not verification.valid:
                 click.echo("❌ Bundle verification failed!", err=True)
-                
+
                 if not force:
                     click.echo("\nUse --force to proceed anyway.", err=True)
                     sys.exit(1)
@@ -1280,13 +1279,13 @@ def simulate(
                     click.echo("⚠️  Proceeding with --force despite verification failure.", err=True)
             else:
                 click.echo("✅ Bundle integrity verified")
-        
+
         # Load changes
         click.echo(f"Loading changes from: {changes}")
         sim_changes = SimulationChanges.from_yaml(changes)
-        
+
         # Run simulation
-        click.echo(f"\nRunning simulation...")
+        click.echo("\nRunning simulation...")
         engine = SimulationEngine()
         result = engine.simulate(
             bundle=replay_bundle,
@@ -1295,35 +1294,35 @@ def simulate(
             mode=mode,
             profile=profile,
         )
-        
+
         # Write reports
         reporter = SimulationReporter()
         paths = reporter.write_reports(result, out)
-        
-        click.echo(f"\n✅ Simulation complete")
-        click.echo(f"\nReports:")
+
+        click.echo("\n✅ Simulation complete")
+        click.echo("\nReports:")
         click.echo(f"  - JSON: {paths['json']}")
         click.echo(f"  - Markdown: {paths['markdown']}")
         if "diff" in paths:
             click.echo(f"  - Diff: {paths['diff']}")
-        
+
         # Show comparison
         if result.original_verdict and result.simulated_verdict:
             orig = result.original_verdict
             sim = result.simulated_verdict
-            
-            click.echo(f"\nVerdict Comparison:")
+
+            click.echo("\nVerdict Comparison:")
             click.echo(f"  Original:  {orig.verdict.value} ({orig.total_findings} findings, {orig.total_points} points)")
             click.echo(f"  Simulated: {sim.verdict.value} ({sim.total_findings} findings, {sim.total_points} points)")
-            
+
             if orig.verdict != sim.verdict:
                 click.echo(f"\n⚠️  VERDICT CHANGED: {orig.verdict.value} → {sim.verdict.value}")
-        
+
         if result.errors:
-            click.echo(f"\n⚠️  Errors encountered:")
+            click.echo("\n⚠️  Errors encountered:")
             for error in result.errors:
                 click.echo(f"  - {error}")
-        
+
     except Exception as e:
         handle_error(e, debug)
 

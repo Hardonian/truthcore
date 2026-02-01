@@ -23,7 +23,7 @@ DEFAULT_MAX_STRING_LENGTH = 10_000_000  # 10 MB of text
 
 class SecurityLimits:
     """Configurable security limits."""
-    
+
     def __init__(
         self,
         max_file_size: int = DEFAULT_MAX_FILE_SIZE,
@@ -56,7 +56,7 @@ def check_path_safety(path: Path, base_dir: Path | None = None) -> Path:
         SecurityError: If path traversal detected
     """
     resolved = path.resolve()
-    
+
     if base_dir is not None:
         base_resolved = base_dir.resolve()
         try:
@@ -65,7 +65,7 @@ def check_path_safety(path: Path, base_dir: Path | None = None) -> Path:
             raise SecurityError(
                 f"Path traversal detected: {path} is outside {base_dir}"
             )
-    
+
     # Check for suspicious patterns
     suspicious = ["..", "~", "$HOME", "$PWD", "//"]
     path_str = str(path)
@@ -73,7 +73,7 @@ def check_path_safety(path: Path, base_dir: Path | None = None) -> Path:
         if pattern in path_str and pattern != "//":  # Allow double-slash in URLs
             # Additional check - resolve and verify
             pass
-    
+
     return resolved
 
 
@@ -97,17 +97,17 @@ def safe_read_file(
     """
     if limits is None:
         limits = SecurityLimits()
-    
+
     # Check path safety
     safe_path = check_path_safety(path, base_dir)
-    
+
     # Check file size before reading
     size = safe_path.stat().st_size
     if size > limits.max_file_size:
         raise SecurityError(
             f"File too large: {path} ({size} bytes > {limits.max_file_size})"
         )
-    
+
     return safe_path.read_bytes()
 
 
@@ -118,7 +118,7 @@ def safe_read_text(
 ) -> str:
     """Safely read file as text with limits."""
     content = safe_read_file(path, limits, base_dir)
-    
+
     # Check decoded length
     text = content.decode("utf-8", errors="replace")
     max_len = limits.max_string_length if limits else DEFAULT_MAX_STRING_LENGTH
@@ -126,7 +126,7 @@ def safe_read_text(
         raise SecurityError(
             f"Text content too long: {path} ({len(text)} chars)"
         )
-    
+
     return text
 
 
@@ -141,7 +141,7 @@ def check_json_depth(obj: Any, current_depth: int = 0, max_depth: int = DEFAULT_
     """
     if current_depth > max_depth:
         raise SecurityError(f"JSON depth exceeds maximum: {max_depth}")
-    
+
     if isinstance(obj, dict):
         max_child_depth = current_depth
         for value in obj.values():
@@ -176,7 +176,7 @@ def safe_load_json(
     """
     if limits is None:
         limits = SecurityLimits()
-    
+
     # Check size
     if isinstance(data, bytes):
         if len(data) > limits.max_json_size:
@@ -190,16 +190,16 @@ def safe_load_json(
                 f"JSON data too large: {len(data)} chars exceeds size limit"
             )
         text = data
-    
+
     # Parse JSON
     try:
         obj = json.loads(text)
     except json.JSONDecodeError as e:
         raise SecurityError(f"Invalid JSON: {e}")
-    
+
     # Check depth
     check_json_depth(obj, max_depth=limits.max_json_depth)
-    
+
     return obj
 
 
@@ -223,41 +223,41 @@ def safe_extract_zip(
     """
     if limits is None:
         limits = SecurityLimits()
-    
+
     extracted: list[Path] = []
     output_dir = output_dir.resolve()
-    
+
     with zipfile.ZipFile(zip_path, 'r') as zf:
         for member in zf.namelist():
             # Check for path traversal in member name
             member_path = Path(member)
-            
+
             # Reject absolute paths
             if member_path.is_absolute():
                 raise SecurityError(f"Absolute path in zip: {member}")
-            
+
             # Reject paths with .. components
             if ".." in member_path.parts:
                 raise SecurityError(f"Path traversal in zip: {member}")
-            
+
             # Compute target path and verify it's within output_dir
             target = output_dir / member_path
             try:
                 target.relative_to(output_dir)
             except ValueError:
                 raise SecurityError(f"Zip extraction would escape target: {member}")
-            
+
             # Check file size if available
             info = zf.getinfo(member)
             if info.file_size > limits.max_file_size:
                 raise SecurityError(
                     f"Zip member too large: {member} ({info.file_size} bytes)"
                 )
-            
+
             # Extract
             zf.extract(member, output_dir)
             extracted.append(target)
-    
+
     return extracted
 
 
@@ -271,16 +271,16 @@ def sanitize_markdown(text: str) -> str:
     """
     # Remove script tags
     text = re.sub(r'<script[^>]*>.*?</script>', '[REMOVED: script]', text, flags=re.IGNORECASE | re.DOTALL)
-    
+
     # Remove event handlers
     text = re.sub(r'on\w+\s*=\s*["\'][^"\']*["\']', '[REMOVED: event handler]', text, flags=re.IGNORECASE)
-    
+
     # Remove data URIs
     text = re.sub(r'data:[^\s"\'>]+', '[REMOVED: data URI]', text, flags=re.IGNORECASE)
-    
+
     # Remove javascript: URLs
     text = re.sub(r'javascript:[^\s"\'>]+', '[REMOVED: javascript URL]', text, flags=re.IGNORECASE)
-    
+
     return text
 
 
@@ -303,7 +303,7 @@ def validate_input_path(
         SecurityError: If validation fails
     """
     path_obj = Path(path)
-    
+
     # Check extension
     if allowed_extensions is not None:
         if path_obj.suffix.lower() not in allowed_extensions:
@@ -311,6 +311,6 @@ def validate_input_path(
                 f"File extension not allowed: {path_obj.suffix}. "
                 f"Allowed: {allowed_extensions}"
             )
-    
+
     # Check path safety
     return check_path_safety(path_obj, base_dir)

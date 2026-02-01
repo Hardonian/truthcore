@@ -177,7 +177,7 @@ class VerdictThresholds:
     })
 
     @classmethod
-    def for_mode(cls, mode: Mode | str) -> "VerdictThresholds":
+    def for_mode(cls, mode: Mode | str) -> VerdictThresholds:
         """Create thresholds for a specific mode."""
         if isinstance(mode, str):
             mode = Mode(mode)

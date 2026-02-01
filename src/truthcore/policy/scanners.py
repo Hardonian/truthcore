@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from truthcore.findings import Finding, Location
-from truthcore.policy.models import Matcher, PolicyRule, Severity
-from truthcore.security import safe_read_text, SecurityLimits
+from truthcore.policy.models import Matcher, PolicyRule
+from truthcore.security import SecurityLimits, safe_read_text
 
 
 @dataclass
@@ -440,12 +440,12 @@ class ConfigScanner(PolicyScanner):
         """Check structured config files for specific patterns."""
         try:
             if file_path.suffix.lower() == ".json":
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
                 self._check_config_dict(data, rel_path, rule, [])
             else:
                 import yaml
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 if isinstance(data, dict):
                     self._check_config_dict(data, rel_path, rule, [])

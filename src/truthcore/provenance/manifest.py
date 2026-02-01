@@ -6,13 +6,12 @@ import hashlib
 import json
 import mimetypes
 from dataclasses import dataclass, field
-
 from pathlib import Path
 from typing import Any
 
 from truthcore import __version__
 from truthcore.manifest import normalize_timestamp
-from truthcore.security import SecurityLimits, SecurityError, check_path_safety
+from truthcore.security import SecurityError, SecurityLimits, check_path_safety
 
 
 @dataclass
@@ -181,7 +180,7 @@ class EvidenceManifest:
     @classmethod
     def from_json(cls, path: Path) -> EvidenceManifest:
         """Load manifest from JSON file."""
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return cls.from_dict(data)
 

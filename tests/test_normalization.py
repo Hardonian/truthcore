@@ -3,31 +3,29 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 from truthcore.normalize import (
-    TextNormalizer,
     TextNormalizationConfig,
+    TextNormalizer,
     canonical_text,
     normalize_text,
 )
 from truthcore.normalize.json_norm import (
-    JSONNormalizer,
     JSONNormalizationConfig,
     JSONNormalizationError,
+    JSONNormalizer,
     canonical_json,
-    normalize_json,
     parse_json_safe,
 )
 from truthcore.normalize.parsers import (
-    SeverityLevel,
+    BuildLogParser,
     ESLintJSONParser,
     ESLintTextParser,
+    SeverityLevel,
     TypeScriptCompilerParser,
-    BuildLogParser,
     get_parser,
-    parse_with,
     infer_severity,
+    parse_with,
 )
 
 
@@ -45,18 +43,18 @@ class TestTextNormalization:
         result_crlf = canonical_text("hello\r\nworld")
         result_cr = canonical_text("hello\rworld")
         result_lf = canonical_text("hello\nworld")
-        
+
         assert result_crlf == result_cr == result_lf
         assert "\r" not in result_crlf
 
     def test_determinism_same_input(self):
         """Test that same input produces identical output."""
         input_text = "  messy   text  \r\nwith  spaces\n"
-        
+
         result1 = canonical_text(input_text)
         result2 = canonical_text(input_text)
         result3 = canonical_text(input_text)
-        
+
         assert result1 == result2 == result3
 
     def test_whitespace_collapsing(self):
@@ -74,7 +72,7 @@ class TestTextNormalization:
         """Test path separator normalization."""
         config = TextNormalizationConfig(normalize_paths=True)
         normalizer = TextNormalizer(config)
-        
+
         result = normalizer.normalize("path\\to\\file.txt")
         assert result == "path/to/file.txt"
 
@@ -82,7 +80,7 @@ class TestTextNormalization:
         """Test timestamp redaction."""
         config = TextNormalizationConfig(redact_timestamps=True)
         normalizer = TextNormalizer(config)
-        
+
         result = normalizer.normalize("Error at 2024-01-15T10:30:00Z")
         assert "[TIMESTAMP]" in result
         assert "2024-01-15" not in result
@@ -91,7 +89,7 @@ class TestTextNormalization:
         """Test configurable whitespace handling."""
         config = TextNormalizationConfig(collapse_whitespace=False)
         normalizer = TextNormalizer(config)
-        
+
         result = normalizer.normalize("hello   world")
         assert result == "hello   world"  # Not collapsed
 
@@ -115,7 +113,7 @@ class TestJSONNormalization:
         """Test that canonical JSON sorts keys."""
         data = {"z": 1, "a": 2, "m": 3}
         result = canonical_json(data)
-        
+
         # Keys should be in alphabetical order
         assert result.index('"a"') < result.index('"m"')
         assert result.index('"m"') < result.index('"z"')
@@ -123,18 +121,18 @@ class TestJSONNormalization:
     def test_determinism_same_input(self):
         """Test that same JSON produces identical output."""
         data = {"b": {"y": 1, "x": 2}, "a": [3, 1, 2]}
-        
+
         result1 = canonical_json(data)
         result2 = canonical_json(data)
         result3 = canonical_json(data)
-        
+
         assert result1 == result2 == result3
 
     def test_nested_sorting(self):
         """Test that nested objects are also sorted."""
         data = {"outer": {"z": 1, "a": 2}}
         result = canonical_json(data)
-        
+
         assert '"a"' in result
         assert '"z"' in result
 
@@ -142,10 +140,10 @@ class TestJSONNormalization:
         """Test numeric formatting as strings."""
         config = JSONNormalizationConfig(numeric_format="string")
         normalizer = JSONNormalizer(config)
-        
+
         result = normalizer.normalize({"value": 3.14159})
         serialized = normalizer.serialize(result)
-        
+
         assert "3.14159" in serialized
 
     def test_max_depth_enforcement(self):
@@ -156,9 +154,9 @@ class TestJSONNormalization:
         for i in range(150):
             current["nested"] = {}
             current = current["nested"]
-        
+
         normalizer = JSONNormalizer()
-        
+
         with pytest.raises(JSONNormalizationError):
             normalizer.normalize(data)
 
@@ -166,14 +164,14 @@ class TestJSONNormalization:
         """Test safe parsing of valid JSON."""
         json_str = '{"key": "value", "number": 42}'
         result = parse_json_safe(json_str)
-        
+
         assert result["key"] == "value"
         assert result["number"] == 42
 
     def test_safe_parsing_invalid(self):
         """Test safe parsing of invalid JSON."""
         json_str = '{"key": invalid}'
-        
+
         with pytest.raises(JSONNormalizationError):
             parse_json_safe(json_str)
 
@@ -186,7 +184,7 @@ class TestJSONNormalization:
         """Test array normalization."""
         data = {"items": [3, 1, 2]}
         result = canonical_json(data)
-        
+
         # Arrays should preserve order by default
         assert "[3,1,2]" in result or "[3, 1, 2]" in result
 
@@ -194,7 +192,7 @@ class TestJSONNormalization:
         """Test Unicode handling."""
         data = {"message": "Hello 世界"}
         result = canonical_json(data)
-        
+
         assert "Hello" in result
 
 
@@ -205,10 +203,10 @@ class TestLogParsers:
         """Test ESLint text parser."""
         log = """src/app.js:10:5: error Missing semicolon [semi]
 src/app.js:20:3: warning Unused variable [no-unused-vars]"""
-        
+
         parser = ESLintTextParser()
         findings = parser.parse(log)
-        
+
         assert len(findings) == 2
         assert findings[0].severity == SeverityLevel.HIGH
         assert findings[1].severity == SeverityLevel.LOW
@@ -223,10 +221,10 @@ src/app.js:20:3: warning Unused variable [no-unused-vars]"""
                 {"line": 20, "column": 3, "severity": 1, "message": "Unused var", "ruleId": "no-unused-vars"}
             ]
         }]"""
-        
+
         parser = ESLintJSONParser()
         findings = parser.parse(json_log)
-        
+
         assert len(findings) == 2
         assert findings[0].severity == SeverityLevel.HIGH
         assert findings[0].location == "src/app.js:10:5"
@@ -234,10 +232,10 @@ src/app.js:20:3: warning Unused variable [no-unused-vars]"""
     def test_tsc_parser(self):
         """Test TypeScript compiler parser."""
         log = "src/app.ts(10,5): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'."
-        
+
         parser = TypeScriptCompilerParser()
         findings = parser.parse(log)
-        
+
         assert len(findings) == 1
         assert findings[0].severity == SeverityLevel.HIGH
         assert findings[0].rule_id == "TS2345"
@@ -248,10 +246,10 @@ src/app.js:20:3: warning Unused variable [no-unused-vars]"""
         log = """INFO: Build started
 ERROR: Compilation failed
 WARNING: Deprecated API usage"""
-        
+
         parser = BuildLogParser()
         findings = parser.parse(log)
-        
+
         assert len(findings) >= 2
         severities = [f.severity for f in findings]
         assert SeverityLevel.HIGH in severities
@@ -296,7 +294,7 @@ WARNING: Deprecated API usage"""
         """Test parse_with with valid parser."""
         log = "src/app.js:10:5: error Missing semicolon [semi]"
         findings = parse_with("eslint-text", log)
-        
+
         assert len(findings) == 1
         assert findings[0].severity == SeverityLevel.HIGH
 
@@ -308,7 +306,7 @@ WARNING: Deprecated API usage"""
     def test_finding_to_dict(self):
         """Test finding conversion to dict."""
         from truthcore.normalize.parsers import ParsedFinding
-        
+
         finding = ParsedFinding(
             tool="test",
             severity=SeverityLevel.HIGH,
@@ -316,7 +314,7 @@ WARNING: Deprecated API usage"""
             location="file:10:5",
             rule_id="test-rule",
         )
-        
+
         data = finding.to_dict()
         assert data["tool"] == "test"
         assert data["severity"] == "HIGH"
@@ -335,7 +333,7 @@ class TestDeterminism:
             "path\\to\\file",
             "2024-01-15T10:30:00Z timestamp",
         ]
-        
+
         for input_text in inputs:
             results = [canonical_text(input_text) for _ in range(10)]
             assert all(r == results[0] for r in results), f"Non-deterministic for: {input_text}"
@@ -348,7 +346,7 @@ class TestDeterminism:
             [3, 1, 2],
             {"items": [{"id": 2}, {"id": 1}]},
         ]
-        
+
         for input_data in inputs:
             results = [canonical_json(input_data) for _ in range(10)]
             assert all(r == results[0] for r in results), f"Non-deterministic for: {input_data}"
@@ -358,14 +356,14 @@ class TestDeterminism:
         log = """src/app.js:10:5: error Error 1 [rule1]
 src/app.js:20:3: error Error 2 [rule2]
 src/app.js:5:1: warning Warning 1 [rule3]"""
-        
+
         parser = ESLintTextParser()
-        
+
         results = [parser.parse(log) for _ in range(10)]
-        
+
         # Check same number of findings each time
         assert all(len(r) == len(results[0]) for r in results)
-        
+
         # Check findings are in same order
         for i in range(len(results[0])):
             messages = [r[i].message for r in results]
