@@ -156,6 +156,7 @@ class TestSigner:
         assert isinstance(pub_b64, str)
         assert len(priv_b64) > 0
 
+    @pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason="cryptography library not installed")
     def test_sign_and_verify(self):
         """Test signing and verifying."""
         private_key, public_key = Signer.generate_keys()
@@ -173,6 +174,7 @@ class TestSigner:
         is_valid = signer.verify(message, signature)
         assert is_valid is True
 
+    @pytest.mark.skipif(not HAS_CRYPTOGRAPHY, reason="cryptography library not installed")
     def test_verify_wrong_message(self):
         """Test verification fails with wrong message."""
         private_key, public_key = Signer.generate_keys()
