@@ -240,7 +240,7 @@ def get_migration_info(
         Dict with migration information
     """
     try:
-        chain = _find_migration_chain(artifact_type, from_version, to_version)
+        chain = find_migration_chain(artifact_type, from_version, to_version)
         return {
             "possible": True,
             "steps": len(chain),
