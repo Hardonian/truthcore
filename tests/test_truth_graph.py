@@ -205,7 +205,7 @@ class TestTruthGraph:
         """Test simple query with contains."""
         graph = TruthGraph()
         
-        graph.add_run("run-123", "judge", {"path": "/test/judge/run"})
+        graph.add_run("run-123", "judge", {}, path="/test/judge/run")
         
         results = graph.query_simple("path=contains:judge")
         assert len(results) == 1

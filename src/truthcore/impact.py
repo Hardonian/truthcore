@@ -148,10 +148,10 @@ class GitDiffParser:
         """Parse diff text and/or changed files list."""
         if self.diff_text:
             self._parse_diff_text()
-        
+
         if self.changed_files:
             self._parse_changed_files()
-        
+
         return self.changes
 
     def _parse_diff_text(self) -> None:
@@ -212,13 +212,15 @@ class GitDiffParser:
     def _parse_changed_files(self) -> None:
         """Parse simple changed files list."""
         existing_paths = {c.path for c in self.changes}
-        
+
         for path in self.changed_files:
             if path not in existing_paths:
-                self.changes.append(FileChange(
-                    path=path,
-                    change_type=ChangeType.MODIFIED,
-                ))
+                self.changes.append(
+                    FileChange(
+                        path=path,
+                        change_type=ChangeType.MODIFIED,
+                    )
+                )
 
 
 class ImpactAnalyzer:
@@ -290,33 +292,26 @@ class ImpactAnalyzer:
     def _extract_entities(self, change: FileChange) -> None:
         """Extract affected entities from a file change."""
         entities: list[str] = []
-        
+
         # Always include the file path
         entities.append(f"file_path:{change.path}")
 
         # Extract from diff content if available
         if change.diff_content:
             content = change.diff_content
-            
+
             # Extract routes
             for match in re.finditer(
-                r"(?:@|\.)(?:route|get|post|put|delete|patch)\s*\(\s*['\"]([^'\"]+)['\"]",
-                content
+                r"(?:@|\.)(?:route|get|post|put|delete|patch)\s*\(\s*['\"]([^'\"]+)['\"]", content
             ):
                 entities.append(f"route:{match.group(1)}")
-            
+
             # Extract components (classes/functions)
-            for match in re.finditer(
-                r"(?:class|def)\s+(\w+)",
-                content
-            ):
+            for match in re.finditer(r"(?:class|def)\s+(\w+)", content):
                 entities.append(f"component:{match.group(1)}")
-            
+
             # Extract dependencies
-            for match in re.finditer(
-                r"(?:import|from)\s+([\w\.]+)",
-                content
-            ):
+            for match in re.finditer(r"(?:import|from)\s+([\w\.]+)", content):
                 entities.append(f"dependency:{match.group(1)}")
 
         change.affected_entities = list(set(entities))
@@ -460,31 +455,30 @@ class EngineSelector:
     def select_engines(self) -> list[EngineDecision]:
         """Select engines to run based on changes."""
         decisions: list[EngineDecision] = []
-        
+
         for engine_id, definition in sorted(
-            self.ENGINE_DEFINITIONS.items(),
-            key=lambda x: x[1]["priority"]
+            self.ENGINE_DEFINITIONS.items(), key=lambda x: x[1]["priority"]
         ):
             decision = self._evaluate_engine(engine_id, definition)
             decisions.append(decision)
-        
+
         return decisions
 
     def select_invariants(self, selected_engines: list[str]) -> list[InvariantDecision]:
         """Select invariant rules to run based on changes and engines."""
         decisions: list[InvariantDecision] = []
-        
+
         for rule_id, definition in self.INVARIANT_DEFINITIONS.items():
             decision = self._evaluate_invariant(rule_id, definition, selected_engines)
             decisions.append(decision)
-        
+
         return decisions
 
     def _evaluate_engine(self, engine_id: str, definition: dict[str, Any]) -> EngineDecision:
         """Evaluate whether an engine should be included."""
         triggers = definition["triggers"]
         min_impact = triggers.get("min_impact", ImpactLevel.LOW)
-        
+
         # Check if max impact meets minimum
         if self._impact_value(self.max_impact) < self._impact_value(min_impact):
             return EngineDecision(
@@ -494,27 +488,27 @@ class EngineSelector:
                 priority=definition["priority"],
                 impact_level=self.max_impact,
             )
-        
+
         # Check file patterns
         file_patterns = triggers.get("file_patterns", [])
         matching_files: list[str] = []
-        
+
         for change in self.changes:
             for pattern in file_patterns:
                 if re.search(pattern, change.path, re.IGNORECASE):
                     matching_files.append(change.path)
                     break
-        
+
         # Check entity patterns
         entity_patterns = triggers.get("entities", [])
         matching_entities: list[str] = []
-        
+
         for entity in self.all_entities:
             for pattern in entity_patterns:
                 if pattern in entity:
                     matching_entities.append(entity)
                     break
-        
+
         # Decision logic
         if matching_files or matching_entities:
             affected = list(set(matching_files))
@@ -526,7 +520,7 @@ class EngineSelector:
                 impact_level=self.max_impact,
                 affected_files=affected,
             )
-        
+
         # Security engine always runs on critical changes
         if engine_id == "security" and self.max_impact == ImpactLevel.CRITICAL:
             return EngineDecision(
@@ -536,7 +530,7 @@ class EngineSelector:
                 priority=0,
                 impact_level=ImpactLevel.CRITICAL,
             )
-        
+
         return EngineDecision(
             engine_id=engine_id,
             include=False,
@@ -555,10 +549,10 @@ class EngineSelector:
         triggers = definition["triggers"]
         min_impact = triggers.get("min_impact", ImpactLevel.LOW)
         applies_to = triggers.get("applies_to", [])
-        
+
         # Check if applicable to selected engines
         applicable_engines = [e for e in selected_engines if e in applies_to]
-        
+
         if not applicable_engines:
             return InvariantDecision(
                 rule_id=rule_id,
@@ -566,7 +560,7 @@ class EngineSelector:
                 reason=f"Not applicable to selected engines ({', '.join(selected_engines)})",
                 impact_level=self.max_impact,
             )
-        
+
         # Check impact level
         if self._impact_value(self.max_impact) < self._impact_value(min_impact):
             return InvariantDecision(
@@ -575,27 +569,27 @@ class EngineSelector:
                 reason=f"Impact ({self.max_impact.value}) below threshold ({min_impact.value})",
                 impact_level=self.max_impact,
             )
-        
+
         # Check file patterns
         file_patterns = triggers.get("file_patterns", [])
         matching_files: list[str] = []
-        
+
         for change in self.changes:
             for pattern in file_patterns:
                 if re.search(pattern, change.path, re.IGNORECASE):
                     matching_files.append(change.path)
                     break
-        
+
         # Check entity patterns
         entity_patterns = triggers.get("entities", [])
         matching_entities: list[str] = []
-        
+
         for entity in self.all_entities:
             for pattern in entity_patterns:
                 if pattern in entity:
                     matching_entities.append(entity)
                     break
-        
+
         if matching_files or matching_entities:
             return InvariantDecision(
                 rule_id=rule_id,
@@ -604,7 +598,7 @@ class EngineSelector:
                 impact_level=self.max_impact,
                 affected_files=list(set(matching_files)),
             )
-        
+
         return InvariantDecision(
             rule_id=rule_id,
             include=True,
@@ -641,58 +635,62 @@ class ChangeImpactEngine:
         source: str | None = None,
     ) -> RunPlan:
         """Analyze changes and generate run plan.
-        
+
         Args:
             diff_text: Git diff text to analyze
             changed_files: List of changed file paths
             profile: Execution profile to use
             source: Source identifier for the analysis
-            
+
         Returns:
             RunPlan with selected engines and invariants
         """
-        from truthcore.manifest import normalize_timestamp, hash_dict
-        
+        from truthcore.manifest import hash_dict, normalize_timestamp
+
         # Parse changes
         parser = GitDiffParser(diff_text, changed_files)
         self.changes = parser.parse()
-        
+
         # Analyze impact
         analyzer = ImpactAnalyzer(self.changes)
         analyzer.analyze()
-        
+
         # Select engines and invariants
         selector = EngineSelector(self.changes, profile)
         engine_decisions = selector.select_engines()
-        
+
         # Get selected engine IDs for invariant selection
         selected_engines = [e.engine_id for e in engine_decisions if e.include]
         invariant_decisions = selector.select_invariants(selected_engines)
-        
+
         # Generate exclusions with reasons
         exclusions = []
         for engine in engine_decisions:
             if not engine.include:
-                exclusions.append({
-                    "type": "engine",
-                    "id": engine.engine_id,
-                    "reason": engine.reason,
-                })
-        
+                exclusions.append(
+                    {
+                        "type": "engine",
+                        "id": engine.engine_id,
+                        "reason": engine.reason,
+                    }
+                )
+
         for invariant in invariant_decisions:
             if not invariant.include:
-                exclusions.append({
-                    "type": "invariant",
-                    "id": invariant.rule_id,
-                    "reason": invariant.reason,
-                })
-        
+                exclusions.append(
+                    {
+                        "type": "invariant",
+                        "id": invariant.rule_id,
+                        "reason": invariant.reason,
+                    }
+                )
+
         # Compute impact summary
         impact_counts: dict[str, int] = {}
         for change in self.changes:
             level = change.impact_level.value
             impact_counts[level] = impact_counts.get(level, 0) + 1
-        
+
         # Create run plan
         self.plan = RunPlan(
             version=self.VERSION,
@@ -713,11 +711,11 @@ class ChangeImpactEngine:
                 "analyzer_version": self.VERSION,
             },
         )
-        
+
         # Compute cache key
         plan_dict = self.plan.to_dict()
         self.plan.cache_key = hash_dict(plan_dict)
-        
+
         return self.plan
 
     def load_diff_from_file(self, path: Path) -> str:

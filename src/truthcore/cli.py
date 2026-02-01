@@ -6,26 +6,25 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import click
 
 from truthcore import __version__
-from truthcore.manifest import RunManifest, normalize_timestamp
-from truthcore.cache import ContentAddressedCache
-from truthcore.security import SecurityLimits, safe_read_text, safe_load_json
-from truthcore.parquet_store import ParquetStore, HistoryCompactor
-from truthcore.invariant_dsl import InvariantExplainer
-from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 from truthcore.anomaly_scoring import (
-    ReadinessAnomalyScorer,
-    ReconciliationAnomalyScorer,
     AgentBehaviorScorer,
     KnowledgeHealthScorer,
+    ReadinessAnomalyScorer,
+    ReconciliationAnomalyScorer,
     ScorecardWriter,
 )
+from truthcore.cache import ContentAddressedCache
 from truthcore.impact import ChangeImpactEngine
+from truthcore.invariant_dsl import InvariantExplainer
+from truthcore.manifest import RunManifest, normalize_timestamp
+from truthcore.parquet_store import HistoryCompactor, ParquetStore
+from truthcore.security import safe_load_json, safe_read_text
 from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
+from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 
 
 # Cache context for CLI
