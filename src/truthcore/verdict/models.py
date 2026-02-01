@@ -152,7 +152,7 @@ class VerdictThresholds:
     max_total_points: int = 100
 
     # Category-specific limits (points)
-    category_limits: dict[Category, int] = field(default_factory=dict)
+    category_limits: dict[Category, int] = field(default_factory=lambda: dict())
 
     # Weight multipliers per severity
     severity_weights: dict[SeverityLevel, float] = field(default_factory=lambda: {
@@ -260,7 +260,7 @@ class VerdictResult:
     mode: Mode = Mode.PR
 
     # Inputs processed
-    inputs: list[str] = field(default_factory=list)
+    inputs: list[str] = field(default_factory=lambda: list())
 
     # Summary counts
     total_findings: int = 0
@@ -271,17 +271,17 @@ class VerdictResult:
     total_points: int = 0
 
     # Engine contributions
-    engines: list[EngineContribution] = field(default_factory=list)
+    engines: list[EngineContribution] = field(default_factory=lambda: list())
 
     # Category breakdowns
-    categories: list[CategoryBreakdown] = field(default_factory=list)
+    categories: list[CategoryBreakdown] = field(default_factory=lambda: list())
 
     # Top findings (for explainability)
-    top_findings: list[WeightedFinding] = field(default_factory=list)
+    top_findings: list[WeightedFinding] = field(default_factory=lambda: list())
 
     # Reasons for decision
-    ship_reasons: list[str] = field(default_factory=list)
-    no_ship_reasons: list[str] = field(default_factory=list)
+    ship_reasons: list[str] = field(default_factory=lambda: list())
+    no_ship_reasons: list[str] = field(default_factory=lambda: list())
 
     # Configuration used
     thresholds: VerdictThresholds | None = None

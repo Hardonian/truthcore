@@ -1,0 +1,35 @@
+{
+  "findings": [
+    {
+      "category": "ui",
+      "id": "UI_001",
+      "location": "src/components/Button.tsx:45",
+      "message": "Button not clickable at coordinates (100, 200)",
+      "rule_id": "UI_CLICKABLE",
+      "severity": "HIGH",
+      "tool": "ui_geometry"
+    },
+    {
+      "category": "build",
+      "id": "BUILD_001",
+      "location": "src/utils/helpers.ts:23",
+      "message": "TypeScript compilation warning",
+      "rule_id": "TS_WARN",
+      "severity": "MEDIUM",
+      "tool": "build"
+    },
+    {
+      "category": "security",
+      "id": "SEC_001",
+      "location": "nginx.conf:12",
+      "message": "Missing security header",
+      "rule_id": "SEC_HEADERS",
+      "severity": "LOW",
+      "tool": "security"
+    }
+  ],
+  "passed": false,
+  "profile": "ui",
+  "timestamp": "2026-02-01T02:22:24Z",
+  "version": "0.2.0"
+}

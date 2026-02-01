@@ -92,7 +92,7 @@ class BaseLogParser:
         content = path.read_text(encoding="utf-8")
         return self.parse(content)
 
-    def _infer_severity(self, text: str) -> SeverityLevel:
+    def infer_severity(self, text: str) -> SeverityLevel:
         """Infer severity from text content (deterministic rules)."""
         text_upper = text.upper()
 
@@ -150,7 +150,7 @@ class RegexLogParser(BaseLogParser):
             severity_str = groups.get("severity", "").upper()
             severity = self.severity_map.get(severity_str)
             if severity is None:
-                severity = self._infer_severity(severity_str or groups.get("message", ""))
+                severity = self.infer_severity(severity_str or groups.get("message", ""))
 
             finding = ParsedFinding(
                 tool=self.tool_name,
@@ -199,7 +199,7 @@ class BlockParser(BaseLogParser):
         for block in blocks:
             severity = SeverityLevel.UNKNOWN
             if self.severity_infer:
-                severity = self._infer_severity(block)
+                severity = self.infer_severity(block)
 
             finding = ParsedFinding(
                 tool=self.tool_name,
@@ -555,4 +555,4 @@ def infer_severity(text: str) -> SeverityLevel:
         Inferred severity level
     """
     parser = BaseLogParser("infer")
-    return parser._infer_severity(text)
+    return parser.infer_severity(text)

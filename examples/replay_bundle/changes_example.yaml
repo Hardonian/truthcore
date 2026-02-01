@@ -1,0 +1,33 @@
+# Example changes for simulation
+# This file demonstrates how to configure counterfactual changes
+
+# Override thresholds
+thresholds:
+  max_highs: 5              # Allow up to 5 high severity issues
+  max_total_points: 200     # Increase total points threshold
+  max_highs_with_override: 10
+
+# Override severity weights
+severity_weights:
+  HIGH: 25.0               # Reduce HIGH weight from 50.0
+  MEDIUM: 5.0              # Reduce MEDIUM weight from 10.0
+
+# Override category weights
+category_weights:
+  ui: 0.5                  # Reduce UI weight
+  security: 3.0            # Increase security weight
+  build: 1.0               # Reduce build weight
+
+# Disable specific engines
+disabled_engines:
+  - "ui_geometry"
+
+# Disable specific rules
+disabled_rules:
+  - "UI_CLICKABLE"
+
+# Suppress specific findings
+suppressions:
+  - rule_id: "UI_001"
+    reason: "Known issue, will be fixed in next sprint"
+    expiry: "2026-02-15T00:00:00Z"

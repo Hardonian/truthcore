@@ -1,0 +1,50 @@
+{
+  "cache": {
+    "hit": false,
+    "key": null,
+    "path": null
+  },
+  "command": "judge",
+  "config": {
+    "hash": "7e7219b3b4ed3633638082896dbc6eb9",
+    "path": null,
+    "profile": "ui"
+  },
+  "engine_versions": {},
+  "environment": {
+    "cpu_arch": "AMD64",
+    "os": {
+      "name": "Windows",
+      "release": "11"
+    },
+    "python_implementation": "CPython",
+    "python_version": "3.13.9 (tags/v3.13.9:8183fa5, Oct 14 2025, 14:09:13) [MSC v.1944 64 bit (AMD64)]",
+    "timezone": "Eastern Standard Time"
+  },
+  "execution": {
+    "duration_ms": 1500,
+    "exit_code": 0
+  },
+  "inputs": {
+    "directory": "C:\\Users\\scott\\Documents\\GitHub\\truthcore\\examples\\replay_bundle\\inputs",
+    "files": [
+      {
+        "content_hash": "e8e1b44ee6bd386dec405bfe357f47d5",
+        "modified_time": "2026-02-01T02:22:24Z",
+        "path": "build_report.json",
+        "size": 61
+      },
+      {
+        "content_hash": "a7070ab5217dee7b42c6434da7001165",
+        "modified_time": "2026-02-01T02:22:24Z",
+        "path": "ui_facts.json",
+        "size": 226
+      }
+    ]
+  },
+  "metadata": {},
+  "run_id": "20260201022224-26cca4dd",
+  "timestamp": "2026-02-01T02:22:24Z",
+  "truthcore_git_sha": "5cff639d1f3d",
+  "truthcore_version": "0.1.0"
+}

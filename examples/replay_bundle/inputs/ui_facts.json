@@ -1,0 +1,15 @@
+{
+  "elements": [
+    {
+      "id": "button1",
+      "type": "button",
+      "bounds": {
+        "x": 100,
+        "y": 200,
+        "width": 80,
+        "height": 40
+      },
+      "clickable": false
+    }
+  ]
+}

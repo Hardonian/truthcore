@@ -1,0 +1,118 @@
+{
+  "categories": [
+    {
+      "category": "ui",
+      "findings_count": 1,
+      "max_allowed": null,
+      "points_contributed": 50,
+      "weight": 1.0
+    },
+    {
+      "category": "build",
+      "findings_count": 1,
+      "max_allowed": 50,
+      "points_contributed": 10,
+      "weight": 1.5
+    },
+    {
+      "category": "security",
+      "findings_count": 1,
+      "max_allowed": 100,
+      "points_contributed": 1,
+      "weight": 2.0
+    }
+  ],
+  "engines": [
+    {
+      "blockers": 0,
+      "engine_id": "ui_geometry",
+      "findings_count": 1,
+      "highs": 1,
+      "lows": 0,
+      "mediums": 0,
+      "passed": false,
+      "points_contributed": 50
+    },
+    {
+      "blockers": 0,
+      "engine_id": "build",
+      "findings_count": 1,
+      "highs": 0,
+      "lows": 0,
+      "mediums": 1,
+      "passed": true,
+      "points_contributed": 10
+    },
+    {
+      "blockers": 0,
+      "engine_id": "security",
+      "findings_count": 1,
+      "highs": 0,
+      "lows": 1,
+      "mediums": 0,
+      "passed": true,
+      "points_contributed": 1
+    }
+  ],
+  "inputs": [
+    "C:\\Users\\scott\\Documents\\GitHub\\truthcore\\examples\\replay_bundle\\inputs"
+  ],
+  "mode": "pr",
+  "profile": "ui",
+  "reasoning": {
+    "no_ship_reasons": [
+      "1 high severity issue(s) found (max allowed: 0)",
+      "Total points (60) exceed threshold (100)"
+    ],
+    "ship_reasons": []
+  },
+  "summary": {
+    "blockers": 0,
+    "highs": 1,
+    "lows": 1,
+    "mediums": 1,
+    "total_findings": 3,
+    "total_points": 60
+  },
+  "thresholds": {
+    "category_limits": {
+      "build": 50,
+      "security": 100
+    },
+    "category_weights": {
+      "build": 1.5,
+      "security": 2.0,
+      "ui": 1.0
+    },
+    "max_blockers": 0,
+    "max_highs": 0,
+    "max_highs_with_override": 3,
+    "max_total_points": 100,
+    "mode": "pr",
+    "severity_weights": {
+      "BLOCKER": Infinity,
+      "HIGH": 50.0,
+      "INFO": 0.0,
+      "LOW": 1.0,
+      "MEDIUM": 10.0
+    }
+  },
+  "timestamp": "2026-02-01T02:22:24Z",
+  "top_findings": [
+    {
+      "category": "ui",
+      "finding_id": "UI_001",
+      "location": "src/components/Button.tsx:45",
+      "message": "Button not clickable at coordinates (100, 200)",
+      "points": 50,
+      "rule_id": "UI_CLICKABLE",
+      "severity": "HIGH",
+      "source_engine": "ui_geometry",
+      "source_file": null,
+      "tool": "ui_geometry",
+      "weight": 50.0
+    }
+  ],
+  "verdict": "NO_SHIP",
+  "version": "2.0"
+}
