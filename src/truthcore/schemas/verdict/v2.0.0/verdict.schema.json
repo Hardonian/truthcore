@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "schemas/verdict/v2.0.0/verdict.schema.json",
+  "title": "Truth Core Verdict v2",
+  "description": "Aggregated judgment from multiple truth-core engines (v2)",
+  "type": "object",
+  "required": ["_contract", "verdict", "value", "confidence", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "_contract": {
+      "type": "object",
+      "required": ["artifact_type", "contract_version", "truthcore_version", "created_at", "schema"],
+      "properties": {
+        "artifact_type": {
+          "type": "string",
+          "const": "verdict"
+        },
+        "contract_version": {
+          "type": "string",
+          "const": "2.0.0"
+        },
+        "truthcore_version": {
+          "type": "string"
+        },
+        "engine_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "WARN", "UNKNOWN"]
+    },
+    "value": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall score value (renamed from 'score' in v1)"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in the verdict (0-1, new in v2)"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/item"
+      },
+      "description": "Verdict items (renamed from 'findings' in v1)"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "References to supporting evidence (optional)"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "engine_outputs": {
+      "type": "object"
+    }
+  },
+  "definitions": {
+    "item": {
+      "type": "object",
+      "required": ["id", "severity", "message"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["BLOCKER", "HIGH", "MEDIUM", "LOW", "INFO"]
+        },
+        "message": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

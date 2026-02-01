@@ -225,9 +225,9 @@ def validate_artifact_or_raise(
     Raises:
         ValidationError: If validation fails
     """
-    errors = validate_artifact(artifact, artifact_type, version, strict)
-    if errors:
-        raise ValidationError(f"Validation failed with {len(errors)} errors", errors)
+    val_errors: list[str] = validate_artifact(artifact, artifact_type, version, strict)
+    if val_errors:
+        raise ValidationError(f"Validation failed with {len(val_errors)} errors", val_errors)
 
 
 def is_valid(
