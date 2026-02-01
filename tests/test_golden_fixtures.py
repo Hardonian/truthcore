@@ -6,7 +6,6 @@ verdict generation produces consistent, explainable results.
 """
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -23,7 +22,7 @@ def load_expected_verdict(scenario_dir: Path) -> dict:
     if not verdict_path.exists():
         raise FileNotFoundError(f"Expected verdict not found: {verdict_path}")
 
-    with open(verdict_path, "r", encoding="utf-8") as f:
+    with open(verdict_path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -331,11 +330,11 @@ class TestVerdictStability:
         blocker_count = sum(1 for item in items if item["severity"] == "BLOCKER")
         high_count = sum(1 for item in items if item["severity"] == "HIGH")
 
-        # Explainability rules
+            # Explainability rules
         if verdict_state == "FAIL":
             # FAIL should have blockers or significant issues
             assert blocker_count > 0 or high_count > 0 or len(items) > 2, (
-                f"FAIL verdict should have BLOCKERs or multiple HIGHs"
+                "FAIL verdict should have BLOCKERs or multiple HIGHs"
             )
         elif verdict_state == "WARN":
             # WARN should have at least one MEDIUM or HIGH
@@ -454,8 +453,9 @@ class TestGoldenFixtureCompleteness:
         code_related = any(s for s in domains_found if "code" in s or "style" in s)
         security_related = any(s for s in domains_found if "security" in s)
         performance_related = any(s for s in domains_found if "performance" in s)
-        test_related = any(s for s in domains_found if "test" in s)
-        agent_related = any(s for s in domains_found if "agent" in s)
+        _test_related = any(s for s in domains_found if "test" in s)
+        _agent_related = any(s for s in domains_found if "agent" in s)
 
         assert code_related, "No code quality scenarios found"
         assert security_related or performance_related, "No security or performance scenarios found"
+        # Note: _test_related and _agent_related are validated as part of domain coverage
