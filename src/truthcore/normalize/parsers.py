@@ -409,7 +409,7 @@ class PlaywrightJSONParser(BaseLogParser):
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse Playwright JSON report."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         try:
             data = json.loads(content)
@@ -423,9 +423,9 @@ class PlaywrightJSONParser(BaseLogParser):
 
         return findings
 
-    def _parse_suite(self, suite: dict, path: str = "") -> list[ParsedFinding]:
+    def _parse_suite(self, suite: dict[str, Any], path: str = "") -> list[ParsedFinding]:
         """Recursively parse test suite."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         suite_title = suite.get("title", "")
         current_path = f"{path}/{suite_title}" if path else suite_title
@@ -440,9 +440,9 @@ class PlaywrightJSONParser(BaseLogParser):
 
         return findings
 
-    def _parse_spec(self, spec: dict, path: str) -> list[ParsedFinding]:
+    def _parse_spec(self, spec: dict[str, Any], path: str) -> list[ParsedFinding]:
         """Parse a test spec."""
-        findings = []
+        findings: list[ParsedFinding] = []
 
         spec_title = spec.get("title", "")
         tests = spec.get("tests", [])
