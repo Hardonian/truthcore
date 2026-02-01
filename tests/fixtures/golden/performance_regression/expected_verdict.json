@@ -1,0 +1,60 @@
+{
+  "_contract": {
+    "artifact_type": "verdict",
+    "contract_version": "2.0.0",
+    "truthcore_version": "0.2.0",
+    "engine_versions": {
+      "readiness": "1.0.0",
+      "invariants": "1.0.0"
+    },
+    "created_at": "2026-01-31T12:00:00Z",
+    "schema": "schemas/verdict/v2.0.0/verdict.schema.json"
+  },
+  "verdict": "WARN",
+  "value": 72,
+  "confidence": 0.88,
+  "items": [
+    {
+      "id": "perf-001",
+      "severity": "HIGH",
+      "message": "O(n²) algorithm detected in hot path - consider optimization",
+      "category": "performance",
+      "engine": "invariants",
+      "source": "src/processor.py:120",
+      "confidence": 0.91
+    },
+    {
+      "id": "perf-002",
+      "severity": "MEDIUM",
+      "message": "Database query inside loop - consider batching",
+      "category": "performance",
+      "engine": "readiness",
+      "source": "src/service.py:45",
+      "confidence": 0.85
+    },
+    {
+      "id": "perf-003",
+      "severity": "MEDIUM",
+      "message": "Memory allocation in tight loop detected",
+      "category": "performance",
+      "engine": "invariants",
+      "source": "src/renderer.py:78",
+      "confidence": 0.82
+    },
+    {
+      "id": "perf-004",
+      "severity": "LOW",
+      "message": "Unnecessary string concatenation in loop",
+      "category": "performance",
+      "engine": "readiness",
+      "confidence": 0.75
+    }
+  ],
+  "evidence_refs": ["inputs/performance_regression/*.py"],
+  "metadata": {
+    "scenario": "performance_regression",
+    "description": "Code with performance issues but no security blockers",
+    "high_severity": 1,
+    "medium_severity": 2
+  }
+}

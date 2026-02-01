@@ -1,0 +1,187 @@
+name: "Truth Core Verification"
+description: "Run truth-core verification with configurable engines and artifact handling"
+author: "Truth Core Contributors"
+
+inputs:
+  profile:
+    description: "Verification profile to use (readylayer, settler, aias, keys, custom)"
+    required: false
+    default: "readylayer"
+  config:
+    description: "Path to truth-core config file (optional, uses profile default if not set)"
+    required: false
+    default: ""
+  inputs-path:
+    description: "Path to inputs directory or files to verify"
+    required: true
+  output-path:
+    description: "Path to write verdict output"
+    required: false
+    default: "truthcore-verdict.json"
+  upload-artifacts:
+    description: "Whether to upload artifacts (true/false)"
+    required: false
+    default: "true"
+  sign-bundle:
+    description: "Whether to sign the evidence bundle (requires signing keys)"
+    required: false
+    default: "false"
+  signing-key:
+    description: "Path to signing key (required if sign-bundle is true)"
+    required: false
+    default: ""
+  truthctl-version:
+    description: "Version of truth-core to install (default: latest)"
+    required: false
+    default: "latest"
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.11"
+
+outputs:
+  verdict:
+    description: "Overall verdict (PASS, FAIL, WARN, UNKNOWN)"
+    value: ${{ steps.run-verification.outputs.verdict }}
+  verdict-file:
+    description: "Path to the generated verdict file"
+    value: ${{ steps.run-verification.outputs.verdict-file }}
+  score:
+    description: "Overall score (0-100)"
+    value: ${{ steps.run-verification.outputs.score }}
+  findings-count:
+    description: "Number of findings"
+    value: ${{ steps.run-verification.outputs.findings-count }}
+  artifact-id:
+    description: "Artifact upload ID (if upload-artifacts is true)"
+    value: ${{ steps.upload.outputs.artifact-id }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Cache truth-core
+      uses: actions/cache@v4
+      id: cache-truthcore
+      with:
+        path: ~/.local/bin/truthctl
+        key: truthcore-${{ inputs.truthctl-version }}-${{ runner.os }}
+
+    - name: Install truth-core
+      if: steps.cache-truthcore.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        if [ "${{ inputs.truthctl-version }}" = "latest" ]; then
+          pip install truth-core
+        else
+          pip install truth-core==${{ inputs.truthctl-version }}
+        fi
+
+    - name: Verify Installation
+      shell: bash
+      run: |
+        truthctl --version
+
+    - name: Determine Config
+      id: config
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.config }}" ]; then
+          echo "config_path=${{ inputs.config }}" >> $GITHUB_OUTPUT
+        else
+          # Use default config based on profile
+          PROFILE="${{ inputs.profile }}"
+          CONFIG_FILE="${{ github.action_path }}/configs/${PROFILE}.yaml"
+          if [ -f "$CONFIG_FILE" ]; then
+            echo "config_path=$CONFIG_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "No default config for profile: $PROFILE"
+            echo "config_path=" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Run Verification
+      id: run-verification
+      shell: bash
+      run: |
+        CONFIG_ARG=""
+        if [ -n "${{ steps.config.outputs.config_path }}" ]; then
+          CONFIG_ARG="--config ${{ steps.config.outputs.config_path }}"
+        fi
+
+        # Run judge command (readiness check)
+        if truthctl judge --help >/dev/null 2>&1; then
+          truthctl judge \
+            $CONFIG_ARG \
+            --output ${{ inputs.output-path }} \
+            ${{ inputs.inputs-path }}
+        else
+          # Fallback: run policy scan
+          truthctl policy-run \
+            --output ${{ inputs.output-path }} \
+            ${{ inputs.inputs-path }}
+        fi
+
+        # Extract verdict data
+        if [ -f "${{ inputs.output-path }}" ]; then
+          VERDICT=$(cat ${{ inputs.output-path }} | python3 -c "import sys, json; print(json.load(sys.stdin).get('verdict', 'UNKNOWN'))")
+          SCORE=$(cat ${{ inputs.output-path }} | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('value', d.get('score', 0)))")
+          FINDINGS=$(cat ${{ inputs.output-path }} | python3 -c "import sys, json; d=json.load(sys.stdin); items=d.get('items', d.get('findings', [])); print(len(items))")
+
+          echo "verdict=$VERDICT" >> $GITHUB_OUTPUT
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          echo "findings-count=$FINDINGS" >> $GITHUB_OUTPUT
+          echo "verdict-file=${{ inputs.output-path }}" >> $GITHUB_OUTPUT
+
+          # Set job output
+          echo "## Truth Core Verification Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Verdict | $VERDICT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Score | $SCORE/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Findings | $FINDINGS |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "verdict=UNKNOWN" >> $GITHUB_OUTPUT
+          echo "score=0" >> $GITHUB_OUTPUT
+          echo "findings-count=0" >> $GITHUB_OUTPUT
+          echo "verdict-file=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Export Bundle (Optional)
+      if: inputs.sign-bundle == 'true' && inputs.signing-key != ''
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.output-path }}" ]; then
+          truthctl bundle export \
+            --input-dir ${{ inputs.inputs-path }} \
+            --output-dir truthcore-bundle \
+            --sign ${{ inputs.signing-key }}
+        fi
+
+    - name: Upload Artifacts
+      if: inputs.upload-artifacts == 'true' && success()
+      id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: truthcore-verification-${{ github.run_id }}
+        path: |
+          ${{ inputs.output-path }}
+          truthcore-bundle/
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Fail on BLOCKER
+      if: steps.run-verification.outputs.verdict == 'FAIL'
+      shell: bash
+      run: |
+        echo "Verification failed with verdict: ${{ steps.run-verification.outputs.verdict }}"
+        exit 1
+
+branding:
+  icon: "shield"
+  color: "blue"

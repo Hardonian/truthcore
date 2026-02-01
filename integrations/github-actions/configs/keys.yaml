@@ -1,0 +1,58 @@
+# Keys Profile Configuration
+# For: Security key and credential verification
+# Focus: Key validation, rotation status, exposure detection, policy compliance
+
+engines:
+  policy:
+    enabled: true
+    packs:
+      - "security"
+      - "privacy"
+    checks:
+      - name: "key_validation"
+        weight: 0.3
+      - name: "rotation_status"
+        weight: 0.25
+      - name: "exposure_detection"
+        weight: 0.25
+      - name: "policy_compliance"
+        weight: 0.2
+
+  invariants:
+    enabled: true
+    checks:
+      - name: "key_format"
+        weight: 0.5
+      - name: "entropy_check"
+        weight: 0.5
+
+thresholds:
+  pass: 98
+  warn: 90
+  fail: 75
+
+severities:
+  blocker:
+    - "exposed_key"
+    - "invalid_key_format"
+    - "policy_violation"
+  high:
+    - "rotation_overdue"
+    - "weak_entropy"
+    - "compliance_gap"
+  medium:
+    - "rotation_soon"
+    - "format_warning"
+  low:
+    - "documentation_missing"
+  info:
+    - "key_metric"
+
+metadata:
+  profile: "keys"
+  description: "Security key and credential verification"
+  tags:
+    - "security"
+    - "keys"
+    - "credentials"
+    - "compliance"

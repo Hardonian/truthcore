@@ -1,0 +1,51 @@
+{
+  "_contract": {
+    "artifact_type": "verdict",
+    "contract_version": "2.0.0",
+    "truthcore_version": "0.2.0",
+    "engine_versions": {
+      "agent_trace": "1.0.0",
+      "intelligence": "1.0.0"
+    },
+    "created_at": "2026-01-31T12:00:00Z",
+    "schema": "schemas/verdict/v2.0.0/verdict.schema.json"
+  },
+  "verdict": "PASS",
+  "value": 94,
+  "confidence": 0.96,
+  "items": [
+    {
+      "id": "agent-001",
+      "severity": "INFO",
+      "message": "Agent completed task within expected bounds",
+      "category": "success",
+      "engine": "agent_trace",
+      "confidence": 0.95
+    },
+    {
+      "id": "agent-002",
+      "severity": "INFO",
+      "message": "All FSM transitions validated successfully",
+      "category": "fsm",
+      "engine": "agent_trace",
+      "confidence": 0.98
+    },
+    {
+      "id": "agent-003",
+      "severity": "LOW",
+      "message": "Consider reducing tool call frequency for efficiency",
+      "category": "optimization",
+      "engine": "intelligence",
+      "confidence": 0.75
+    }
+  ],
+  "evidence_refs": ["inputs/agent_trace_success/*.json"],
+  "metadata": {
+    "scenario": "agent_trace_success",
+    "description": "Valid AI agent trace with proper FSM compliance",
+    "trace_id": "trace-2026-01-31-002",
+    "agent_type": "coding_assistant",
+    "turns": 8,
+    "task_completed": true
+  }
+}

@@ -1,0 +1,44 @@
+# ReadyLayer Profile Configuration
+# For: Readiness verification in PR and CI workflows
+# Focus: Code quality, test coverage, security basics
+
+engines:
+  readiness:
+    enabled: true
+    checks:
+      - name: "code_quality"
+        weight: 0.3
+      - name: "test_coverage"
+        weight: 0.25
+      - name: "security_basics"
+        weight: 0.25
+      - name: "documentation"
+        weight: 0.2
+
+thresholds:
+  pass: 90
+  warn: 75
+  fail: 50
+
+severities:
+  blocker:
+    - "security_vulnerability"
+    - "test_failure"
+  high:
+    - "coverage_drop"
+    - "lint_error"
+  medium:
+    - "style_issue"
+    - "doc_missing"
+  low:
+    - "formatting"
+  info:
+    - "suggestion"
+
+metadata:
+  profile: "readylayer"
+  description: "Standard readiness verification for code changes"
+  tags:
+    - "ci"
+    - "pr"
+    - "quality"

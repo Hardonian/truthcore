@@ -1,0 +1,54 @@
+# Settler Profile Configuration
+# For: Deployment readiness and release verification
+# Focus: Stability, performance, compatibility, rollback safety
+
+engines:
+  readiness:
+    enabled: true
+    checks:
+      - name: "stability"
+        weight: 0.3
+      - name: "performance"
+        weight: 0.25
+      - name: "compatibility"
+        weight: 0.25
+      - name: "rollback_safety"
+        weight: 0.2
+
+  reconciliation:
+    enabled: true
+    checks:
+      - name: "state_consistency"
+        weight: 0.5
+      - name: "dependency_check"
+        weight: 0.5
+
+thresholds:
+  pass: 95
+  warn: 85
+  fail: 70
+
+severities:
+  blocker:
+    - "data_loss_risk"
+    - "rollback_impossible"
+    - "security_exposure"
+  high:
+    - "performance_degradation"
+    - "compatibility_break"
+    - "dependency_conflict"
+  medium:
+    - "warning_threshold"
+    - "monitoring_gap"
+  low:
+    - "minor_inconsistency"
+  info:
+    - "observation"
+
+metadata:
+  profile: "settler"
+  description: "Release and deployment readiness verification"
+  tags:
+    - "release"
+    - "deployment"
+    - "production"
