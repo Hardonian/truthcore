@@ -34,7 +34,70 @@ pip install truth-core[parquet]
 pip install truth-core[dev,parquet]
 ```
 
-## Quick Start
+## Integrate in 3 Minutes
+
+### 1. GitHub Actions (10 lines of YAML)
+
+Add truth-core to your CI workflow:
+
+```yaml
+- name: Truth Core Verification
+  uses: your-org/truth-core/integrations/github-actions@main
+  with:
+    profile: readylayer        # Options: readylayer, settler, aias, keys
+    inputs-path: ./src
+    output-path: verdict.json
+
+- name: Check Results
+  run: |
+    if [ "${{ steps.truthcore.outputs.verdict }}" = "FAIL" ]; then
+      exit 1
+    fi
+```
+
+**Profiles:**
+- `readylayer` - PR/CI quality gates (pass ≥90)
+- `settler` - Release readiness (pass ≥95)
+- `aias` - AI agent trace validation (pass ≥92)
+- `keys` - Security credential verification (pass ≥98)
+
+### 2. TypeScript SDK
+
+Consume truth-core artifacts in your Next.js/TypeScript apps:
+
+```bash
+npm install @truth-core/contract-sdk
+```
+
+```typescript
+import { loadVerdict, topFindings, filterBySeverity } from "@truth-core/contract-sdk";
+
+// Load and validate
+const verdict = loadVerdict(await fetch("/api/verdict").then(r => r.json()));
+
+// Analyze
+const blockers = filterBySeverity(verdict, "BLOCKER");
+const topIssues = topFindings(verdict, 5);
+
+console.log(`${verdict.verdict}: ${verdict.value}/100 with ${blockers.length} blockers`);
+```
+
+### 3. Local CLI Quick Start
+
+```bash
+# Install
+pip install truth-core
+
+# Run verification
+truthctl judge --inputs ./src --profile ui --out ./results
+
+# Check output
+cat ./results/verdict.json | jq '.verdict'
+```
+
+---
+
+## Full Quick Start
 
 ```bash
 # Run readiness check
