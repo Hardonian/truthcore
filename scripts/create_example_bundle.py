@@ -12,8 +12,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from truthcore.replay import BundleExporter
 from truthcore.manifest import RunManifest, normalize_timestamp
+from truthcore.replay import BundleExporter
 
 
 def create_example_bundle():
@@ -22,17 +22,17 @@ def create_example_bundle():
     run_dir = examples_dir / "run_output"
     inputs_dir = examples_dir / "inputs"
     bundle_dir = examples_dir / "bundle"
-    
+
     # Clean and recreate directories
     for d in [examples_dir, run_dir, inputs_dir, bundle_dir]:
         if d.exists():
             import shutil
             shutil.rmtree(d)
         d.mkdir(parents=True, exist_ok=True)
-    
+
     # Create run directory structure
     (run_dir / "subfolder").mkdir(parents=True, exist_ok=True)
-    
+
     # Create mock findings
     findings = {
         "version": "0.2.0",
@@ -69,7 +69,7 @@ def create_example_bundle():
             },
         ],
     }
-    
+
     # Create mock verdict
     verdict = {
         "verdict": "NO_SHIP",
@@ -184,14 +184,14 @@ def create_example_bundle():
             },
         },
     }
-    
+
     # Write output files
     with open(run_dir / "readiness.json", "w") as f:
         json.dump(findings, f, indent=2, sort_keys=True)
-    
+
     with open(run_dir / "verdict.json", "w") as f:
         json.dump(verdict, f, indent=2, sort_keys=True)
-    
+
     with open(run_dir / "verdict.md", "w") as f:
         f.write("""# Verdict Report
 
@@ -220,7 +220,7 @@ def create_example_bundle():
 - 1 high severity issue(s) found (max allowed: 0)
 - Total points (60) exceed threshold (100)
 """)
-    
+
     # Create input files
     with open(inputs_dir / "ui_facts.json", "w") as f:
         json.dump({
@@ -233,14 +233,14 @@ def create_example_bundle():
                 }
             ]
         }, f, indent=2)
-    
+
     with open(inputs_dir / "build_report.json", "w") as f:
         json.dump({
             "errors": 0,
             "warnings": 1,
             "duration_ms": 5000,
         }, f, indent=2)
-    
+
     # Create run manifest
     manifest = RunManifest.create(
         command="judge",
@@ -250,7 +250,7 @@ def create_example_bundle():
     )
     manifest.duration_ms = 1500
     manifest.write(run_dir)
-    
+
     # Export bundle
     exporter = BundleExporter()
     bundle = exporter.export(
@@ -260,13 +260,13 @@ def create_example_bundle():
         profile="ui",
         mode="pr",
     )
-    
+
     print(f"Example bundle created at: {bundle_dir}")
-    print(f"\nBundle contents:")
+    print("\nBundle contents:")
     print(f"  - Run ID: {bundle.manifest.run_id}")
     print(f"  - Inputs: {len(bundle.get_input_files())} files")
     print(f"  - Outputs: {len(bundle.get_output_files())} files")
-    
+
     # Create example changes file
     changes_file = examples_dir / "changes_example.yaml"
     with open(changes_file, "w") as f:
@@ -304,9 +304,9 @@ suppressions:
     reason: "Known issue, will be fixed in next sprint"
     expiry: "2026-02-15T00:00:00Z"
 """)
-    
+
     print(f"\nExample changes file: {changes_file}")
-    
+
     # Create README
     readme = examples_dir / "README.md"
     with open(readme, "w") as f:
@@ -370,12 +370,15 @@ With the example changes:
 
 The simulated verdict should show improved results.
 """)
-    
+
     print(f"README: {readme}")
     print("\nExample bundle fixture created successfully!")
-    print(f"\nNext steps:")
+    print("\nNext steps:")
     print(f"  1. Replay: truthctl replay --bundle {bundle_dir} --out /tmp/replay")
-    print(f"  2. Simulate: truthctl simulate --bundle {bundle_dir} --out /tmp/sim --changes {changes_file}")
+    print(
+        f"  2. Simulate: truthctl simulate --bundle {bundle_dir} --out /tmp/sim "
+        f"--changes {changes_file}"
+    )
 
 
 if __name__ == "__main__":

@@ -47,29 +47,35 @@ def check_schema_changes() -> list[str]:
         for version_dir in artifact_dir.iterdir():
             if not version_dir.is_dir():
                 continue
-            
+
             version_str = version_dir.name.lstrip("v")
             try:
                 major, minor, patch = map(int, version_str.split("."))
                 versions.append((major, minor, patch, version_str))
             except ValueError:
-                errors.append(f"Invalid version format: {version_dir.name} in {artifact_dir.name}")
+                errors.append(
+                    f"Invalid version format: {version_dir.name} in {artifact_dir.name}"
+                )
 
         # Check version ordering
         versions.sort()
-        
+
         for i in range(1, len(versions)):
             prev = versions[i - 1]
             curr = versions[i]
-            
+
             # Check if versions follow semver
             if curr[0] < prev[0]:
                 errors.append(f"Version {curr[3]} < {prev[3]} in {artifact_dir.name}")
             elif curr[0] == prev[0] and curr[1] < prev[1]:
-                errors.append(f"Minor version decreased: {curr[3]} < {prev[3]} in {artifact_dir.name}")
+                errors.append(
+                    f"Minor version decreased: {curr[3]} < {prev[3]} in {artifact_dir.name}"
+                )
             elif curr[0] == prev[0] and curr[1] == prev[1] and curr[2] < prev[2]:
-                errors.append(f"Patch version decreased: {curr[3]} < {prev[3]} in {artifact_dir.name}")
-    
+                errors.append(
+                    f"Patch version decreased: {curr[3]} < {prev[3]} in {artifact_dir.name}"
+                )
+
     return errors
 
 
@@ -83,52 +89,50 @@ def check_migration_coverage() -> list[str]:
     # Import migrations to check coverage
     try:
         from truthcore.migrations.engine import list_available_migrations
-        
+
         schemas_dir = Path("src/truthcore/schemas")
         if not schemas_dir.exists():
             return errors
-        
+
         for artifact_dir in schemas_dir.iterdir():
             if not artifact_dir.is_dir():
                 continue
 
             artifact_type = artifact_dir.name
             migrations = list_available_migrations(artifact_type)
-            
+
             # Get all versions
             versions = set()
             for version_dir in artifact_dir.iterdir():
                 if version_dir.is_dir():
                     version_str = version_dir.name.lstrip("v")
                     versions.add(version_str)
-            
+
             # Check that migrations exist between consecutive versions
-            sorted_versions = sorted(versions, key=lambda v: tuple(map(int, v.split("."))))
-            
             migration_pairs = set()
             for m in migrations:
                 migration_pairs.add((m["from"], m["to"]))
-            
+
             # For now, just warn if there are gaps
             # Full validation would require checking all possible paths
-            
-        except ImportError:
-            # truthcore not installed, skip this check
-            pass
+
+    except ImportError:
+        # truthcore not installed, skip this check
+        pass
 
     return errors
 
 
 def main() -> int:
     """Run all contract version checks.
-    
+
     Returns exit code.
     """
     print("Checking contract versions...")
     print("=" * 60)
-    
+
     all_errors = []
-    
+
     # Check schema changes
     print("\n1. Checking schema versions...")
     schema_errors = check_schema_changes()
@@ -138,7 +142,7 @@ def main() -> int:
             print(f"  ERROR: {error}")
     else:
         print("  OK")
-    
+
     # Check migration coverage
     print("\n2. Checking migration coverage...")
     migration_errors = check_migration_coverage()
@@ -148,7 +152,7 @@ def main() -> int:
             print(f"  ERROR: {error}")
     else:
         print("  OK")
-    
+
     # Summary
     print("\n" + "=" * 60)
     if all_errors:
