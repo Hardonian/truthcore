@@ -1,6 +1,6 @@
 # Truth Core
 
-[![CI](https://github.com/Hardonian/truthcore/workflows/CI/badge.svg)](https://github.com/Hardonian/truthcore/actions)
+(https://github.com/Hardonian/truthcore/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
