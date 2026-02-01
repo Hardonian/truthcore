@@ -27,14 +27,14 @@ class AnomalyScore:
 
 class DeterministicAnomalyScorer:
     """Base class for deterministic anomaly scoring.
-    
+
     All scoring methods must be deterministic - same inputs always
     produce same outputs. No random sampling or probabilistic methods.
     """
 
     def __init__(self, history: list[dict[str, Any]]) -> None:
         """Initialize with historical data.
-        
+
         Args:
             history: List of historical reports, sorted newest first
         """
@@ -46,11 +46,11 @@ class DeterministicAnomalyScorer:
         threshold: float = 0.2,
     ) -> dict[str, Any]:
         """Compute regression density - ratio of failing to total runs.
-        
+
         Args:
             window_size: Number of recent runs to consider
             threshold: Failure ratio threshold for alert
-        
+
         Returns:
             Regression density score and details
         """
@@ -74,12 +74,12 @@ class DeterministicAnomalyScorer:
         min_transitions: int = 3,
     ) -> dict[str, Any]:
         """Compute flake indicator based on pass/fail transitions.
-        
+
         High transition count indicates flaky behavior.
-        
+
         Args:
             min_transitions: Minimum transitions to consider flaky
-        
+
         Returns:
             Flake indicator and transition count
         """
@@ -108,11 +108,11 @@ class DeterministicAnomalyScorer:
         window_size: int = 5,
     ) -> dict[str, Any]:
         """Compute trend delta for a metric.
-        
+
         Args:
             metric_path: Dot-separated path to metric (e.g., "summary.total")
             window_size: Number of recent runs to compare
-        
+
         Returns:
             Trend analysis
         """
@@ -157,13 +157,13 @@ class DeterministicAnomalyScorer:
         threshold_std: float = 2.0,
     ) -> dict[str, Any]:
         """Compute drift score using statistical distance.
-        
+
         Detects when recent values deviate significantly from historical.
-        
+
         Args:
             metric_path: Path to metric
             threshold_std: Standard deviation threshold for drift alert
-        
+
         Returns:
             Drift analysis
         """

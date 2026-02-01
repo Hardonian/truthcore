@@ -1,6 +1,6 @@
-import type { RunData, DashboardState, Finding, Severity, VerdictState } from './types';
+import type { RunData, Severity } from './types';
 import { RunLoader, StateManager, FilterManager } from './utils/data';
-import { generateBarChart, generatePieChart, generateTrendChart } from './utils/charts';
+import { generateBarChart, generatePieChart } from './utils/charts';
 
 // Initialize managers
 const runLoader = new RunLoader();
@@ -8,7 +8,6 @@ const stateManager = new StateManager();
 const filterManager = new FilterManager();
 
 // DOM elements
-const app = document.getElementById('app')!;
 const runsView = document.getElementById('runs-view')!;
 const runDetailView = document.getElementById('run-detail-view')!;
 const settingsView = document.getElementById('settings-view')!;
@@ -219,7 +218,7 @@ function renderRunsView(): void {
   renderStats(runs);
   
   // Render runs list
-  runsList.innerHTML = runs.map(run => renderRunItem(run)).join('');
+  runsList.innerHTML = runs.map((run: RunData) => renderRunItem(run)).join('');
   
   // Add click handlers
   runsList.querySelectorAll('.run-item').forEach((item, index) => {
@@ -294,7 +293,7 @@ function renderRunItem(run: RunData): string {
 
 function renderRunDetail(runId: string): void {
   const { runs } = stateManager.getState();
-  const run = runs.find(r => r.run_id === runId);
+  const run = runs.find((r: RunData) => r.run_id === runId);
   if (!run) return;
   
   // Update header
@@ -337,7 +336,7 @@ function renderRunDetail(runId: string): void {
 
 function renderTab(tab: string): void {
   const { runs, selectedRunId } = stateManager.getState();
-  const run = runs.find(r => r.run_id === selectedRunId);
+  const run = runs.find((r: RunData) => r.run_id === selectedRunId);
   if (!run) return;
   
   switch (tab) {

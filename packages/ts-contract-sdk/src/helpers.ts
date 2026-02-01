@@ -14,7 +14,7 @@ import type { Verdict, Finding, SeverityLevel } from "./types";
  * console.log(verdict.verdict); // "PASS"
  * ```
  */
-export function loadVerdict(input: string | unknown): Verdict {
+export function loadVerdict(input: unknown): Verdict {
   let data: unknown;
 
   if (typeof input === "string") {
@@ -40,7 +40,7 @@ export function loadVerdict(input: string | unknown): Verdict {
 
   const contract = obj._contract as Record<string, unknown>;
   if (contract.artifact_type !== "verdict") {
-    throw new Error(`Invalid artifact_type: expected "verdict", got "${contract.artifact_type}"`);
+    throw new Error(`Invalid artifact_type: expected "verdict", got "${String(contract.artifact_type)}"`);
   }
 
   // Validate verdict field
@@ -222,9 +222,13 @@ export function getEngines(verdict: Verdict): string[] {
 function getItems(verdict: Verdict): Finding[] {
   // Handle both v1 (findings) and v2 (items)
   if ("items" in verdict && Array.isArray(verdict.items)) {
+    // Type assertion needed as items is unknown[] in VerdictV2
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     return verdict.items as Finding[];
   }
   if ("findings" in verdict && Array.isArray(verdict.findings)) {
+    // Type assertion needed as findings is unknown[] in VerdictV1
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     return verdict.findings as Finding[];
   }
   return [];

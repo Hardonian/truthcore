@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import functools
+import hashlib
 import json
+import logging
+import os
+import secrets
 import tempfile
 import time
 import traceback
@@ -10,9 +15,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -40,6 +46,12 @@ from truthcore.replay import (
 from truthcore.security import SecurityLimits
 from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
 from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Security configuration
+SECURITY_BEARER = HTTPBearer(auto_error=False)
 
 
 class JudgeRequest(BaseModel):
@@ -92,14 +104,150 @@ class JobStatus(BaseModel):
 # In-memory job storage (in production, use Redis or similar)
 jobs: dict[str, JobStatus] = {}
 
+# Rate limiting storage: {client_id: [(timestamp, count), ...]}
+rate_limit_storage: dict[str, list[tuple[float, int]]] = {}
+
+
+def verify_api_key(
+    credentials: HTTPAuthorizationCredentials | None = Depends(SECURITY_BEARER),
+    api_key: str | None = None,
+) -> bool:
+    """Verify API key authentication.
+
+    Args:
+        credentials: Bearer token from Authorization header
+        api_key: Optional API key from query parameter
+
+    Returns:
+        True if authentication successful or disabled
+
+    Raises:
+        HTTPException: If authentication fails and is required
+    """
+    # Get expected API key from environment
+    expected_key = os.environ.get("TRUTHCORE_API_KEY")
+
+    # If no API key configured, authentication is disabled (with warning)
+    if not expected_key:
+        return True
+
+    # Check for API key in header or query param
+    provided_key = None
+    if credentials and credentials.credentials:
+        provided_key = credentials.credentials
+    elif api_key:
+        provided_key = api_key
+
+    if not provided_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required. Provide via Authorization: Bearer <key> header or ?api_key= query parameter",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(provided_key, expected_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return True
+
+
+def check_rate_limit(
+    request: Request,
+    max_requests: int = 100,
+    window_seconds: int = 60,
+) -> bool:
+    """Check rate limit for a client.
+
+    Args:
+        request: FastAPI request object
+        max_requests: Maximum requests per window
+        window_seconds: Time window in seconds
+
+    Returns:
+        True if within rate limit
+
+    Raises:
+        HTTPException: If rate limit exceeded
+    """
+    # Get client identifier (IP + User-Agent hash)
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    client_id = hashlib.sha256(f"{client_ip}:{user_agent}".encode()).hexdigest()[:16]
+
+    now = time.time()
+    window_start = now - window_seconds
+
+    # Get or initialize client's request history
+    client_history = rate_limit_storage.get(client_id, [])
+
+    # Filter to only requests within the window
+    client_history = [(ts, cnt) for ts, cnt in client_history if ts > window_start]
+
+    # Count total requests in window
+    total_requests = sum(cnt for _, cnt in client_history)
+
+    if total_requests >= max_requests:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded: {max_requests} requests per {window_seconds} seconds",
+            headers={"Retry-After": str(window_seconds)},
+        )
+
+    # Record this request
+    client_history.append((now, 1))
+    rate_limit_storage[client_id] = client_history
+
+    return True
+
+
+def get_cors_origins() -> list[str]:
+    """Get allowed CORS origins from environment or default.
+
+    Returns:
+        List of allowed origins. Empty list means no CORS (same-origin only).
+    """
+    origins_env = os.environ.get("TRUTHCORE_CORS_ORIGINS", "")
+    if origins_env:
+        return [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+    return []  # Default: no cross-origin allowed
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan."""
     # Startup
+    logger.info("Truth Core server starting up")
+
+    # Check security configuration
+    api_key = os.environ.get("TRUTHCORE_API_KEY")
+    cors_origins = get_cors_origins()
+
+    if not api_key:
+        logger.warning(
+            "TRUTHCORE_API_KEY not set - API authentication is DISABLED. "
+            "This is INSECURE for production deployments."
+        )
+    else:
+        logger.info("API authentication enabled")
+
+    if not cors_origins:
+        logger.warning(
+            "TRUTHCORE_CORS_ORIGINS not set - CORS disabled (same-origin only). "
+            "Frontend will need to be served from same origin."
+        )
+    else:
+        logger.info(f"CORS enabled for origins: {cors_origins}")
+
     yield
     # Shutdown
     jobs.clear()
+    rate_limit_storage.clear()
+    logger.info("Truth Core server shutting down")
 
 
 def create_app(
@@ -112,7 +260,7 @@ def create_app(
     Args:
         cache_dir: Optional cache directory path
         static_dir: Optional static files directory
-        debug: Enable debug mode
+        debug: Enable debug mode (shows stack traces in errors)
 
     Returns:
         Configured FastAPI application
@@ -124,17 +272,50 @@ def create_app(
         lifespan=lifespan,
     )
 
-    # Add CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # Add CORS middleware (configured via environment)
+    cors_origins = get_cors_origins()
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=False,  # Never allow credentials with CORS
+            allow_methods=["GET", "POST"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
 
     # Initialize cache
     cache = ContentAddressedCache(cache_dir) if cache_dir else None
+
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(request: Request, exc: Exception):
+        """Handle uncaught exceptions without exposing internals."""
+        error_id = f"err_{int(time.time() * 1000)}_{secrets.token_hex(4)}"
+
+        # Log full error with traceback (server-side only)
+        logger.error(
+            f"Unhandled exception {error_id}: {exc}",
+            exc_info=True if debug else False,
+        )
+
+        if debug:
+            # In debug mode, return detailed error
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "error_id": error_id,
+                    "detail": str(exc),
+                    "traceback": traceback.format_exc(),
+                },
+            )
+        else:
+            # Production: generic error message
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "error_id": error_id,
+                    "detail": "Internal server error. Please try again or contact support.",
+                },
+            )
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
@@ -155,19 +336,27 @@ def create_app(
                 .version {{ color: #666; }}
                 .endpoints {{ background: #f5f5f5; padding: 20px; border-radius: 8px; }}
                 code {{ background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }}
+                .security {{ background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; }}
             </style>
         </head>
         <body>
             <h1>Truth Core Server</h1>
             <p class="version">Version: {__version__}</p>
+
+            <div class="security">
+                <strong>Security Notice:</strong>
+                {'<p style="color: #dc3545;">⚠️ API authentication is DISABLED. Set TRUTHCORE_API_KEY for production.</p>' if not os.environ.get("TRUTHCORE_API_KEY") else '<p style="color: #28a745;">✅ API authentication is enabled.</p>'}
+                {'<p>CORS is disabled (same-origin only). Set TRUTHCORE_CORS_ORIGINS to enable cross-origin requests.</p>' if not get_cors_origins() else f'<p>CORS enabled for: {", ".join(get_cors_origins())}</p>'}
+            </div>
+
             <div class="endpoints">
                 <h2>API Endpoints</h2>
                 <ul>
                     <li><code>GET /health</code> - Health check</li>
-                    <li><code>POST /judge</code> - Run readiness check</li>
-                    <li><code>POST /intel</code> - Run intelligence analysis</li>
-                    <li><code>POST /explain</code> - Explain invariant rules</li>
-                    <li><code>GET /cache/stats</code> - Cache statistics</li>
+                    <li><code>POST /api/v1/judge</code> - Run readiness check</li>
+                    <li><code>POST /api/v1/intel</code> - Run intelligence analysis</li>
+                    <li><code>POST /api/v1/explain</code> - Explain invariant rules</li>
+                    <li><code>GET /api/v1/cache/stats</code> - Cache statistics</li>
                 </ul>
                 <p>Full API docs: <a href="/docs">/docs</a></p>
             </div>
@@ -185,7 +374,11 @@ def create_app(
         )
 
     @app.get("/api/v1/status")
-    async def status():
+    async def status(
+        request: Request,
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=60, window_seconds=60)),
+    ):
         """Get server status and capabilities."""
         return {
             "version": __version__,
@@ -198,18 +391,28 @@ def create_app(
                 "cache-stats",
                 "impact",
             ],
+            "security": {
+                "auth_enabled": bool(os.environ.get("TRUTHCORE_API_KEY")),
+                "cors_origins": get_cors_origins(),
+            },
         }
 
     @app.post("/api/v1/judge")
     async def judge(
-        request: JudgeRequest,
+        request: Request,
+        judge_request: JudgeRequest,
         inputs: UploadFile | None = File(None),
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
     ):
         """Run readiness check.
 
         Args:
-            request: Judge configuration
+            request: FastAPI request
+            judge_request: Judge configuration
             inputs: Optional input file/directory as zip
+            _auth: Authentication check (injected)
+            _rate: Rate limiting check (injected)
 
         Returns:
             Judgment results
@@ -232,6 +435,15 @@ def create_app(
                     inputs_zip = tmp_path / "inputs.zip"
                     with open(inputs_zip, "wb") as f:
                         content = await inputs.read()
+
+                        # Validate file size (100MB max)
+                        max_size = 100 * 1024 * 1024
+                        if len(content) > max_size:
+                            raise HTTPException(
+                                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                detail=f"File too large. Maximum size: {max_size} bytes",
+                            )
+
                         f.write(content)
 
                     inputs_path = tmp_path / "inputs"
@@ -244,12 +456,12 @@ def create_app(
                 manifest = RunManifest.create(
                     command="judge",
                     config={
-                        "profile": request.profile,
-                        "strict": request.strict,
-                        "parallel": request.parallel,
+                        "profile": judge_request.profile,
+                        "strict": judge_request.strict,
+                        "parallel": judge_request.parallel,
                     },
                     input_dir=inputs_path or Path("."),
-                    profile=request.profile,
+                    profile=judge_request.profile,
                 )
 
                 # Check cache
@@ -279,7 +491,7 @@ def create_app(
                 # Create readiness output
                 readiness_data = {
                     "version": __version__,
-                    "profile": request.profile,
+                    "profile": judge_request.profile,
                     "timestamp": normalize_timestamp(),
                     "passed": True,
                     "findings": [],
@@ -289,8 +501,8 @@ def create_app(
                     json.dump(readiness_data, f, indent=2, sort_keys=True)
 
                 # Run policy pack if specified
-                if request.policy_pack:
-                    pack = PolicyPackLoader.load_pack(request.policy_pack)
+                if judge_request.policy_pack:
+                    pack = PolicyPackLoader.load_pack(judge_request.policy_pack)
                     engine = PolicyEngine(inputs_path or Path("."), out_path)
                     policy_result = engine.run_pack(pack)
                     engine.write_outputs(policy_result)
@@ -309,7 +521,7 @@ def create_app(
                 evidence_manifest.write_json(out_path / "evidence.manifest.json")
 
                 # Sign if requested
-                if request.sign:
+                if judge_request.sign:
                     from truthcore.provenance.signing import Signer
 
                     signer = Signer()
@@ -339,21 +551,31 @@ def create_app(
                     "results": results,
                 }
 
+        except HTTPException:
+            raise
         except Exception as e:
-            if debug:
-                traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error in judge endpoint: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error processing request",
+            ) from e
 
     @app.post("/api/v1/intel")
     async def intel(
-        request: IntelRequest,
+        request: Request,
+        intel_request: IntelRequest,
         inputs: UploadFile | None = File(None),
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
     ):
         """Run intelligence analysis.
 
         Args:
-            request: Intel configuration
+            request: FastAPI request
+            intel_request: Intel configuration
             inputs: Optional input file/directory as zip
+            _auth: Authentication check (injected)
+            _rate: Rate limiting check (injected)
 
         Returns:
             Analysis results
@@ -372,6 +594,15 @@ def create_app(
                     inputs_zip = tmp_path / "inputs.zip"
                     with open(inputs_zip, "wb") as f:
                         content = await inputs.read()
+
+                        # Validate file size (100MB max)
+                        max_size = 100 * 1024 * 1024
+                        if len(content) > max_size:
+                            raise HTTPException(
+                                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                detail=f"File too large. Maximum size: {max_size} bytes",
+                            )
+
                         f.write(content)
 
                     inputs_path = tmp_path / "inputs"
@@ -383,18 +614,18 @@ def create_app(
                 inputs_path = inputs_path or Path(".")
 
                 # Create appropriate scorer
-                if request.mode == "readiness":
+                if intel_request.mode == "readiness":
                     scorer = ReadinessAnomalyScorer(inputs_path)
-                elif request.mode == "recon":
+                elif intel_request.mode == "recon":
                     scorer = ReconciliationAnomalyScorer(inputs_path)
-                elif request.mode == "agent":
+                elif intel_request.mode == "agent":
                     scorer = AgentBehaviorScorer(inputs_path)
-                elif request.mode == "knowledge":
+                elif intel_request.mode == "knowledge":
                     scorer = KnowledgeHealthScorer(inputs_path)
                 else:
                     raise HTTPException(
-                        status_code=400,
-                        detail=f"Unknown mode: {request.mode}",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Unknown mode: {intel_request.mode}",
                     )
 
                 # Run analysis
@@ -402,12 +633,12 @@ def create_app(
 
                 # Write scorecard
                 writer = ScorecardWriter(tmp_path)
-                writer.write(scores, mode=request.mode)
+                writer.write(scores, mode=intel_request.mode)
 
                 # Compact if requested
-                if request.compact:
+                if intel_request.compact:
                     compactor = HistoryCompactor(
-                        retention_days=request.retention_days,
+                        retention_days=intel_request.retention_days,
                     )
                     stats = compactor.compact(inputs_path)
                 else:
@@ -416,22 +647,32 @@ def create_app(
                 return {
                     "job_id": job_id,
                     "status": "completed",
-                    "mode": request.mode,
+                    "mode": intel_request.mode,
                     "scores": scores,
                     "compact_stats": stats,
                 }
 
+        except HTTPException:
+            raise
         except Exception as e:
-            if debug:
-                traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error in intel endpoint: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error processing request",
+            ) from e
 
     @app.post("/api/v1/explain")
-    async def explain(request: ExplainRequest):
+    async def explain(
+        explain_request: ExplainRequest,
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=30, window_seconds=60)),
+    ):
         """Explain invariant rule evaluation.
 
         Args:
-            request: Explain configuration with rule and data
+            explain_request: Explain configuration with rule and data
+            _auth: Authentication check (injected)
+            _rate: Rate limiting check (injected)
 
         Returns:
             Explanation of rule evaluation
@@ -440,26 +681,33 @@ def create_app(
             explainer = InvariantExplainer()
 
             # Load rules if provided
-            if request.rules:
-                explainer.load_rules_from_dict(request.rules)
+            if explain_request.rules:
+                explainer.load_rules_from_dict(explain_request.rules)
 
-            explanation = explainer.explain(request.rule, request.data)
+            explanation = explainer.explain(explain_request.rule, explain_request.data)
 
             return {
-                "rule": request.rule,
+                "rule": explain_request.rule,
                 "explanation": explanation,
             }
 
+        except HTTPException:
+            raise
         except Exception as e:
-            if debug:
-                traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error in explain endpoint: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error processing request",
+            ) from e
 
     @app.get("/api/v1/cache/stats")
-    async def cache_stats():
+    async def cache_stats(
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=60, window_seconds=60)),
+    ):
         """Get cache statistics."""
         if not cache:
-            raise HTTPException(status_code=503, detail="Cache not enabled")
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
 
         try:
             stats = cache.get_stats()
@@ -469,35 +717,61 @@ def create_app(
                 "stats": stats,
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error getting cache stats: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error retrieving cache statistics",
+            ) from e
 
     @app.post("/api/v1/cache/clear")
-    async def cache_clear():
+    async def cache_clear(
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=5, window_seconds=60)),
+    ):
         """Clear all cache entries."""
         if not cache:
-            raise HTTPException(status_code=503, detail="Cache not enabled")
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
 
         try:
             cache.clear()
+            logger.info("Cache cleared via API")
             return {"status": "cleared", "timestamp": normalize_timestamp()}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error clearing cache: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error clearing cache",
+            ) from e
 
     @app.post("/api/v1/impact")
     async def impact(
+        request: Request,
         diff: str = Form(...),
         profile: str = Form(default="base"),
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
     ):
         """Run change impact analysis.
 
         Args:
+            request: FastAPI request
             diff: Git diff text
             profile: Analysis profile
+            _auth: Authentication check (injected)
+            _rate: Rate limiting check (injected)
 
         Returns:
             Impact analysis results
         """
         try:
+            # Validate diff size (1MB max to prevent DoS)
+            max_diff_size = 1024 * 1024
+            if len(diff) > max_diff_size:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"Diff too large. Maximum size: {max_diff_size} bytes",
+                )
+
             engine = ChangeImpactEngine()
             plan = engine.analyze(
                 diff_text=diff,
@@ -517,16 +791,24 @@ def create_app(
                 ],
             }
 
+        except HTTPException:
+            raise
         except Exception as e:
-            if debug:
-                traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception(f"Error in impact endpoint: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal error processing impact analysis",
+            ) from e
 
     @app.get("/api/v1/jobs/{job_id}")
-    async def get_job(job_id: str):
+    async def get_job(
+        job_id: str,
+        _auth: bool = Depends(verify_api_key),
+        _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=60, window_seconds=60)),
+    ):
         """Get job status by ID."""
         if job_id not in jobs:
-            raise HTTPException(status_code=404, detail="Job not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
         return jobs[job_id]
 
     # Serve static files if directory provided, or use default GUI

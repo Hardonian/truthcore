@@ -6,15 +6,13 @@ import json
 from typing import TYPE_CHECKING
 
 from truthcore.verdict import (
-    VerdictAggregator,
-    VerdictThresholds,
-    aggregate_verdict,
-)
-from truthcore.verdict.models import (
     Category,
     Mode,
     SeverityLevel,
+    VerdictAggregator,
     VerdictStatus,
+    VerdictThresholds,
+    aggregate_verdict,
 )
 
 if TYPE_CHECKING:

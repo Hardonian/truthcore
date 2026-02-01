@@ -1,4 +1,4 @@
-import type { DashboardState, RunData, FilterState, Severity } from './types';
+import type { DashboardState, RunData, FilterState, Severity } from '../types';
 
 /**
  * Run Loader - handles loading run data from the filesystem
@@ -20,7 +20,9 @@ export class RunLoader {
   async loadFromDirectoryHandle(dirHandle: FileSystemDirectoryHandle): Promise<RunData[]> {
     const runs: RunData[] = [];
 
-    for await (const entry of dirHandle.values()) {
+    // Type assertion needed for File System Access API types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for await (const entry of (dirHandle as unknown as { values(): AsyncIterable<FileSystemHandle> }).values()) {
       if (entry.kind === 'directory') {
         const runData = await this.loadRunEntry(entry as FileSystemDirectoryHandle);
         if (runData) {
@@ -52,7 +54,9 @@ export class RunLoader {
     let intel_scorecard: RunData['intel_scorecard'] | undefined;
 
     try {
-      for await (const entry of dirHandle.values()) {
+      // Type assertion needed for File System Access API types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for await (const entry of (dirHandle as unknown as { values(): AsyncIterable<FileSystemHandle> }).values()) {
         if (entry.kind === 'file') {
           files.push(entry.name);
           const fileHandle = entry as FileSystemFileHandle;
