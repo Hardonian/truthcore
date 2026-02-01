@@ -27,6 +27,7 @@ from truthcore.parquet_store import HistoryCompactor, ParquetStore
 from truthcore.security import safe_load_json, safe_read_text
 from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
 from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
+from truthcore.verdict.cli import register_verdict_commands, generate_verdict_for_judge
 
 
 def handle_error(error: Exception, debug: bool) -> None:
@@ -72,6 +73,10 @@ def cli(ctx: click.Context, cache_dir: Path | None, no_cache: bool, cache_readon
     ctx.obj['cache_dir'] = None if no_cache else cache_dir
     ctx.obj['cache_readonly'] = cache_readonly
     ctx.obj['debug'] = debug
+
+
+# Register verdict commands
+register_verdict_commands(cli)
 
 
 @cli.command()
@@ -296,6 +301,17 @@ def judge(
         # Cache results
         if cache and not ctx.obj.get('cache_readonly'):
             cache.put(cache_key, out, run_manifest.to_dict())
+        
+        # Generate verdict
+        click.echo("Generating verdict...")
+        verdict_path = generate_verdict_for_judge(
+            inputs_dir=inputs or Path("."),
+            output_dir=out,
+            mode="pr",
+            profile=profile,
+        )
+        if verdict_path:
+            click.echo(f"  Verdict: {verdict_path}")
         
         click.echo(f"Results written to {out}")
     except Exception as e:
