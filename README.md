@@ -268,9 +268,11 @@ else:
 ## Documentation
 
 - [Upgrade Notes](UPGRADE_NOTES.md) - Version upgrade guide
+- [Server Mode](docs/server.md) - HTTP server and REST API documentation
 - [Evidence Contract](docs/evidence_contract.md) - Output specifications
 - [Severity Model](docs/severity_model.md) - Issue classification
 - [Consumer Integration](docs/consumer_integration.md) - Integration guide
+- [Changelog](CHANGELOG.md) - Version history and changes
 
 ## Development
 
