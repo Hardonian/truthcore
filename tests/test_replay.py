@@ -19,6 +19,7 @@ from truthcore.replay import (
     SimulationChanges,
     SimulationEngine,
     SimulationReporter,
+    SimulationResult,
 )
 from truthcore.replay.diff import compute_content_hash
 from truthcore.verdict.models import VerdictResult, VerdictStatus, Mode
