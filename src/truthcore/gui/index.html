@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truth Core Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover, .nav a.active {
+            color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .status-healthy {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .file-input {
+            padding: 0.5rem 0;
+        }
+
+        .results-area {
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 200px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .endpoint-list {
+            list-style: none;
+        }
+
+        .endpoint-item {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .endpoint-method {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 0.75rem;
+        }
+
+        .method-get { background: #dbeafe; color: #1e40af; }
+        .method-post { background: #dcfce7; color: #166534; }
+
+        .endpoint-path {
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .endpoint-desc {
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="14" stroke="#2563eb" stroke-width="3"/>
+                    <path d="M10 16L14 20L22 12" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Truth Core
+            </div>
+            <nav class="nav">
+                <a href="#dashboard" class="active" onclick="showTab('dashboard')">Dashboard</a>
+                <a href="#judge" onclick="showTab('judge')">Judge</a>
+                <a href="#intel" onclick="showTab('intel')">Intel</a>
+                <a href="#api" onclick="showTab('api')">API</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Server Status</div>
+                    <div id="server-status">
+                        <span class="loading"><span class="spinner"></span> Checking...</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Version</div>
+                    <div id="version" class="card-value">-</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Cache Enabled</div>
+                    <div id="cache-status" class="card-value">-</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    Quick Actions
+                </h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="showTab('judge')">
+                        Run Judge
+                    </button>
+                    <button class="btn btn-primary" onclick="showTab('intel')">
+                        Run Intel
+                    </button>
+                    <button class="btn btn-secondary" onclick="checkHealth()">
+                        Check Health
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Judge Tab -->
+        <div id="judge" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Run Readiness Check
+                </h2>
+                
+                <form id="judge-form" onsubmit="runJudge(event)">
+                    <div class="form-group">
+                        <label class="form-label">Profile</label>
+                        <select class="form-select" id="judge-profile">
+                            <option value="base">Base</option>
+                            <option value="ui">UI</option>
+                            <option value="security">Security</option>
+                            <option value="performance">Performance</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Input Files (ZIP)</label>
+                        <input type="file" class="file-input" id="judge-inputs" accept=".zip">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="judge-parallel" checked>
+                            Run in parallel
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="judge-sign">
+                            Sign results
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span class="loading" id="judge-loading">
+                            <span class="spinner"></span> Running...
+                        </span>
+                        <span id="judge-btn-text">Run Judge</span>
+                    </button>
+                </form>
+
+                <div id="judge-results" class="results-area" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Intel Tab -->
+        <div id="intel" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                    Run Intelligence Analysis
+                </h2>
+
+                <form id="intel-form" onsubmit="runIntel(event)">
+                    <div class="form-group">
+                        <label class="form-label">Analysis Mode</label>
+                        <select class="form-select" id="intel-mode">
+                            <option value="readiness">Readiness</option>
+                            <option value="recon">Reconciliation</option>
+                            <option value="agent">Agent Behavior</option>
+                            <option value="knowledge">Knowledge Health</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Input History (ZIP)</label>
+                        <input type="file" class="file-input" id="intel-inputs" accept=".zip">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="intel-compact">
+                            Compact old history
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span class="loading" id="intel-loading">
+                            <span class="spinner"></span> Analyzing...
+                        </span>
+                        <span id="intel-btn-text">Run Analysis</span>
+                    </button>
+                </form>
+
+                <div id="intel-results" class="results-area" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- API Tab -->
+        <div id="api" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    API Endpoints
+                </h2>
+
+                <ul class="endpoint-list">
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/health</span>
+                        <div class="endpoint-desc">Health check - returns server status and version</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/status</span>
+                        <div class="endpoint-desc">Get server capabilities and configuration</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/judge</span>
+                        <div class="endpoint-desc">Run readiness check with specified profile and options</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/intel</span>
+                        <div class="endpoint-desc">Run intelligence analysis on historical data</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/explain</span>
+                        <div class="endpoint-desc">Explain invariant rule evaluation</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/v1/cache/stats</span>
+                        <div class="endpoint-desc">Get cache statistics</div>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/v1/cache/clear</span>
+                        <div class="endpoint-desc">Clear all cache entries</div>
+                    </li>
+                </ul>
+
+                <div style="margin-top: 2rem;">
+                    <a href="/docs" class="btn btn-primary" target="_blank">
+                        Open API Documentation (Swagger UI)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Truth Core Server v<span id="footer-version">0.2.0</span></p>
+        <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+            <a href="https://github.com/your-org/truth-core" target="_blank">GitHub</a> •
+            <a href="/docs" target="_blank">API Docs</a>
+        </p>
+    </footer>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`a[href="#${tabName}"]`).classList.add('active');
+        }
+
+        // Check health on load
+        async function checkHealth() {
+            const statusEl = document.getElementById('server-status');
+            statusEl.innerHTML = '<span class="loading" style="display: flex;"><span class="spinner"></span> Checking...</span>';
+
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+
+                document.getElementById('version').textContent = data.version;
+                document.getElementById('footer-version').textContent = data.version;
+
+                statusEl.innerHTML = `<span class="status-badge status-healthy">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Healthy
+                </span>`;
+
+                // Get status for cache info
+                const statusResp = await fetch('/api/v1/status');
+                const status = await statusResp.json();
+                document.getElementById('cache-status').textContent = status.cache_enabled ? 'Yes' : 'No';
+            } catch (error) {
+                statusEl.innerHTML = `<span class="status-badge status-danger">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                    Error
+                </span>`;
+                console.error('Health check failed:', error);
+            }
+        }
+
+        // Run judge
+        async function runJudge(event) {
+            event.preventDefault();
+
+            const loadingEl = document.getElementById('judge-loading');
+            const btnTextEl = document.getElementById('judge-btn-text');
+            const resultsEl = document.getElementById('judge-results');
+
+            loadingEl.style.display = 'inline-flex';
+            btnTextEl.style.display = 'none';
+            resultsEl.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('profile', document.getElementById('judge-profile').value);
+                formData.append('parallel', document.getElementById('judge-parallel').checked);
+                formData.append('sign', document.getElementById('judge-sign').checked);
+
+                const inputsFile = document.getElementById('judge-inputs').files[0];
+                if (inputsFile) {
+                    formData.append('inputs', inputsFile);
+                }
+
+                const response = await fetch('/api/v1/judge', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                resultsEl.textContent = JSON.stringify(data, null, 2);
+                resultsEl.style.display = 'block';
+            } catch (error) {
+                resultsEl.textContent = 'Error: ' + error.message;
+                resultsEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+                btnTextEl.style.display = 'inline';
+            }
+        }
+
+        // Run intel
+        async function runIntel(event) {
+            event.preventDefault();
+
+            const loadingEl = document.getElementById('intel-loading');
+            const btnTextEl = document.getElementById('intel-btn-text');
+            const resultsEl = document.getElementById('intel-results');
+
+            loadingEl.style.display = 'inline-flex';
+            btnTextEl.style.display = 'none';
+            resultsEl.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('mode', document.getElementById('intel-mode').value);
+                formData.append('compact', document.getElementById('intel-compact').checked);
+
+                const inputsFile = document.getElementById('intel-inputs').files[0];
+                if (inputsFile) {
+                    formData.append('inputs', inputsFile);
+                }
+
+                const response = await fetch('/api/v1/intel', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                resultsEl.textContent = JSON.stringify(data, null, 2);
+                resultsEl.style.display = 'block';
+            } catch (error) {
+                resultsEl.textContent = 'Error: ' + error.message;
+                resultsEl.style.display = 'block';
+            } finally {
+                loadingEl.style.display = 'none';
+                btnTextEl.style.display = 'inline';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', checkHealth);
+    </script>
+</body>
+</html>

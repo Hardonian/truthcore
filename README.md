@@ -132,6 +132,12 @@ truthctl intel --compact --retention 90 --inputs ./history --out ./intel-results
 - `truthctl cache-compact` - Remove old entries
 - `truthctl cache-clear` - Clear all cache entries
 
+### Server Mode
+
+- `truthctl serve` - Start HTTP server with REST API and web GUI
+- `truthctl serve --port 8080` - Start on custom port
+- `truthctl serve --reload` - Development mode with auto-reload
+
 ### Invariant Tools
 
 - `truthctl explain` - Explain invariant rule evaluation
