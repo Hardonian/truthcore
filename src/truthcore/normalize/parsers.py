@@ -361,7 +361,8 @@ class BuildLogParser(RegexLogParser):
     """Generic build log parser."""
 
     # Pattern: [timestamp] severity: message
-    PATTERN = r"(?:\[?[^\]]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>[^\n]+)"
+    # [^\]\n]* ensures we don't match across newlines
+    PATTERN = r"(?:\[?[^\]\n]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>[^\n]+)"
 
     def __init__(self, tool_name: str = "build"):
         severity_map = {
