@@ -65,6 +65,8 @@ class ContentAddressedCache:
 
     def _save_index(self, index: dict[str, Any]) -> None:
         """Save cache index."""
+        # Ensure cache directory exists before saving
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         with open(self.index_path, "w", encoding="utf-8") as f:
             json.dump(index, f, indent=2, sort_keys=True)
 
@@ -193,6 +195,10 @@ class ContentAddressedCache:
         return len(to_remove)
 
     def stats(self) -> dict[str, Any]:
+        """Get cache statistics (alias for get_stats)."""
+        return self.get_stats()
+
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         index = self._load_index()
 

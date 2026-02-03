@@ -15,7 +15,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -41,6 +42,21 @@ from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Import security utilities
+from truthcore.server_security import (
+    SecurityMiddleware,
+    RequestIDMiddleware,
+    ErrorCategory,
+    ErrorSeverity,
+    create_error_response,
+    sanitize_cache_key,
+    AuthenticationError,
+    RateLimitError,
+    ValidationError,
+    generate_error_id,
+    validate_api_key_format,
+)
 
 # Security configuration
 SECURITY_BEARER = HTTPBearer(auto_error=False)
@@ -114,7 +130,7 @@ def verify_api_key(
         True if authentication successful or disabled
 
     Raises:
-        HTTPException: If authentication fails and is required
+        AuthenticationError: If authentication fails and is required
     """
     # Get expected API key from environment
     expected_key = os.environ.get("TRUTHCORE_API_KEY")
@@ -131,19 +147,17 @@ def verify_api_key(
         provided_key = api_key
 
     if not provided_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key required. Provide via Authorization: Bearer <key> header or ?api_key= query parameter",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise AuthenticationError(
+            "API key required. Provide via Authorization: Bearer <key> header or ?api_key= query parameter",
         )
+
+    # Validate API key format
+    if not validate_api_key_format(provided_key):
+        raise AuthenticationError("Invalid API key format")
 
     # Constant-time comparison to prevent timing attacks
     if not secrets.compare_digest(provided_key, expected_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AuthenticationError("Invalid API key")
 
     return True
 
@@ -164,7 +178,7 @@ def check_rate_limit(
         True if within rate limit
 
     Raises:
-        HTTPException: If rate limit exceeded
+        RateLimitError: If rate limit exceeded
     """
     # Get client identifier (IP + User-Agent hash)
     client_ip = request.client.host if request.client else "unknown"
@@ -184,10 +198,9 @@ def check_rate_limit(
     total_requests = sum(cnt for _, cnt in client_history)
 
     if total_requests >= max_requests:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Rate limit exceeded: {max_requests} requests per {window_seconds} seconds",
-            headers={"Retry-After": str(window_seconds)},
+        raise RateLimitError(
+            message=f"Rate limit exceeded: {max_requests} requests per {window_seconds} seconds",
+            retry_after=window_seconds,
         )
 
     # Record this request
@@ -275,39 +288,53 @@ def create_app(
             allow_headers=["Authorization", "Content-Type"],
         )
 
+    # Add security middleware
+    app.add_middleware(SecurityMiddleware)
+    app.add_middleware(RequestIDMiddleware)
+
     # Initialize cache
     cache = ContentAddressedCache(cache_dir) if cache_dir else None
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
-        """Handle uncaught exceptions without exposing internals."""
-        error_id = f"err_{int(time.time() * 1000)}_{secrets.token_hex(4)}"
+        """Handle uncaught exceptions with standardized error envelopes."""
+        error_id = generate_error_id()
+        request_id = getattr(request.state, 'request_id', 'unknown')
 
-        # Log full error with traceback (server-side only)
+        # Determine error category based on exception type
+        if isinstance(exc, ValidationError):
+            category = ErrorCategory.VALIDATION
+            status_code = http_status.HTTP_422_UNPROCESSABLE_ENTITY
+        elif isinstance(exc, AuthenticationError):
+            category = ErrorCategory.AUTHENTICATION
+            status_code = http_status.HTTP_401_UNAUTHORIZED
+        elif isinstance(exc, RateLimitError):
+            category = ErrorCategory.RATE_LIMIT
+            status_code = http_status.HTTP_429_TOO_MANY_REQUESTS
+        else:
+            category = ErrorCategory.INTERNAL
+            status_code = http_status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        # Log error
         logger.error(
-            f"Unhandled exception {error_id}: {exc}",
-            exc_info=True if debug else False,
+            f"Error {error_id} (request: {request_id}): {exc}",
+            exc_info=debug,
         )
 
-        if debug:
-            # In debug mode, return detailed error
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error_id": error_id,
-                    "detail": str(exc),
-                    "traceback": traceback.format_exc(),
-                },
-            )
-        else:
-            # Production: generic error message
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error_id": error_id,
-                    "detail": "Internal server error. Please try again or contact support.",
-                },
-            )
+        # Create standardized error response
+        error_content = create_error_response(
+            error_id=error_id,
+            request_id=request_id,
+            error=exc,
+            category=category,
+            severity=ErrorSeverity.ERROR if not isinstance(exc, ValidationError) else ErrorSeverity.WARNING,
+            include_traceback=debug,
+        )
+
+        return JSONResponse(
+            status_code=status_code,
+            content=error_content,
+        )
 
     @app.get("/", response_class=HTMLResponse)
     async def root():
@@ -431,7 +458,7 @@ def create_app(
                         max_size = 100 * 1024 * 1024
                         if len(content) > max_size:
                             raise HTTPException(
-                                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                                 detail=f"File too large. Maximum size: {max_size} bytes",
                             )
 
@@ -547,7 +574,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error in judge endpoint: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error processing request",
             ) from e
 
@@ -590,7 +617,7 @@ def create_app(
                         max_size = 100 * 1024 * 1024
                         if len(content) > max_size:
                             raise HTTPException(
-                                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                                status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                                 detail=f"File too large. Maximum size: {max_size} bytes",
                             )
 
@@ -615,7 +642,7 @@ def create_app(
                     scorer = KnowledgeHealthScorer(inputs_path)
                 else:
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
+                        status_code=http_status.HTTP_400_BAD_REQUEST,
                         detail=f"Unknown mode: {intel_request.mode}",
                     )
 
@@ -648,7 +675,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error in intel endpoint: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error processing request",
             ) from e
 
@@ -687,7 +714,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error in explain endpoint: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error processing request",
             ) from e
 
@@ -698,7 +725,7 @@ def create_app(
     ):
         """Get cache statistics."""
         if not cache:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
+            raise HTTPException(status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
 
         try:
             stats = cache.get_stats()
@@ -710,7 +737,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error getting cache stats: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error retrieving cache statistics",
             ) from e
 
@@ -721,7 +748,7 @@ def create_app(
     ):
         """Clear all cache entries."""
         if not cache:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
+            raise HTTPException(status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache not enabled")
 
         try:
             cache.clear()
@@ -730,7 +757,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error clearing cache: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error clearing cache",
             ) from e
 
@@ -759,7 +786,7 @@ def create_app(
             max_diff_size = 1024 * 1024
             if len(diff) > max_diff_size:
                 raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     detail=f"Diff too large. Maximum size: {max_diff_size} bytes",
                 )
 
@@ -787,7 +814,7 @@ def create_app(
         except Exception as e:
             logger.exception(f"Error in impact endpoint: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal error processing impact analysis",
             ) from e
 
@@ -799,7 +826,7 @@ def create_app(
     ):
         """Get job status by ID."""
         if job_id not in jobs:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Job not found")
         return jobs[job_id]
 
     # Serve static files if directory provided, or use default GUI

@@ -209,7 +209,8 @@ def test_not_optimistic_by_default():
 
 def test_engine_health_required():
     """Test that missing engine health signals cause failure."""
-    aggregator = VerdictAggregator(expected_engines=["engine1", "engine2", "engine3"])
+    thresholds = VerdictThresholds.for_mode(Mode.MAIN)
+    aggregator = VerdictAggregator(thresholds=thresholds, expected_engines=["engine1", "engine2", "engine3"])
 
     # Only one engine reports health
     aggregator.register_engine_health(
@@ -225,7 +226,7 @@ def test_engine_health_required():
     result = aggregator.aggregate(mode=Mode.MAIN)  # Requires 2 engines
 
     assert result.verdict == VerdictStatus.NO_SHIP
-    assert "1 engine(s) ran, but 2 required" in result.no_ship_reasons
+    assert "1 engine(s) ran, but 2 required" in str(result.no_ship_reasons)
     assert len(result.degradation_reasons) >= 2  # Two engines missing signals
 
 
@@ -280,7 +281,9 @@ def test_temporal_escalation():
         temporal_path = Path(tmpdir) / "temporal.json"
 
         # First run
-        agg1 = VerdictAggregator(temporal_store_path=temporal_path, expected_engines=["test"])
+        thresholds = VerdictThresholds.for_mode(Mode.PR)
+        thresholds.min_engines_required = 0
+        agg1 = VerdictAggregator(thresholds=thresholds, temporal_store_path=temporal_path, expected_engines=["test"])
         agg1.register_engine_health(
             EngineHealth(
                 engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -303,7 +306,9 @@ def test_temporal_escalation():
         agg1.aggregate(mode=Mode.PR, run_id="run-1")
 
         # Second run (same issue)
-        agg2 = VerdictAggregator(temporal_store_path=temporal_path, expected_engines=["test"])
+        thresholds = VerdictThresholds.for_mode(Mode.PR)
+        thresholds.min_engines_required = 0
+        agg2 = VerdictAggregator(thresholds=thresholds, temporal_store_path=temporal_path, expected_engines=["test"])
         agg2.register_engine_health(
             EngineHealth(
                 engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -323,7 +328,9 @@ def test_temporal_escalation():
         assert finding2.severity == Severity.LOW  # Not yet escalated
 
         # Third run (should escalate)
-        agg3 = VerdictAggregator(temporal_store_path=temporal_path, expected_engines=["test"])
+        thresholds = VerdictThresholds.for_mode(Mode.PR)
+        thresholds.min_engines_required = 0
+        agg3 = VerdictAggregator(thresholds=thresholds, temporal_store_path=temporal_path, expected_engines=["test"])
         agg3.register_engine_health(
             EngineHealth(
                 engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -351,7 +358,9 @@ def test_temporal_escalation():
 
 def test_override_application():
     """Test that overrides are properly applied and tracked."""
-    aggregator = VerdictAggregator(expected_engines=["test"])
+    thresholds = VerdictThresholds.for_mode(Mode.PR)
+    thresholds.min_engines_required = 0
+    aggregator = VerdictAggregator(thresholds=thresholds, expected_engines=["test"])
     aggregator.register_engine_health(
         EngineHealth(
             engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -374,7 +383,9 @@ def test_override_application():
     assert result_no_override.verdict == VerdictStatus.NO_SHIP
 
     # Reset and add override
-    aggregator2 = VerdictAggregator(expected_engines=["test"])
+    thresholds = VerdictThresholds.for_mode(Mode.PR)
+    thresholds.min_engines_required = 0
+    aggregator2 = VerdictAggregator(thresholds=thresholds, expected_engines=["test"])
     aggregator2.register_engine_health(
         EngineHealth(
             engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -408,7 +419,9 @@ def test_override_application():
 
 def test_category_assignment_audit():
     """Test that all category assignments are audited."""
-    aggregator = VerdictAggregator(expected_engines=["test"])
+    thresholds = VerdictThresholds.for_mode(Mode.PR)
+    thresholds.min_engines_required = 0
+    aggregator = VerdictAggregator(thresholds=thresholds, expected_engines=["test"])
     aggregator.register_engine_health(
         EngineHealth(
             engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()
@@ -455,7 +468,9 @@ def test_category_assignment_audit():
 
 def test_category_multipliers_in_use():
     """Test that category multipliers actually affect scoring."""
-    aggregator = VerdictAggregator(expected_engines=["test"])
+    thresholds = VerdictThresholds.for_mode(Mode.PR)
+    thresholds.min_engines_required = 0
+    aggregator = VerdictAggregator(thresholds=thresholds, expected_engines=["test"])
     aggregator.register_engine_health(
         EngineHealth(
             engine_id="test", expected=True, ran=True, succeeded=True, timestamp=datetime.now(UTC).isoformat()

@@ -1,0 +1,233 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # ============================================================================
+  # Create Release
+  # ============================================================================
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # Get changes since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s" $LAST_TAG..HEAD | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" || true)
+          else
+            CHANGES=$(git log --pretty=format:"- %s" | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" | head -50 || true)
+          fi
+          
+          if [ -z "$CHANGES" ]; then
+            CHANGES="- Maintenance release"
+          fi
+          
+          NOTES="## Changes
+          
+          $CHANGES
+          
+          ## Installation
+          
+          \`\`\`bash
+          pip install truth-core==${{ steps.version.outputs.version }}
+          \`\`\`
+          
+          ## Docker
+          
+          \`\`\`bash
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          \`\`\`"
+          
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.version.outputs.version }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          draft: false
+          prerelease: false
+
+  # ============================================================================
+  # Build Python Package
+  # ============================================================================
+  build-python:
+    runs-on: ubuntu-latest
+    needs: create-release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload to GitHub Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: dist/truth_core-${{ needs.create-release.outputs.version }}.tar.gz
+          asset_name: truth-core-${{ needs.create-release.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload dist/*
+
+  # ============================================================================
+  # Build TypeScript SDK
+  # ============================================================================
+  build-typescript-sdk:
+    runs-on: ubuntu-latest
+    needs: create-release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: |
+          cd packages/ts-contract-sdk
+          pnpm install
+
+      - name: Build
+        run: |
+          cd packages/ts-contract-sdk
+          pnpm run build
+
+      - name: Update version
+        run: |
+          cd packages/ts-contract-sdk
+          npm version ${{ needs.create-release.outputs.version }} --no-git-tag-version
+
+      - name: Publish to npm
+        run: |
+          cd packages/ts-contract-sdk
+          pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ============================================================================
+  # Build Docker Image
+  # ============================================================================
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: create-release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # Update Documentation
+  # ============================================================================
+  update-docs:
+    runs-on: ubuntu-latest
+    needs: [create-release, build-python, build-typescript-sdk]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update CHANGELOG
+        run: |
+          VERSION=${{ needs.create-release.outputs.version }}
+          DATE=$(date +%Y-%m-%d)
+          
+          # Get changes
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s" $LAST_TAG..HEAD | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" || true)
+          else
+            CHANGES=$(git log --pretty=format:"- %s" | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" | head -50 || true)
+          fi
+          
+          # Create new entry
+          NEW_ENTRY="## [$VERSION] - $DATE
+          
+          $CHANGES
+          "
+          
+          # Insert after header
+          echo "$NEW_ENTRY" | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG for v$VERSION [skip ci]"
+          git push

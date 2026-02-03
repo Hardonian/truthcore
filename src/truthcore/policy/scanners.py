@@ -62,7 +62,7 @@ class PolicyScanner(ABC):
 
         finding = Finding(
             rule_id=rule.id,
-            severity=rule.severity.to_finding_severity(),
+            severity=rule.severity,
             target=target,
             location=location,
             message=message,

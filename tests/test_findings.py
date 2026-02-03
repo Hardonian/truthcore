@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from truthcore.findings import Finding, FindingReport, Location, Severity, severity_order
+from truthcore.findings import Finding, FindingReport, Location, Severity
+from truthcore.severity import severity_order
 
 
 class TestSeverity:
