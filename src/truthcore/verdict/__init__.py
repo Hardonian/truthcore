@@ -51,7 +51,7 @@ __all__ = [
 
 # Optional CLI imports (requires click)
 try:
-    from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands
+    from truthcore.verdict.cli import generate_verdict_for_judge, register_verdict_commands  # noqa: F401
 
     __all__.extend(["register_verdict_commands", "generate_verdict_for_judge"])
 except ImportError:

@@ -64,7 +64,7 @@ class BaseLogParser:
 
     def __init__(self, tool_name: str):
         """Initialize parser.
-        
+
         Args:
             tool_name: Name of the tool being parsed
         """
@@ -73,10 +73,10 @@ class BaseLogParser:
 
     def parse(self, content: str) -> list[ParsedFinding]:
         """Parse log content and return findings.
-        
+
         Args:
             content: Log content to parse
-            
+
         Returns:
             List of parsed findings
         """
@@ -84,10 +84,10 @@ class BaseLogParser:
 
     def parse_file(self, path: Path) -> list[ParsedFinding]:
         """Parse a log file.
-        
+
         Args:
             path: Path to log file
-            
+
         Returns:
             List of parsed findings
         """
@@ -131,7 +131,7 @@ class RegexLogParser(BaseLogParser):
         severity_map: dict[str, SeverityLevel] | None = None,
     ):
         """Initialize with regex pattern.
-        
+
         Args:
             tool_name: Name of the tool
             pattern: Regex pattern with named groups
@@ -181,7 +181,7 @@ class BlockParser(BaseLogParser):
         severity_infer: bool = True,
     ):
         """Initialize block parser.
-        
+
         Args:
             tool_name: Name of the tool
             block_start: Pattern indicating start of block
@@ -501,13 +501,13 @@ PARSER_REGISTRY: dict[str, Callable[[], BaseLogParser]] = {
 
 def get_parser(tool_name: str) -> BaseLogParser | None:
     """Get a parser by tool name.
-    
+
     Args:
         tool_name: Name of the tool/parser
-        
+
     Returns:
         Parser instance or None if not found
-        
+
     Example:
         >>> parser = get_parser("eslint-json")
         >>> findings = parser.parse_file(Path("eslint-output.json"))
@@ -520,7 +520,7 @@ def get_parser(tool_name: str) -> BaseLogParser | None:
 
 def register_parser(name: str, factory: Callable[[], BaseLogParser]) -> None:
     """Register a custom parser.
-    
+
     Args:
         name: Name to register under
         factory: Factory function that returns a parser instance
@@ -530,14 +530,14 @@ def register_parser(name: str, factory: Callable[[], BaseLogParser]) -> None:
 
 def parse_with(tool_name: str, content: str) -> list[ParsedFinding]:
     """Parse content with a registered parser.
-    
+
     Args:
         tool_name: Name of the parser to use
         content: Content to parse
-        
+
     Returns:
         List of findings
-        
+
     Raises:
         ValueError: If parser not found
     """
@@ -549,10 +549,10 @@ def parse_with(tool_name: str, content: str) -> list[ParsedFinding]:
 
 def infer_severity(text: str) -> SeverityLevel:
     """Infer severity from text (deterministic rules).
-    
+
     Args:
         text: Text to analyze
-        
+
     Returns:
         Inferred severity level
     """

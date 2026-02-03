@@ -40,7 +40,7 @@ DEFAULT_ALLOWLIST = {
 @dataclass
 class ReplayBundle:
     """A replay bundle containing all artifacts needed for replay/simulation.
-    
+
     Attributes:
         bundle_dir: Path to the bundle directory
         manifest: The run manifest from the original run
@@ -62,13 +62,13 @@ class ReplayBundle:
     @classmethod
     def load(cls, bundle_dir: Path) -> ReplayBundle:
         """Load a replay bundle from directory.
-        
+
         Args:
             bundle_dir: Path to bundle directory
-            
+
         Returns:
             Loaded ReplayBundle
-            
+
         Raises:
             FileNotFoundError: If required files missing
             ValueError: If bundle structure invalid
@@ -132,10 +132,10 @@ class ReplayBundle:
 
     def verify_integrity(self, public_key: bytes | None = None) -> VerificationResult:
         """Verify bundle integrity using evidence manifest.
-        
+
         Args:
             public_key: Optional public key for signature verification
-            
+
         Returns:
             VerificationResult with details
         """
@@ -156,7 +156,7 @@ class ReplayBundle:
 
     def get_config_files(self) -> list[Path]:
         """Get all configuration files in the bundle.
-        
+
         Returns:
             List of paths to config files
         """
@@ -170,7 +170,7 @@ class ReplayBundle:
 
     def get_input_files(self) -> list[Path]:
         """Get all input files in the bundle.
-        
+
         Returns:
             List of paths to input files
         """
@@ -185,7 +185,7 @@ class ReplayBundle:
 
     def get_output_files(self) -> list[Path]:
         """Get all output files in the bundle.
-        
+
         Returns:
             List of paths to output files
         """
@@ -218,7 +218,7 @@ class ReplayBundle:
 
 class BundleExporter:
     """Exports run results into a replay bundle format.
-    
+
     This captures all inputs, configuration, and outputs needed for
     deterministic replay and counterfactual simulation.
     """
@@ -236,7 +236,7 @@ class BundleExporter:
         copy_inputs: bool = True,
     ) -> ReplayBundle:
         """Export a run directory into a replay bundle.
-        
+
         Args:
             run_dir: Directory containing run outputs (with run_manifest.json)
             original_inputs_dir: Original inputs directory (if separate from run_dir)
@@ -244,10 +244,10 @@ class BundleExporter:
             profile: Profile used for the run
             mode: Mode used for the run
             copy_inputs: Whether to copy input files (True) or just reference them
-            
+
         Returns:
             The created ReplayBundle
-            
+
         Raises:
             FileNotFoundError: If run_dir missing required files
             SecurityError: If path safety checks fail

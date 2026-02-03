@@ -21,6 +21,7 @@ class CacheEntry:
     timestamp: str
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert cache entry to dictionary."""
         return {
             "cache_key": self.cache_key,
             "output_dir": str(self.output_dir),
@@ -31,19 +32,19 @@ class CacheEntry:
 
 class ContentAddressedCache:
     """Content-addressed cache for engine outputs.
-    
+
     Cache keys are computed from:
     - Command name
     - Configuration hash
     - Input file content hashes
     - Engine version
-    
+
     This ensures deterministic cache hits for identical inputs.
     """
 
     def __init__(self, cache_dir: Path | None = None) -> None:
         """Initialize cache.
-        
+
         Args:
             cache_dir: Directory for cache storage. Defaults to .truthcache in current directory.
         """
@@ -88,14 +89,13 @@ class ContentAddressedCache:
 
     def get(self, cache_key: str) -> Path | None:
         """Get cached output directory if exists.
-        
+
         Returns:
             Path to cached output directory, or None if not in cache.
         """
         index = self._load_index()
 
         if cache_key in index["entries"]:
-            entry = index["entries"][cache_key]
             cache_path = self.cache_dir / cache_key
 
             if cache_path.exists():
@@ -114,12 +114,12 @@ class ContentAddressedCache:
         manifest: dict[str, Any],
     ) -> Path:
         """Store output in cache.
-        
+
         Args:
             cache_key: Computed cache key
             output_dir: Directory containing outputs to cache
             manifest: Run manifest for this execution
-        
+
         Returns:
             Path to cached directory
         """
@@ -146,7 +146,7 @@ class ContentAddressedCache:
 
     def clear(self) -> int:
         """Clear all cached entries.
-        
+
         Returns:
             Number of entries cleared.
         """
@@ -167,10 +167,10 @@ class ContentAddressedCache:
 
     def compact(self, max_age_days: int = 30) -> int:
         """Remove old cache entries.
-        
+
         Args:
             max_age_days: Maximum age in days for entries to keep
-        
+
         Returns:
             Number of entries removed.
         """

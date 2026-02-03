@@ -16,7 +16,7 @@ from truthcore.verdict.aggregator import aggregate_verdict
 
 def register_verdict_commands(cli: click.Group) -> None:
     """Register verdict commands with the CLI.
-    
+
     Args:
         cli: The Click CLI group to add commands to
     """
@@ -72,21 +72,21 @@ def register_verdict_commands(cli: click.Group) -> None:
         compat: bool,
     ):
         """Build a verdict from engine outputs.
-        
+
         Aggregates findings from multiple engines and produces a weighted
         ship/no-ship verdict based on configured thresholds.
-        
+
         Inputs should contain:
         - readiness.json: Readiness engine output
         - invariants.json: Invariant violations
         - policy_findings.json: Policy findings
         - provenance verification results (optional)
         - intel scorecards (optional)
-        
+
         Outputs:
         - verdict.json: Machine-readable verdict
         - verdict.md: Human-readable report
-        
+
         Use --compat for v1 output format (backward compatible with truth-core < 0.2.0).
         """
         debug = ctx.obj.get("debug", False)
@@ -190,15 +190,15 @@ def generate_verdict_for_judge(
     profile: str | None = None,
 ) -> Path | None:
     """Generate verdict as part of judge command.
-    
+
     This is called by truthctl judge to produce verdict artifacts.
-    
+
     Args:
         inputs_dir: Directory containing engine outputs
         output_dir: Directory to write verdict to
         mode: Execution mode
         profile: Profile name
-        
+
     Returns:
         Path to verdict.json or None if generation failed
     """

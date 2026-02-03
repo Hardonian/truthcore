@@ -32,7 +32,7 @@ class IngestionConfig:
 
 class IngestionQueue:
     """Bounded queue for async ingestion.
-    
+
     Drops signals when full rather than blocking.
     """
 
@@ -45,7 +45,7 @@ class IngestionQueue:
 
     def put(self, signal: dict) -> bool:
         """Add signal to queue. Returns False if dropped.
-        
+
         Never blocks - drops signal if queue full.
         """
         if not self.config.enabled:
@@ -96,7 +96,7 @@ class SignalTransformer:
 
     def transform_signal(self, signal: dict) -> tuple[Evidence | None, Assertion | None]:
         """Transform a signal into evidence and/or assertion.
-        
+
         Returns (evidence, assertion) tuple. Either may be None.
         """
         signal_type = signal.get("signal_type")
@@ -210,7 +210,7 @@ class SignalTransformer:
 
 class IngestionEngine:
     """Main ingestion engine that processes signals asynchronously.
-    
+
     Safe to use from multiple threads. Drops signals on failure.
     """
 
@@ -241,7 +241,7 @@ class IngestionEngine:
 
     def ingest(self, signal: dict) -> bool:
         """Ingest a signal. Returns True if queued successfully.
-        
+
         Never blocks or raises exceptions.
         """
         try:
@@ -329,7 +329,7 @@ class IngestionEngine:
 
 class IngestionBridge:
     """High-level bridge for ingesting from Silent Instrumentation Layer.
-    
+
     Provides simple interface for connecting existing engines to spine.
     """
 
@@ -343,7 +343,7 @@ class IngestionBridge:
 
     def record_finding(self, finding: Any) -> bool:
         """Record a finding from existing TruthCore engine.
-        
+
         Converts Finding to assertion signal and ingests.
         """
         if not self.enabled or not self.engine:

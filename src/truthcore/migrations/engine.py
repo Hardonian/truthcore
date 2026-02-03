@@ -97,7 +97,7 @@ def register_migration(
     breaking: bool = False,
 ) -> None:
     """Register a migration function.
-    
+
     Args:
         artifact_type: Type of artifact this migration applies to
         from_version: Source version (e.g., "1.0.0")
@@ -128,17 +128,17 @@ def find_migration_chain(
     to_version: str,
 ) -> list[Migration]:
     """Find a chain of migrations from one version to another.
-    
+
     Uses BFS to find shortest path.
-    
+
     Args:
         artifact_type: Type of artifact
         from_version: Starting version
         to_version: Target version
-    
+
     Returns:
         List of migrations to apply in order
-    
+
     Raises:
         MigrationNotFoundError: If no path exists
     """
@@ -184,16 +184,16 @@ def migrate(
     artifact_type: str | None = None,
 ) -> dict[str, Any]:
     """Migrate an artifact from one version to another.
-    
+
     Args:
         artifact: The artifact to migrate
         from_version: Current version of the artifact
         to_version: Target version
         artifact_type: Artifact type (inferred from metadata if not provided)
-    
+
     Returns:
         Migrated artifact
-    
+
     Raises:
         MigrationNotFoundError: If no migration path exists
     """
@@ -230,12 +230,12 @@ def get_migration_info(
     to_version: str,
 ) -> dict[str, Any]:
     """Get information about a migration path.
-    
+
     Args:
         artifact_type: Type of artifact
         from_version: Starting version
         to_version: Target version
-    
+
     Returns:
         Dict with migration information
     """
@@ -264,10 +264,10 @@ def get_migration_info(
 
 def list_available_migrations(artifact_type: str) -> list[dict[str, Any]]:
     """List all available migrations for an artifact type.
-    
+
     Args:
         artifact_type: Type of artifact
-    
+
     Returns:
         List of migration information dicts
     """

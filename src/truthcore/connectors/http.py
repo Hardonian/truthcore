@@ -14,10 +14,10 @@ from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorR
 
 class HTTPConnector(BaseConnector):
     """Connector for fetching artifacts via HTTP(S).
-    
+
     Downloads artifacts from a specific URL (no crawling).
     Supports single files or zip archives.
-    
+
     Example source formats:
         https://example.com/path/to/artifact.json
         https://example.com/path/to/bundle.zip
@@ -25,7 +25,7 @@ class HTTPConnector(BaseConnector):
 
     def __init__(self, config: ConnectorConfig | None = None):
         """Initialize HTTP connector.
-        
+
         Args:
             config: Connector configuration
         """
@@ -33,19 +33,21 @@ class HTTPConnector(BaseConnector):
 
     @property
     def name(self) -> str:
+        """Return connector name."""
         return "http"
 
     @property
     def is_available(self) -> bool:
+        """Return whether HTTP connector is available (always True)."""
         return True
 
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Download artifact from HTTP(S) URL.
-        
+
         Args:
             source: HTTP(S) URL to download
             destination: Destination directory for downloaded content
-            
+
         Returns:
             ConnectorResult with status and file list
         """
@@ -101,12 +103,12 @@ class HTTPConnector(BaseConnector):
 
     def _extract_zip(self, data: bytes, destination: Path, source: str) -> ConnectorResult:
         """Extract zip file to destination.
-        
+
         Args:
             data: Zip file data
             destination: Destination directory
             source: Original source URL
-            
+
         Returns:
             ConnectorResult
         """
@@ -173,13 +175,13 @@ class HTTPConnector(BaseConnector):
         self, data: bytes, destination: Path, source: str, path: str
     ) -> ConnectorResult:
         """Save single file to destination.
-        
+
         Args:
             data: File data
             destination: Destination directory
             source: Original source URL
             path: URL path component
-            
+
         Returns:
             ConnectorResult
         """

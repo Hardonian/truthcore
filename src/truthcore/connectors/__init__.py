@@ -32,11 +32,11 @@ __all__ = [
 
 def get_connector(name: str, config: ConnectorConfig | None = None) -> BaseConnector | None:
     """Get a connector by name.
-    
+
     Args:
         name: Connector name (local, http, github-actions, s3)
         config: Optional connector configuration
-        
+
     Returns:
         Connector instance or None if not available
     """
@@ -60,7 +60,7 @@ def get_connector(name: str, config: ConnectorConfig | None = None) -> BaseConne
 
 def list_connectors() -> list[dict[str, str | bool]]:
     """List all available connectors.
-    
+
     Returns:
         List of connector info dicts with name and available status
     """

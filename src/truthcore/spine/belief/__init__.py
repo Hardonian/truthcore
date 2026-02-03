@@ -17,7 +17,7 @@ from truthcore.spine.primitives import Assertion, Belief, Evidence
 
 class BeliefEngine:
     """Computes and updates beliefs based on assertions and evidence.
-    
+
     Responsibilities:
     - Form initial beliefs from assertions
     - Update confidence when evidence changes
@@ -37,7 +37,7 @@ class BeliefEngine:
         rationale: str = "",
     ) -> Belief:
         """Form a new belief from an assertion.
-        
+
         If no initial confidence provided, computes from evidence quality.
         """
         if initial_confidence is None:
@@ -76,7 +76,7 @@ class BeliefEngine:
         decay_rate: float | None = None,
     ) -> Belief | None:
         """Update a belief with new evidence or parameters.
-        
+
         Creates a new belief version with updated confidence.
         """
         # Get current belief
@@ -175,7 +175,7 @@ class BeliefEngine:
 
     def propagate_decay(self, upstream_assertion_id: str) -> list[Belief]:
         """When an upstream belief decays, propagate to downstream beliefs.
-        
+
         Returns list of updated beliefs.
         """
         # Get upstream belief
@@ -220,7 +220,7 @@ class BeliefEngine:
         evidence_list: list[Evidence] | None = None,
     ) -> float:
         """Compute confidence based on evidence quality and quantity.
-        
+
         This is a simple heuristic - can be replaced with more sophisticated ML.
         """
         if evidence_list is None:

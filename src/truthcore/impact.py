@@ -6,8 +6,10 @@ import json
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class ImpactLevel(Enum):
@@ -41,6 +43,7 @@ class FileChange:
     affected_entities: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert file change to dictionary."""
         return {
             "path": self.path,
             "change_type": self.change_type.value,
@@ -63,6 +66,7 @@ class EngineDecision:
     affected_files: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert engine decision to dictionary."""
         return {
             "engine_id": self.engine_id,
             "include": self.include,
@@ -84,6 +88,7 @@ class InvariantDecision:
     affected_files: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert invariant decision to dictionary."""
         return {
             "rule_id": self.rule_id,
             "include": self.include,
@@ -109,6 +114,7 @@ class RunPlan:
     cache_key: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert run plan to dictionary."""
         return {
             "version": self.version,
             "timestamp": self.timestamp,

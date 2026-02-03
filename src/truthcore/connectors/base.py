@@ -11,7 +11,7 @@ from typing import Any
 @dataclass
 class ConnectorResult:
     """Result from fetching inputs via a connector.
-    
+
     Attributes:
         success: Whether the fetch was successful
         local_path: Path to the fetched inputs directory
@@ -26,6 +26,7 @@ class ConnectorResult:
     error: str | None = None
 
     def __post_init__(self):
+        """Initialize default values for optional fields."""
         if self.files is None:
             self.files = []
         if self.metadata is None:
@@ -35,7 +36,7 @@ class ConnectorResult:
 @dataclass
 class ConnectorConfig:
     """Base configuration for connectors.
-    
+
     Attributes:
         max_size_bytes: Maximum total size of inputs to fetch (default 100MB)
         max_files: Maximum number of files to fetch (default 1000)
@@ -50,6 +51,7 @@ class ConnectorConfig:
     sanitize_paths: bool = True
 
     def __post_init__(self):
+        """Initialize default blocked extensions."""
         if self.blocked_extensions is None:
             # Block dangerous extensions
             self.blocked_extensions = [
@@ -60,14 +62,14 @@ class ConnectorConfig:
 
 class BaseConnector(ABC):
     """Abstract base class for input connectors.
-    
+
     Connectors fetch inputs from various sources and normalize them
     into a local directory ready for the judge to consume.
     """
 
     def __init__(self, config: ConnectorConfig | None = None):
         """Initialize connector with configuration.
-        
+
         Args:
             config: Connector configuration
         """
@@ -88,11 +90,11 @@ class BaseConnector(ABC):
     @abstractmethod
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Fetch inputs from source and place in destination.
-        
+
         Args:
             source: Source specification (URL, path, etc)
             destination: Local directory to place inputs
-            
+
         Returns:
             ConnectorResult with status and metadata
         """
@@ -100,10 +102,10 @@ class BaseConnector(ABC):
 
     def validate_path(self, path: str) -> bool:
         """Validate that a path is safe and within limits.
-        
+
         Args:
             path: Path to validate
-            
+
         Returns:
             True if path is valid and safe
         """
@@ -111,12 +113,9 @@ class BaseConnector(ABC):
             return True
 
         # Check for path traversal attempts
-        normalized = Path(path).resolve()
-
         # Block absolute paths that could escape
-        if path.startswith('/') or path.startswith('\\'):
-            if '..' in path:
-                return False
+        if (path.startswith('/') or path.startswith('\\')) and '..' in path:
+            return False
 
         # Check extension
         if self.config.blocked_extensions:
@@ -133,11 +132,11 @@ class BaseConnector(ABC):
 
     def check_size_limit(self, current_size: int, new_file_size: int) -> bool:
         """Check if adding a file would exceed size limit.
-        
+
         Args:
             current_size: Current total size in bytes
             new_file_size: Size of file to add
-            
+
         Returns:
             True if within limits
         """

@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass
 class CompatOptions:
     """Compatibility options for backward compatibility.
-    
+
     Attributes:
         legacy_format: Use legacy output format
         v1_output: Use v1 output format for verdicts
@@ -30,7 +32,7 @@ class CompatOptions:
     @classmethod
     def from_flag(cls, enabled: bool) -> CompatOptions:
         """Create compatibility options from a single flag.
-        
+
         When --compat is enabled, all compatibility options are enabled
         for maximum backward compatibility.
         """
@@ -45,7 +47,7 @@ class CompatOptions:
 
 def apply_compat_decorator(cmd):
     """Apply compatibility option decorator to a command.
-    
+
     Usage:
         @cli.command()
         @click.option(...)
@@ -63,11 +65,11 @@ def apply_compat_decorator(cmd):
 
 def transform_output_for_compat(data: dict[str, Any], opts: CompatOptions) -> dict[str, Any]:
     """Transform output data for compatibility mode.
-    
+
     Args:
         data: Output data dict
         opts: Compatibility options
-        
+
     Returns:
         Transformed data for backward compatibility
     """
@@ -115,7 +117,7 @@ def write_compat_output(
     opts: CompatOptions,
 ) -> None:
     """Write output file with compatibility transformations.
-    
+
     Args:
         data: Data to write
         output_path: Path to write to
@@ -130,10 +132,10 @@ def write_compat_output(
 
 def get_compat_help_text(command_name: str) -> str:
     """Get help text for compatibility mode for a specific command.
-    
+
     Args:
         command_name: Name of the command
-        
+
     Returns:
         Help text describing compat mode effects
     """

@@ -49,7 +49,7 @@ def register_spine_commands(cli: click.Group) -> None:
 
 def handle_error(error: Exception, debug: bool) -> None:
     """Handle errors with structured output.
-    
+
     Args:
         error: The exception that occurred
         debug: Whether to show full traceback
@@ -131,13 +131,13 @@ def judge(
     compat: bool,
 ):
     """Run readiness check with parallel execution and UI geometry support.
-    
+
     Can use --diff or --changed-files to run impact analysis first and
     execute only selected engines/invariants based on changes.
-    
+
     Optionally runs policy pack (--policy-pack) and generates provenance
     (--sign, --manifest).
-    
+
     Use --compat for backward compatibility with truth-core < 0.2.0.
     """
     start_time = time.time()
@@ -574,7 +574,7 @@ def explain(ctx: click.Context, rule: str, data: Path, rules: Path):
 @click.pass_context
 def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, profile: str, out: Path, source: str | None):
     """Generate a run plan from git diff or changed files list.
-    
+
     Analyzes changes to determine which engines and invariants should run.
     Output is deterministic and cacheable.
     """
@@ -616,7 +616,6 @@ def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, prof
         click.echo(f"  Max impact: {run_plan.impact_summary['max_impact']}")
 
         selected_engines = [e for e in run_plan.engines if e.include]
-        selected_invariants = [i for i in run_plan.invariants if i.include]
 
         click.echo(f"\nSelected Engines ({len(selected_engines)}):")
         for eng in selected_engines:
@@ -640,7 +639,7 @@ def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, prof
 @click.pass_context
 def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path, format: str):
     """Build a Truth Graph from run outputs.
-    
+
     Creates a graph linking runs, engines, findings, evidence, and entities.
     """
     debug = ctx.obj.get('debug', False)
@@ -683,12 +682,12 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
 @click.pass_context
 def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
     """Query a Truth Graph using simple predicates.
-    
+
     Query syntax:
       - key=value (exact match)
       - key=contains:substring (contains match)
       - severity>=level (severity comparison)
-      
+
     Examples:
       truthctl graph-query --graph truth_graph.json --where "severity=high"
       truthctl graph-query --graph truth_graph.json --where "type=finding"
@@ -734,9 +733,9 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
 @click.pass_context
 def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: Path | None, compat: bool):
     """Run policy-as-code scanner against inputs.
-    
+
     Built-in packs: base, security, privacy, logging, agent
-    
+
     Examples:
       truthctl policy run --inputs ./src --pack base --out ./policy-results
       truthctl policy run --inputs ./src --pack security --out ./security-report
@@ -797,9 +796,9 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
 @click.pass_context
 def policy_explain(ctx: click.Context, rule: str, pack: str):
     """Explain a policy rule.
-    
+
     Shows the rule definition, matchers, thresholds, and suppressions.
-    
+
     Example:
       truthctl policy explain --rule SECRET_API_KEY_DETECTED --pack security
     """
@@ -830,10 +829,10 @@ def policy_explain(ctx: click.Context, rule: str, pack: str):
 @click.pass_context
 def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out: Path | None):
     """Verify an evidence bundle for tampering.
-    
+
     Recomputes file hashes and compares against manifest.
     Optionally verifies signature if public key is provided.
-    
+
     Examples:
       truthctl verify-bundle --bundle ./results
       truthctl verify-bundle --bundle ./results --public-key ./public.key
@@ -973,7 +972,7 @@ def policy_list():
 @cli.command()
 def generate_keys():
     """Generate signing keys for evidence bundles.
-    
+
     Outputs environment variable format for TRUTHCORE_SIGNING_PRIVATE_KEY
     and TRUTHCORE_SIGNING_PUBLIC_KEY.
     """
@@ -1035,10 +1034,10 @@ def bundle_export(
     mode: str | None,
 ):
     """Export a run into a replay bundle.
-    
+
     Captures all inputs, configuration, and outputs needed for
     deterministic replay and counterfactual simulation.
-    
+
     Examples:
       truthctl bundle export --run-dir ./results --out ./my-bundle
       truthctl bundle export --run-dir ./results --inputs ./test-data --out ./bundle --profile ui
@@ -1119,10 +1118,10 @@ def replay(
     force: bool,
 ):
     """Replay a bundle and verify deterministic behavior.
-    
+
     Re-runs the verdict using stored inputs and configuration,
     then compares outputs to verify identical results.
-    
+
     Examples:
       truthctl replay --bundle ./my-bundle --out ./replay-results
       truthctl replay --bundle ./my-bundle --out ./replay-results --strict
@@ -1246,10 +1245,10 @@ def simulate(
     force: bool,
 ):
     """Run counterfactual simulation with modified configuration.
-    
+
     Applies changes to thresholds, weights, or rules and re-runs
     the verdict to see how results would differ.
-    
+
     The changes YAML file can specify:
       - thresholds: Override threshold values
       - severity_weights: Override severity weights
@@ -1257,10 +1256,10 @@ def simulate(
       - disabled_engines: List of engines to disable
       - disabled_rules: List of rules to disable
       - suppressions: Findings to suppress
-    
+
     Examples:
       truthctl simulate --bundle ./my-bundle --out ./sim-results --changes ./changes.yaml
-    
+
     Example changes.yaml:
       thresholds:
         max_highs: 10
@@ -1435,10 +1434,10 @@ def dashboard_group():
 @click.pass_context
 def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
     """Build the dashboard as static files.
-    
+
     Creates a production-ready static dashboard that can be hosted
     on GitHub Pages or any static hosting.
-    
+
     Examples:
       truthctl dashboard build --runs ./my-runs --out ./dashboard-dist
       truthctl dashboard build --runs ./runs --out ./dist --no-embedded
@@ -1459,7 +1458,7 @@ def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
         click.echo(f"Building dashboard from {dashboard_dir}...")
 
         # Build the dashboard
-        result = subprocess.run(
+        subprocess.run(
             ["npm", "run", "build"],
             cwd=dashboard_dir,
             capture_output=True,
@@ -1536,9 +1535,9 @@ def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
 @click.pass_context
 def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: bool):
     """Serve the dashboard locally.
-    
+
     Builds and serves the dashboard with hot-reload for development.
-    
+
     Examples:
       truthctl dashboard serve --runs ./my-runs
       truthctl dashboard serve --runs ./runs --port 8080
@@ -1598,12 +1597,12 @@ def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: 
 @click.pass_context
 def dashboard_snapshot(ctx: click.Context, runs: Path, out: Path, name: str | None):
     """Create a portable snapshot of runs + dashboard.
-    
+
     Creates a self-contained directory with:
     - All run data (JSON files)
     - Dashboard (built with embedded data)
     - Can be hosted on GitHub Pages or shared as a ZIP
-    
+
     Examples:
       truthctl dashboard snapshot --runs ./my-runs --out ./snapshot
       truthctl dashboard snapshot --runs ./runs --out ./export --name v1.0-results
@@ -1753,12 +1752,12 @@ def load_run_data(run_dir: Path) -> dict | None:
 @click.pass_context
 def dashboard_demo(ctx: click.Context, out: Path, open: bool):
     """Run demo and build dashboard.
-    
+
     Creates a complete demo with:
     - Sample verification runs
     - All artifact types (verdict, policy, provenance)
     - Built dashboard
-    
+
     Examples:
       truthctl dashboard demo --out ./demo-out
       truthctl dashboard demo --out ./demo --no-open

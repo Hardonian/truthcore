@@ -32,7 +32,7 @@ class ContractVersionError(ValidationError):
 
 def _validate_type(value: Any, expected_type: str, path: str) -> list[str]:
     """Validate a value against an expected type.
-    
+
     Returns list of error messages.
     """
     errors: list[str] = []
@@ -56,7 +56,7 @@ def _validate_type(value: Any, expected_type: str, path: str) -> list[str]:
 
 def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
     """Validate a value against a schema fragment.
-    
+
     Returns list of error messages.
     """
     errors: list[str] = []
@@ -141,16 +141,16 @@ def validate_artifact(
     strict: bool = False,
 ) -> list[str]:
     """Validate an artifact against its schema.
-    
+
     Args:
         artifact: The artifact to validate
         artifact_type: Artifact type (inferred from metadata if not provided)
         version: Contract version (inferred from metadata if not provided)
         strict: If True, fail on additional properties not in schema
-    
+
     Returns:
         List of validation error messages (empty if valid)
-    
+
     Raises:
         SchemaNotFoundError: If the schema cannot be found
         ContractVersionError: If contract metadata is missing/invalid
@@ -215,13 +215,13 @@ def validate_artifact_or_raise(
     strict: bool = False,
 ) -> None:
     """Validate an artifact and raise an exception if invalid.
-    
+
     Args:
         artifact: The artifact to validate
         artifact_type: Artifact type (inferred from metadata if not provided)
         version: Contract version (inferred from metadata if not provided)
         strict: If True, fail on additional properties not in schema
-    
+
     Raises:
         ValidationError: If validation fails
     """
@@ -237,13 +237,13 @@ def is_valid(
     strict: bool = False,
 ) -> bool:
     """Check if an artifact is valid.
-    
+
     Args:
         artifact: The artifact to check
         artifact_type: Artifact type (inferred from metadata if not provided)
         version: Contract version (inferred from metadata if not provided)
         strict: If True, fail on additional properties not in schema
-    
+
     Returns:
         True if valid, False otherwise
     """
@@ -261,13 +261,13 @@ def validate_file(
     strict: bool = False,
 ) -> list[str]:
     """Validate an artifact file.
-    
+
     Args:
         file_path: Path to the artifact file
         artifact_type: Artifact type (inferred from metadata if not provided)
         version: Contract version (inferred from metadata if not provided)
         strict: If True, fail on additional properties not in schema
-    
+
     Returns:
         List of validation error messages
     """

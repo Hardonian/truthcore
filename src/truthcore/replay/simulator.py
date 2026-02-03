@@ -30,7 +30,7 @@ from truthcore.verdict.models import (
 @dataclass
 class SimulationChanges:
     """Changes to apply for counterfactual simulation.
-    
+
     Attributes:
         thresholds: Threshold overrides (e.g., {"max_highs": 10})
         severity_weights: Weight overrides (e.g., {"HIGH": 100.0})
@@ -51,7 +51,7 @@ class SimulationChanges:
     @classmethod
     def from_yaml(cls, path: Path) -> SimulationChanges:
         """Load changes from YAML file.
-        
+
         Example YAML:
             thresholds:
               max_highs: 10
@@ -96,7 +96,7 @@ class SimulationChanges:
 @dataclass
 class SimulationResult:
     """Result of a counterfactual simulation.
-    
+
     Attributes:
         success: Whether simulation completed successfully
         bundle: The replay bundle used
@@ -226,7 +226,7 @@ class SimulationResult:
 
 class SimulationEngine:
     """Engine for counterfactual simulation.
-    
+
     This runs "what-if" scenarios by modifying thresholds, weights,
     and other configuration without changing the raw inputs.
     """
@@ -244,14 +244,14 @@ class SimulationEngine:
         profile: str | None = None,
     ) -> SimulationResult:
         """Run a counterfactual simulation.
-        
+
         Args:
             bundle: The replay bundle to simulate
             output_dir: Directory for simulation outputs
             changes: Changes to apply for the simulation
             mode: Override mode (uses bundle mode if None)
             profile: Override profile (uses bundle profile if None)
-            
+
         Returns:
             SimulationResult with comparison details
         """
@@ -427,11 +427,11 @@ class SimulationReporter:
         output_dir: Path,
     ) -> dict[str, Path]:
         """Write simulation reports.
-        
+
         Args:
             result: Simulation result to report
             output_dir: Directory for report files
-            
+
         Returns:
             Dict of report type to path
         """

@@ -30,9 +30,9 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def why_cmd(assertion_id: str, output_format: str, store: Path):
         """Explain why an assertion is believed.
-        
+
         Shows lineage, evidence, and confidence computation.
-        
+
         Examples:
           truthctl spine why assertion_abc123
           truthctl spine why assertion_abc123 --format json
@@ -99,7 +99,7 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def evidence_cmd(assertion_id: str, evidence_type: str, output_format: str, store: Path):
         """Show evidence for an assertion.
-        
+
         Examples:
           truthctl spine evidence assertion_abc123
           truthctl spine evidence assertion_abc123 --type supporting --format json
@@ -164,7 +164,7 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def history_cmd(assertion_id: str, since: str | None, output_format: str, store: Path):
         """Show belief version history.
-        
+
         Examples:
           truthctl spine history assertion_abc123
           truthctl spine history assertion_abc123 --since 2026-01-01
@@ -228,7 +228,7 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def meaning_cmd(concept: str, version: str | None, at: str | None, output_format: str, store: Path):
         """Query semantic meaning of a concept.
-        
+
         Examples:
           truthctl spine meaning deployment_ready
           truthctl spine meaning deployment_ready --at 2026-01-15T00:00:00Z
@@ -296,7 +296,7 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def dependencies_cmd(assertion_id: str, recursive: bool, depth: int, output_format: str, store: Path):
         """Show dependencies for an assertion.
-        
+
         Examples:
           truthctl spine dependencies assertion_abc123
           truthctl spine dependencies assertion_abc123 --recursive --depth 3
@@ -359,7 +359,7 @@ def register_spine_commands(cli: click.Group) -> None:
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def invalidate_cmd(assertion_id: str, output_format: str, store: Path):
         """Show what could invalidate a belief.
-        
+
         Examples:
           truthctl spine invalidate assertion_abc123
         """

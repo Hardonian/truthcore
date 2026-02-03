@@ -11,26 +11,28 @@ from truthcore.connectors.base import BaseConnector, ConnectorResult
 
 class LocalConnector(BaseConnector):
     """Connector for local filesystem inputs.
-    
+
     This connector copies files from a local source directory
     to the destination, applying validation and size limits.
     """
 
     @property
     def name(self) -> str:
+        """Return connector name."""
         return "local"
 
     @property
     def is_available(self) -> bool:
+        """Return whether local connector is available (always True)."""
         return True
 
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Copy files from local source to destination.
-        
+
         Args:
             source: Source directory path
             destination: Destination directory path
-            
+
         Returns:
             ConnectorResult with status and file list
         """
@@ -124,11 +126,11 @@ class LocalConnector(BaseConnector):
 
     def fetch_from_config(self, config: dict[str, Any], destination: Path) -> ConnectorResult:
         """Fetch using a configuration dict.
-        
+
         Args:
             config: Configuration with 'path' key
             destination: Destination directory
-            
+
         Returns:
             ConnectorResult
         """

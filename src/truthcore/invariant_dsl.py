@@ -52,7 +52,7 @@ class InvariantDSL:
 
     def __init__(self, data: dict[str, Any]) -> None:
         """Initialize with data context.
-        
+
         Args:
             data: Dictionary containing values to evaluate against
         """
@@ -79,7 +79,7 @@ class InvariantDSL:
 
     def evaluate_rule(self, rule: dict[str, Any]) -> tuple[bool, RuleEvaluation | None]:
         """Evaluate a single rule.
-        
+
         Rule format:
         {
             "id": "rule_name",
@@ -88,7 +88,7 @@ class InvariantDSL:
             "right": "path.to.value" or literal,
             "threshold": 5,  # optional
         }
-        
+
         Or with aggregation:
         {
             "id": "count_rule",
@@ -289,10 +289,10 @@ class InvariantDSL:
 
     def explain(self, rule: dict[str, Any]) -> str:
         """Generate human-readable explanation for a rule evaluation.
-        
+
         Args:
             rule: Rule to explain
-        
+
         Returns:
             Markdown-formatted explanation
         """

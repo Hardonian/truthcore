@@ -89,7 +89,7 @@ class InvalidationResult:
 
 class QueryEngine:
     """Main query engine for TruthCore Spine.
-    
+
     Provides read-only access to all spine data.
     """
 
@@ -100,7 +100,7 @@ class QueryEngine:
     # Q1: Why is this believed?
     def why(self, assertion_id: str) -> WhyResult | None:
         """Explain why an assertion is believed.
-        
+
         Returns lineage, evidence, and confidence computation.
         """
         assertion = self.store.get_assertion(assertion_id)
@@ -146,7 +146,7 @@ class QueryEngine:
         include_stale: bool = True,
     ) -> EvidenceResult | None:
         """Get evidence related to an assertion.
-        
+
         Categorizes as supporting, weakening, or stale.
         """
         assertion = self.store.get_assertion(assertion_id)
@@ -185,7 +185,7 @@ class QueryEngine:
     # Q3: When and why did this belief change?
     def history(self, assertion_id: str) -> HistoryResult | None:
         """Get belief version history for an assertion.
-        
+
         Shows how confidence changed over time.
         """
         assertion = self.store.get_assertion(assertion_id)
@@ -224,7 +224,7 @@ class QueryEngine:
         timestamp: str | None = None,
     ) -> MeaningResult | None:
         """Get semantic meaning information for a concept.
-        
+
         Returns current and historical versions.
         """
         # Load meaning registry
@@ -271,7 +271,7 @@ class QueryEngine:
     # Q5: Who overrode this, when, and with what scope?
     def override(self, decision_id: str) -> OverrideResult | None:
         """Get override information for a decision.
-        
+
         Returns override record and expiry status.
         """
         # Load override from storage
@@ -303,7 +303,7 @@ class QueryEngine:
         max_depth: int = 5,
     ) -> DependenciesResult | None:
         """Get dependency graph for an assertion.
-        
+
         Shows upstream beliefs and evidence.
         """
         assertion = self.store.get_assertion(assertion_id)
@@ -351,7 +351,7 @@ class QueryEngine:
     # Q7: What would invalidate this belief?
     def invalidate(self, assertion_id: str) -> InvalidationResult | None:
         """Identify what could invalidate a belief.
-        
+
         Returns counter-evidence patterns and scenarios.
         """
         assertion = self.store.get_assertion(assertion_id)
@@ -439,7 +439,7 @@ class QueryEngine:
 
 class SpineQueryClient:
     """High-level client for querying TruthCore Spine.
-    
+
     Provides convenient access to all query types.
     """
 

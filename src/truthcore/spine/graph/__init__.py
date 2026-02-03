@@ -15,7 +15,7 @@ from truthcore.spine.primitives import Assertion, Evidence
 
 class GraphStore:
     """Content-addressed storage for assertions and evidence.
-    
+
     Uses a directory structure with hash prefixes for efficient
     file system storage and lookup.
     """

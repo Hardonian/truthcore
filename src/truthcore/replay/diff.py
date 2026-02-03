@@ -17,7 +17,7 @@ from truthcore.manifest import hash_dict
 @dataclass
 class DiffEntry:
     """A single diff entry representing a difference between two values.
-    
+
     Attributes:
         path: JSON path to the differing field
         old_value: Value from the original/baseline
@@ -33,7 +33,7 @@ class DiffEntry:
 @dataclass
 class DeterministicDiff:
     """Deterministic diff result with content-aware comparison.
-    
+
     Attributes:
         identical: Whether the two documents are considered identical
         total_differences: Total number of differences found
@@ -108,7 +108,7 @@ class DeterministicDiff:
 
 class DiffComputer:
     """Computes deterministic diffs between JSON documents.
-    
+
     This handles:
     - Field allowlists (fields that can differ)
     - Value normalization (timestamps, etc.)
@@ -131,12 +131,12 @@ class DiffComputer:
         path_prefix: str = "$",
     ) -> DeterministicDiff:
         """Compute diff between two JSON documents.
-        
+
         Args:
             old_data: Baseline/original document
             new_data: New/comparison document
             path_prefix: JSONPath prefix for this comparison
-            
+
         Returns:
             DeterministicDiff with all differences
         """
@@ -167,11 +167,11 @@ class DiffComputer:
         new_file: Path,
     ) -> DeterministicDiff:
         """Compute diff between two JSON files.
-        
+
         Args:
             old_file: Path to baseline file
             new_file: Path to comparison file
-            
+
         Returns:
             DeterministicDiff
         """
@@ -256,7 +256,7 @@ class DiffComputer:
         entries: list[DiffEntry],
     ) -> None:
         """Compare two lists.
-        
+
         For determinism, we sort lists of dictionaries by a canonical key
         before comparison.
         """
@@ -274,7 +274,7 @@ class DiffComputer:
 
     def _sort_list(self, lst: list[Any]) -> list[Any]:
         """Sort list for deterministic comparison.
-        
+
         If items are dicts with 'id' or 'path' key, sort by that.
         Otherwise return as-is.
         """
@@ -337,14 +337,14 @@ class DiffComputer:
 
 def compute_content_hash(data: dict[str, Any], allowlist: set[str] | None = None) -> str:
     """Compute a deterministic content hash, ignoring allowed fields.
-    
+
     This creates a hash of the document content that excludes fields
     in the allowlist (like timestamps, run IDs, etc.).
-    
+
     Args:
         data: Document to hash
         allowlist: Fields to ignore
-        
+
     Returns:
         Hex digest of content hash
     """

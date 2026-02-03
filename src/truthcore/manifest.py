@@ -8,10 +8,12 @@ import platform
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from truthcore import __version__
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def get_git_sha() -> str | None:
@@ -33,7 +35,7 @@ def get_git_sha() -> str | None:
 
 def normalize_timestamp(ts: datetime | str | None = None) -> str:
     """Generate normalized ISO timestamp in UTC.
-    
+
     All timestamps are converted to UTC and formatted consistently.
     """
     if ts is None:
@@ -54,12 +56,12 @@ def normalize_timestamp(ts: datetime | str | None = None) -> str:
 
 def hash_file(path: Path, algorithm: str = "blake2b", digest_size: int = 16) -> str:
     """Compute content hash of a file.
-    
+
     Args:
         path: Path to file
         algorithm: Hash algorithm (blake2b, sha256, sha3_256)
         digest_size: Size of digest (for blake2b)
-    
+
     Returns:
         Hex digest of file content
     """
@@ -100,7 +102,7 @@ def hash_content(content: bytes | str, algorithm: str = "blake2b", digest_size: 
 
 def hash_dict(data: dict[str, Any], algorithm: str = "blake2b", digest_size: int = 16) -> str:
     """Compute deterministic hash of a dictionary.
-    
+
     Uses canonical JSON representation with sorted keys.
     """
     canonical = json.dumps(data, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
@@ -116,6 +118,7 @@ class InputFileInfo:
     modified_time: str
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert input file info to dictionary."""
         return {
             "path": self.path,
             "size": self.size,
@@ -127,7 +130,7 @@ class InputFileInfo:
 @dataclass
 class RunManifest:
     """Manifest capturing all provenance information for a run.
-    
+
     This enables reproducibility by recording:
     - Software versions
     - Configuration
@@ -289,7 +292,7 @@ class RunManifest:
 
     def compute_cache_key(self) -> str:
         """Compute cache key from manifest content.
-        
+
         This combines command, config hash, and input hashes.
         """
         key_data = {

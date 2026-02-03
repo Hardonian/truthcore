@@ -20,7 +20,7 @@ class JSONNormalizationError(Exception):
 @dataclass(frozen=True)
 class JSONNormalizationConfig:
     """Configuration for JSON normalization.
-    
+
     All settings default to safe, deterministic values.
     """
 
@@ -56,14 +56,14 @@ class JSONNormalizationConfig:
 
 class JSONNormalizer:
     """Deterministic JSON normalizer.
-    
+
     Normalizes JSON to a canonical form suitable for content hashing
     and comparison. All operations are deterministic and stable.
     """
 
     def __init__(self, config: JSONNormalizationConfig | None = None):
         """Initialize with configuration.
-        
+
         Args:
             config: Normalization configuration (uses defaults if None)
         """
@@ -71,16 +71,16 @@ class JSONNormalizer:
 
     def normalize(self, data: Any) -> Any:
         """Normalize data structure to canonical form.
-        
+
         Args:
             data: JSON-serializable data structure
-            
+
         Returns:
             Normalized data structure
-            
+
         Raises:
             JSONNormalizationError: If data exceeds limits or is invalid
-            
+
         Example:
             >>> normalizer = JSONNormalizer()
             >>> normalizer.normalize({"b": 1, "a": 2})
@@ -90,13 +90,13 @@ class JSONNormalizer:
 
     def normalize_string(self, json_str: str) -> str:
         """Normalize a JSON string.
-        
+
         Args:
             json_str: JSON string to normalize
-            
+
         Returns:
             Normalized JSON string
-            
+
         Raises:
             JSONNormalizationError: If JSON is invalid or exceeds limits
         """
@@ -116,10 +116,10 @@ class JSONNormalizer:
 
     def serialize(self, data: Any) -> str:
         """Serialize data to canonical JSON string.
-        
+
         Args:
             data: Data to serialize
-            
+
         Returns:
             Canonical JSON string
         """
@@ -136,13 +136,13 @@ class JSONNormalizer:
 
     def parse_safe(self, json_str: str) -> Any:
         """Safely parse JSON with limits.
-        
+
         Args:
             json_str: JSON string to parse
-            
+
         Returns:
             Parsed data structure
-            
+
         Raises:
             JSONNormalizationError: If JSON is invalid or exceeds limits
         """
@@ -320,11 +320,11 @@ def canonical_json(data: Any, **kwargs: Any) -> str:
 
 def normalize_json(data: Any, **kwargs: Any) -> Any:
     """Normalize JSON data structure.
-    
+
     Args:
         data: JSON data to normalize
         **kwargs: Configuration overrides
-        
+
     Returns:
         Normalized data structure
     """
@@ -335,14 +335,14 @@ def normalize_json(data: Any, **kwargs: Any) -> Any:
 
 def parse_json_safe(json_str: str, **kwargs: Any) -> Any:
     """Safely parse JSON with limits.
-    
+
     Args:
         json_str: JSON string to parse
         **kwargs: Configuration overrides for limits
-        
+
     Returns:
         Parsed data structure
-        
+
     Raises:
         JSONNormalizationError: If JSON is invalid or exceeds limits
     """

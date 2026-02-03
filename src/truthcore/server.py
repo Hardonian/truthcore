@@ -10,7 +10,6 @@ import os
 import secrets
 import tempfile
 import time
-import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -45,15 +44,14 @@ logger = logging.getLogger(__name__)
 
 # Import security utilities
 from truthcore.server_security import (
-    SecurityMiddleware,
-    RequestIDMiddleware,
+    AuthenticationError,
     ErrorCategory,
     ErrorSeverity,
-    create_error_response,
-    sanitize_cache_key,
-    AuthenticationError,
     RateLimitError,
+    RequestIDMiddleware,
+    SecurityMiddleware,
     ValidationError,
+    create_error_response,
     generate_error_id,
     validate_api_key_format,
 )

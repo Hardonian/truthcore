@@ -16,7 +16,7 @@ from typing import Any
 @dataclass(frozen=True)
 class TextNormalizationConfig:
     """Configuration for text normalization.
-    
+
     All settings default to safe, deterministic values.
     """
 
@@ -53,7 +53,7 @@ class TextNormalizationConfig:
 
 class TextNormalizer:
     """Deterministic text normalizer.
-    
+
     Normalizes text to a canonical form suitable for content hashing
     and comparison. All operations are deterministic and stable.
     """
@@ -64,7 +64,7 @@ class TextNormalizer:
 
     def __init__(self, config: TextNormalizationConfig | None = None):
         """Initialize with configuration.
-        
+
         Args:
             config: Normalization configuration (uses defaults if None)
         """
@@ -75,13 +75,13 @@ class TextNormalizer:
 
     def normalize(self, text: str) -> str:
         """Normalize text to canonical form.
-        
+
         Args:
             text: Input text to normalize
-            
+
         Returns:
             Normalized text in canonical form
-            
+
         Example:
             >>> normalizer = TextNormalizer()
             >>> normalizer.normalize("  hello   world  \\n")
@@ -120,10 +120,10 @@ class TextNormalizer:
 
     def normalize_lines(self, lines: list[str]) -> list[str]:
         """Normalize a list of lines.
-        
+
         Args:
             lines: List of text lines
-            
+
         Returns:
             List of normalized lines (empty lines removed if collapsing)
         """
@@ -137,13 +137,13 @@ class TextNormalizer:
 
     def normalize_file(self, path: Path) -> str:
         """Normalize content of a file.
-        
+
         Args:
             path: Path to file to normalize
-            
+
         Returns:
             Normalized file content
-            
+
         Raises:
             FileNotFoundError: If file does not exist
             UnicodeDecodeError: If file cannot be decoded as UTF-8
@@ -200,14 +200,14 @@ class TextNormalizer:
 
 def normalize_text(text: str, **kwargs: Any) -> str:
     """Convenience function for one-off text normalization.
-    
+
     Args:
         text: Text to normalize
         **kwargs: Configuration overrides (see TextNormalizationConfig)
-        
+
     Returns:
         Normalized text
-        
+
     Example:
         >>> normalize_text("  hello   world  ", trim_final=True)
         'hello world'
@@ -219,11 +219,11 @@ def normalize_text(text: str, **kwargs: Any) -> str:
 
 def normalize_lines(lines: list[str], **kwargs: Any) -> list[str]:
     """Convenience function for one-off line normalization.
-    
+
     Args:
         lines: Lines to normalize
         **kwargs: Configuration overrides (see TextNormalizationConfig)
-        
+
     Returns:
         Normalized lines
     """
@@ -238,15 +238,15 @@ default_normalizer = TextNormalizer()
 
 def canonical_text(text: str) -> str:
     """Quick canonical form for content hashing.
-    
+
     Uses conservative defaults suitable for generating content hashes.
-    
+
     Args:
         text: Text to canonicalize
-        
+
     Returns:
         Canonical text form
-        
+
     Example:
         >>> canonical_text("Hello\\n\\nWorld\\r\\n")
         'Hello\\nWorld'

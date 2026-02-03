@@ -13,8 +13,10 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from truthcore.manifest import normalize_timestamp
 from truthcore.severity import (
@@ -568,12 +570,11 @@ class VerdictAggregator:
 
         # Check category limits
         for cat_breakdown in result.categories:
-            if cat_breakdown.max_allowed is not None:
-                if cat_breakdown.points_contributed > cat_breakdown.max_allowed:
-                    no_ship_reasons.append(
-                        f"Category '{cat_breakdown.category.value}' points "
-                        f"({cat_breakdown.points_contributed}) exceed limit ({cat_breakdown.max_allowed})"
-                    )
+            if cat_breakdown.max_allowed is not None and cat_breakdown.points_contributed > cat_breakdown.max_allowed:
+                no_ship_reasons.append(
+                    f"Category '{cat_breakdown.category.value}' points "
+                    f"({cat_breakdown.points_contributed}) exceed limit ({cat_breakdown.max_allowed})"
+                )
 
         # Build ship reasons if no blockers
         if result.blockers == 0:
@@ -599,7 +600,11 @@ class VerdictAggregator:
         elif degraded:
             verdict = VerdictStatus.DEGRADED
         elif result.highs > thresholds.max_highs:
-            verdict = VerdictStatus.CONDITIONAL
+            # Check if an override was applied for high severity issues
+            high_override_applied = any(
+                "max_highs" in override.scope for override in result.overrides_applied
+            )
+            verdict = VerdictStatus.SHIP if high_override_applied else VerdictStatus.CONDITIONAL
         else:
             verdict = VerdictStatus.SHIP
 

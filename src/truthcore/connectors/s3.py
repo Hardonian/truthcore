@@ -10,10 +10,10 @@ from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorR
 
 class S3Connector(BaseConnector):
     """Connector for S3-compatible object storage.
-    
+
     This connector is disabled by default and only available if
     the truth-core[s3] extra is installed (boto3/botocore).
-    
+
     Example source format:
         s3://bucket-name/path/to/object.zip
         s3://bucket-name/path/to/prefix/
@@ -21,7 +21,7 @@ class S3Connector(BaseConnector):
 
     def __init__(self, config: ConnectorConfig | None = None):
         """Initialize S3 connector.
-        
+
         Args:
             config: Connector configuration
         """
@@ -36,6 +36,7 @@ class S3Connector(BaseConnector):
 
     @property
     def name(self) -> str:
+        """Return connector name."""
         return "s3"
 
     @property
@@ -61,11 +62,11 @@ class S3Connector(BaseConnector):
 
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Fetch object(s) from S3.
-        
+
         Args:
             source: S3 URI in format s3://bucket/key
             destination: Destination directory for downloaded content
-            
+
         Returns:
             ConnectorResult with status and file list
         """
@@ -101,10 +102,10 @@ class S3Connector(BaseConnector):
 
     def _parse_s3_uri(self, source: str) -> tuple[str, str] | None:
         """Parse S3 URI into bucket and key.
-        
+
         Args:
             source: S3 URI
-            
+
         Returns:
             Tuple of (bucket, key) or None if invalid
         """
@@ -139,12 +140,12 @@ class S3Connector(BaseConnector):
 
     def _fetch_object(self, bucket: str, key: str, destination: Path) -> ConnectorResult:
         """Fetch single S3 object.
-        
+
         Args:
             bucket: S3 bucket name
             key: S3 object key
             destination: Destination directory
-            
+
         Returns:
             ConnectorResult
         """
@@ -186,12 +187,12 @@ class S3Connector(BaseConnector):
 
     def _fetch_prefix(self, bucket: str, prefix: str, destination: Path) -> ConnectorResult:
         """Fetch all objects under a prefix.
-        
+
         Args:
             bucket: S3 bucket name
             prefix: S3 key prefix (ends with /)
             destination: Destination directory
-            
+
         Returns:
             ConnectorResult
         """

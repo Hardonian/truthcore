@@ -17,8 +17,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from fastapi import HTTPException, Request, Response
-from fastapi import status as http_status
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 
@@ -334,4 +333,3 @@ def generate_error_id() -> str:
     return f"err_{timestamp}_{random_part}"
 
 
-import time

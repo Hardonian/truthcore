@@ -6,19 +6,22 @@ import io
 import json
 import os
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorResult
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 class GitHubActionsConnector(BaseConnector):
     """Connector for GitHub Actions workflow artifacts.
-    
+
     Downloads artifacts from GitHub Actions runs using the GitHub API.
     Requires a GitHub token with appropriate permissions.
-    
+
     Example source format:
         owner/repo/workflow_run_id/artifact_name
         or
@@ -29,7 +32,7 @@ class GitHubActionsConnector(BaseConnector):
 
     def __init__(self, config: ConnectorConfig | None = None, token: str | None = None):
         """Initialize with optional GitHub token.
-        
+
         Args:
             config: Connector configuration
             token: GitHub personal access token (or from GITHUB_TOKEN env var)
@@ -39,6 +42,7 @@ class GitHubActionsConnector(BaseConnector):
 
     @property
     def name(self) -> str:
+        """Return connector name."""
         return "github-actions"
 
     @property
@@ -48,12 +52,12 @@ class GitHubActionsConnector(BaseConnector):
 
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Download artifact from GitHub Actions.
-        
+
         Args:
             source: Source in format "owner/repo/run_id/artifact_name" or
                    "github://owner/repo/run_id/artifact_name"
             destination: Destination directory for extracted artifact
-            
+
         Returns:
             ConnectorResult with status and file list
         """
@@ -102,10 +106,10 @@ class GitHubActionsConnector(BaseConnector):
 
     def _parse_source(self, source: str) -> tuple[str, str, str, str] | None:
         """Parse source string into components.
-        
+
         Args:
             source: Source string
-            
+
         Returns:
             Tuple of (owner, repo, run_id, artifact_name) or None if invalid
         """
@@ -133,13 +137,13 @@ class GitHubActionsConnector(BaseConnector):
         self, owner: str, repo: str, run_id: str, artifact_name: str
     ) -> str | None:
         """Get artifact download URL from GitHub API.
-        
+
         Args:
             owner: Repository owner
             repo: Repository name
             run_id: Workflow run ID
             artifact_name: Artifact name
-            
+
         Returns:
             Download URL or None if not found
         """
@@ -164,7 +168,7 @@ class GitHubActionsConnector(BaseConnector):
         self, download_url: str, destination: Path, owner: str, repo: str, run_id: str, artifact_name: str
     ) -> ConnectorResult:
         """Download artifact zip and extract to destination.
-        
+
         Args:
             download_url: URL to download artifact zip
             destination: Destination directory
@@ -172,7 +176,7 @@ class GitHubActionsConnector(BaseConnector):
             repo: Repository name
             run_id: Workflow run ID
             artifact_name: Artifact name
-            
+
         Returns:
             ConnectorResult
         """

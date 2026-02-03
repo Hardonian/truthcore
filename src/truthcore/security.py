@@ -44,14 +44,14 @@ class SecurityError(Exception):
 
 def check_path_safety(path: Path, base_dir: Path | None = None) -> Path:
     """Verify path is safe (no traversal outside base_dir).
-    
+
     Args:
         path: Path to check
         base_dir: Allowed base directory (if None, no restriction)
-    
+
     Returns:
         Resolved path
-    
+
     Raises:
         SecurityError: If path traversal detected
     """
@@ -83,15 +83,15 @@ def safe_read_file(
     base_dir: Path | None = None,
 ) -> bytes:
     """Safely read file with size limits.
-    
+
     Args:
         path: File path
         limits: Security limits
         base_dir: Base directory for path traversal check
-    
+
     Returns:
         File contents as bytes
-    
+
     Raises:
         SecurityError: If file too large or path unsafe
     """
@@ -132,10 +132,10 @@ def safe_read_text(
 
 def check_json_depth(obj: Any, current_depth: int = 0, max_depth: int = DEFAULT_MAX_JSON_DEPTH) -> int:
     """Check JSON object depth.
-    
+
     Returns:
         Actual depth of object
-    
+
     Raises:
         SecurityError: If depth exceeds max_depth
     """
@@ -163,14 +163,14 @@ def safe_load_json(
     limits: SecurityLimits | None = None,
 ) -> Any:
     """Safely load JSON with depth and size limits.
-    
+
     Args:
         data: JSON data as bytes or string
         limits: Security limits
-    
+
     Returns:
         Parsed JSON object
-    
+
     Raises:
         SecurityError: If limits exceeded
     """
@@ -209,15 +209,15 @@ def safe_extract_zip(
     limits: SecurityLimits | None = None,
 ) -> list[Path]:
     """Safely extract zip file with path traversal protection.
-    
+
     Args:
         zip_path: Path to zip file
         output_dir: Directory to extract to
         limits: Security limits
-    
+
     Returns:
         List of extracted file paths
-    
+
     Raises:
         SecurityError: If traversal or size limits exceeded
     """
@@ -263,7 +263,7 @@ def safe_extract_zip(
 
 def sanitize_markdown(text: str) -> str:
     """Sanitize markdown to prevent injection.
-    
+
     Escapes or removes potentially dangerous content:
     - HTML script tags
     - Data URIs
@@ -290,15 +290,15 @@ def validate_input_path(
     base_dir: Path | None = None,
 ) -> Path:
     """Validate input path is safe and has allowed extension.
-    
+
     Args:
         path: Input path
         allowed_extensions: Set of allowed extensions (e.g., {'.json', '.yaml'})
         base_dir: Base directory for traversal check
-    
+
     Returns:
         Validated path
-    
+
     Raises:
         SecurityError: If validation fails
     """

@@ -22,18 +22,28 @@ class BoundingBox:
 
     @property
     def area(self) -> float:
+        """Calculate the area of the bounding box."""
         return self.width * self.height
 
     @property
     def center_x(self) -> float:
+        """Calculate the x-coordinate of the box center."""
         return self.x + self.width / 2
 
     @property
     def center_y(self) -> float:
+        """Calculate the y-coordinate of the box center."""
         return self.y + self.height / 2
 
     def intersects(self, other: BoundingBox) -> bool:
-        """Check if this box intersects with another."""
+        """Check if this box intersects with another.
+
+        Args:
+            other: Another bounding box to check intersection with.
+
+        Returns:
+            True if the boxes intersect, False otherwise.
+        """
         return not (
             self.x + self.width < other.x or
             other.x + other.width < self.x or
@@ -68,6 +78,7 @@ class UIElement:
     viewport: str = "desktop"  # desktop, mobile, tablet
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert UI element to dictionary representation."""
         return {
             "id": self.id,
             "selector": self.selector,
@@ -173,7 +184,7 @@ class UIReachabilityChecker:
         viewports: list[str] | None = None,
     ) -> dict[str, Any]:
         """Check if CTA is clickable across viewports.
-        
+
         Returns:
             Result dict with pass/fail and details
         """
@@ -231,7 +242,7 @@ class UIReachabilityChecker:
         content_selectors: list[str],
     ) -> dict[str, Any]:
         """Check if sticky element overlaps primary content.
-        
+
         Returns:
             Result dict with overlap information
         """

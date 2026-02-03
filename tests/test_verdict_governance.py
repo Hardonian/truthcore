@@ -327,6 +327,8 @@ def test_temporal_escalation():
         )
         assert finding2.severity == Severity.LOW  # Not yet escalated
 
+        agg2.aggregate(mode=Mode.PR, run_id="run-2")  # Save temporal state
+
         # Third run (should escalate)
         thresholds = VerdictThresholds.for_mode(Mode.PR)
         thresholds.min_engines_required = 0
@@ -385,6 +387,7 @@ def test_override_application():
     # Reset and add override
     thresholds = VerdictThresholds.for_mode(Mode.PR)
     thresholds.min_engines_required = 0
+    thresholds.max_total_points = 500  # Increase to accommodate 8 HIGH findings (8 * 50 = 400)
     aggregator2 = VerdictAggregator(thresholds=thresholds, expected_engines=["test"])
     aggregator2.register_engine_health(
         EngineHealth(

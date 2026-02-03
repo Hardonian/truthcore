@@ -40,11 +40,11 @@ def check_compat_possible(
     target_version: str,
 ) -> tuple[bool, str]:
     """Check if compatibility conversion is possible.
-    
+
     Args:
         artifact: The artifact to convert
         target_version: Target contract version
-    
+
     Returns:
         Tuple of (is_possible, reason)
     """
@@ -80,15 +80,15 @@ def convert_to_version(
     validate: bool = True,
 ) -> dict[str, Any]:
     """Convert an artifact to a specific contract version.
-    
+
     Args:
         artifact: The artifact to convert
         target_version: Target contract version
         validate: If True, validate output against target schema
-    
+
     Returns:
         Converted artifact
-    
+
     Raises:
         CompatError: If conversion fails
         BreakingChangeError: If conversion requires breaking changes
@@ -154,14 +154,14 @@ def convert_directory(
     validate: bool = True,
 ) -> dict[str, Any]:
     """Convert all artifacts in a directory to a target version.
-    
+
     Args:
         input_dir: Input directory containing artifacts
         output_dir: Output directory for converted artifacts
         target_version: Target contract version
         artifact_types: If provided, only convert these artifact types
         validate: If True, validate outputs
-    
+
     Returns:
         Summary dict with conversion results
     """
@@ -231,10 +231,10 @@ def convert_directory(
 
 def get_compat_versions(artifact_type: str) -> list[str]:
     """Get list of versions available for compat mode.
-    
+
     Args:
         artifact_type: The artifact type
-    
+
     Returns:
         List of supported version strings
     """
@@ -252,15 +252,15 @@ def add_contract_metadata_if_missing(
     engine_versions: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Add contract metadata to an artifact if it doesn't have any.
-    
+
     This is useful for migrating legacy (unversioned) artifacts.
-    
+
     Args:
         artifact: The artifact
         artifact_type: Artifact type
         contract_version: Contract version (typically "0.0.0" for legacy)
         engine_versions: Engine versions
-    
+
     Returns:
         Artifact with metadata added
     """

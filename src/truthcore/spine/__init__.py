@@ -10,12 +10,12 @@ The Spine module provides:
 
 Usage:
     from truthcore.spine import SpineClient
-    
+
     client = SpineClient()
-    
+
     # Query why something is believed
     result = client.query.why("assertion_id")
-    
+
     # Get belief history
     history = client.query.history("assertion_id")
 """

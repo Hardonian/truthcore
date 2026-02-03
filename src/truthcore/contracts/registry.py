@@ -45,7 +45,7 @@ class ContractVersion:
 
     def is_compatible_with(self, other: ContractVersion) -> bool:
         """Check if this version is backward compatible with another.
-        
+
         Returns True if self can be used where other is expected.
         """
         # Same major version and self is >= other
@@ -208,7 +208,7 @@ class ContractRegistry:
 
     def get_schema(self, artifact_type: str, version: str | None = None) -> SchemaRef:
         """Get schema for an artifact type and version.
-        
+
         If version is None, returns the current version.
         """
         registration = self.get(artifact_type)

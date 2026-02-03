@@ -10,7 +10,7 @@ from truthcore.migrations.engine import register_migration
 
 def _migrate_v0_to_v1(artifact: dict[str, Any]) -> dict[str, Any]:
     """Migrate verdict from v0.0.0 (unversioned) to v1.0.0.
-    
+
     Changes:
     - Add contract metadata (done by migration framework)
     - Ensure required fields exist with defaults
@@ -38,7 +38,7 @@ def _migrate_v0_to_v1(artifact: dict[str, Any]) -> dict[str, Any]:
 
 def _migrate_v1_to_v1_1(artifact: dict[str, Any]) -> dict[str, Any]:
     """Migrate verdict from v1.0.0 to v1.1.0.
-    
+
     Changes:
     - Add optional evidence_refs field (empty list by default)
     """
@@ -53,7 +53,7 @@ def _migrate_v1_to_v1_1(artifact: dict[str, Any]) -> dict[str, Any]:
 
 def _migrate_v1_1_to_v2(artifact: dict[str, Any]) -> dict[str, Any]:
     """Migrate verdict from v1.1.0 to v2.0.0.
-    
+
     Changes (BREAKING):
     - Rename 'score' to 'value'
     - Add required 'confidence' field

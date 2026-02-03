@@ -60,10 +60,10 @@ def get_truthcore_version() -> str:
 
 def normalize_timestamp(dt: datetime | None = None) -> str:
     """Normalize a timestamp to UTC ISO 8601 format.
-    
+
     Args:
         dt: Datetime to normalize. If None, uses current UTC time.
-    
+
     Returns:
         ISO 8601 formatted string in UTC (e.g., "2026-01-31T00:00:00Z")
     """
@@ -85,13 +85,13 @@ def create_metadata(
     created_at: datetime | None = None,
 ) -> ContractMetadata:
     """Create contract metadata for an artifact.
-    
+
     Args:
         artifact_type: Type of artifact (e.g., "verdict", "readiness")
         contract_version: Version of the contract (e.g., "2.0.0")
         engine_versions: Versions of engines used to produce artifact
         created_at: Creation timestamp (defaults to current UTC time)
-    
+
     Returns:
         ContractMetadata instance
     """
@@ -125,12 +125,12 @@ def inject_metadata(
     replace_existing: bool = False,
 ) -> dict[str, Any]:
     """Inject contract metadata into an artifact.
-    
+
     Args:
         artifact: The artifact dictionary to inject metadata into
         metadata: Contract metadata to inject
         replace_existing: If True, replace existing _contract field
-    
+
     Returns:
         Artifact with metadata injected (returns new dict, doesn't modify original)
     """
@@ -145,10 +145,10 @@ def inject_metadata(
 
 def extract_metadata(artifact: dict[str, Any]) -> ContractMetadata | None:
     """Extract contract metadata from an artifact.
-    
+
     Args:
         artifact: The artifact dictionary to extract metadata from
-    
+
     Returns:
         ContractMetadata if present, None otherwise
     """
@@ -166,11 +166,11 @@ def update_metadata(
     **updates: Any,
 ) -> dict[str, Any]:
     """Update specific fields in artifact metadata.
-    
+
     Args:
         artifact: The artifact dictionary
         **updates: Fields to update (e.g., contract_version="2.0.0")
-    
+
     Returns:
         Artifact with updated metadata
     """
@@ -190,10 +190,10 @@ def update_metadata(
 
 def remove_metadata(artifact: dict[str, Any]) -> dict[str, Any]:
     """Remove contract metadata from an artifact.
-    
+
     Args:
         artifact: The artifact dictionary
-    
+
     Returns:
         Artifact without _contract field
     """
@@ -204,10 +204,10 @@ def remove_metadata(artifact: dict[str, Any]) -> dict[str, Any]:
 
 def get_artifact_version(artifact: dict[str, Any]) -> str | None:
     """Get the contract version from an artifact.
-    
+
     Args:
         artifact: The artifact dictionary
-    
+
     Returns:
         Contract version string, or None if no metadata
     """
@@ -219,10 +219,10 @@ def get_artifact_version(artifact: dict[str, Any]) -> str | None:
 
 def get_artifact_type(artifact: dict[str, Any]) -> str | None:
     """Get the artifact type from an artifact.
-    
+
     Args:
         artifact: The artifact dictionary
-    
+
     Returns:
         Artifact type string, or None if no metadata
     """
@@ -234,10 +234,10 @@ def get_artifact_type(artifact: dict[str, Any]) -> str | None:
 
 def has_metadata(artifact: dict[str, Any]) -> bool:
     """Check if an artifact has contract metadata.
-    
+
     Args:
         artifact: The artifact dictionary
-    
+
     Returns:
         True if _contract field exists and is valid
     """
@@ -251,13 +251,13 @@ def ensure_metadata(
     engine_versions: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Ensure an artifact has contract metadata, adding it if missing.
-    
+
     Args:
         artifact: The artifact dictionary
         artifact_type: Type of artifact
         contract_version: Contract version
         engine_versions: Engine versions used
-    
+
     Returns:
         Artifact with metadata (adds if missing, preserves if present)
     """

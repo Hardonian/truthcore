@@ -22,14 +22,14 @@ except ImportError:
 
 class ParquetStore:
     """Parquet-based history store for performance.
-    
+
     This is an internal optimization layer. JSON remains the canonical
     interface for all outputs.
     """
 
     def __init__(self, store_dir: Path) -> None:
         """Initialize store.
-        
+
         Args:
             store_dir: Directory for parquet files
         """
@@ -49,7 +49,7 @@ class ParquetStore:
         timestamp: str,
     ) -> Path | None:
         """Write findings to parquet.
-        
+
         Returns:
             Path to parquet file, or None if parquet not available
         """
@@ -84,11 +84,11 @@ class ParquetStore:
         limit: int = 10000,
     ) -> list[dict[str, Any]]:
         """Read historical findings.
-        
+
         Args:
             since: Only read records after this time
             limit: Maximum records to return
-        
+
         Returns:
             List of finding records
         """
@@ -120,10 +120,10 @@ class ParquetStore:
 
     def compact(self, retention_days: int = 90) -> dict[str, int]:
         """Compact old history files.
-        
+
         Args:
             retention_days: Keep records from last N days
-        
+
         Returns:
             Statistics about compaction
         """
@@ -188,10 +188,10 @@ class HistoryCompactor:
 
     def compact(self, dry_run: bool = False) -> dict[str, Any]:
         """Run compaction.
-        
+
         Args:
             dry_run: If True, only report what would be done
-        
+
         Returns:
             Compaction statistics
         """

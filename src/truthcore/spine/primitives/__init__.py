@@ -44,7 +44,7 @@ class DecisionType(Enum):
 @dataclass(frozen=True)
 class Evidence:
     """Raw or derived data that supports assertions.
-    
+
     Evidence is the foundation - assertions are built upon it.
     Both are immutable and content-addressed.
     """
@@ -104,7 +104,7 @@ class Evidence:
 @dataclass(frozen=True)
 class Assertion:
     """A claim backed by evidence. Immutable and content-addressed.
-    
+
     Assertions do not have confidence - they are statements of what
     the system observed or calculated. Confidence belongs to Beliefs.
     """
@@ -161,7 +161,7 @@ class Assertion:
 @dataclass(frozen=True)
 class Belief:
     """A versioned belief in an assertion with confidence scoring.
-    
+
     Beliefs are NOT mutable - each update creates a new Belief
     with incremented version number. Previous beliefs retained
     for history queries.
@@ -248,7 +248,7 @@ class Belief:
 @dataclass(frozen=True)
 class MeaningVersion:
     """Semantic versioning for the *meaning* of concepts.
-    
+
     When "deployment ready" changes from "score >= 90" to
     "score >= 90 AND all reviews complete", this captures
     that semantic drift explicitly.
@@ -321,7 +321,7 @@ class MeaningVersion:
 @dataclass(frozen=True)
 class Decision:
     """A recorded choice made by system or human.
-    
+
     Decisions reference the beliefs that informed them.
     They do not require TruthCore's permission to be made.
     """
@@ -379,7 +379,7 @@ class Decision:
 @dataclass(frozen=True)
 class Override:
     """Human intervention that contradicts system recommendation.
-    
+
     All overrides are scoped, authorized, and time-bounded.
     """
     override_id: str            # Unique identifier

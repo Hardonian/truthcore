@@ -29,7 +29,7 @@ class FileDiffResult:
 @dataclass
 class ReplayResult:
     """Result of a replay operation.
-    
+
     Attributes:
         success: Whether replay completed successfully
         bundle: The replay bundle used
@@ -132,7 +132,7 @@ class ReplayResult:
 
 class ReplayEngine:
     """Engine for deterministic replay of truth-core runs.
-    
+
     This re-runs a previous verdict using the same inputs and configuration,
     then compares the results to verify deterministic behavior.
     """
@@ -143,7 +143,7 @@ class ReplayEngine:
         strict: bool = False,
     ):
         """Initialize replay engine.
-        
+
         Args:
             allowlist: Fields allowed to differ between runs
             strict: If True, any differences (even allowed) cause failure
@@ -160,13 +160,13 @@ class ReplayEngine:
         profile: str | None = None,
     ) -> ReplayResult:
         """Replay a bundle and compare results.
-        
+
         Args:
             bundle: The replay bundle to replay
             output_dir: Directory for replay outputs
             mode: Override mode (uses bundle mode if None)
             profile: Override profile (uses bundle profile if None)
-            
+
         Returns:
             ReplayResult with comparison details
         """
@@ -301,11 +301,11 @@ class ReplayReporter:
         output_dir: Path,
     ) -> dict[str, Path]:
         """Write replay reports.
-        
+
         Args:
             result: Replay result to report
             output_dir: Directory for report files
-            
+
         Returns:
             Dict of report type to path
         """

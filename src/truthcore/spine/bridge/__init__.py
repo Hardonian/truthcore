@@ -17,7 +17,7 @@ from truthcore.spine.primitives import Override as SpineOverride
 
 class SpineBridge:
     """High-level bridge for integrating TruthCore with Spine.
-    
+
     Records findings, verdicts, and overrides as spine primitives.
     """
 
