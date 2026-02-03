@@ -55,6 +55,10 @@ class TestGoldenFixtureStructure:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_scenario_exists(self, scenario_name: str):

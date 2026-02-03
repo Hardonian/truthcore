@@ -42,19 +42,65 @@ class DecisionType(Enum):
 
 
 @dataclass(frozen=True)
+class SourceAttribution:
+    """Explicit source attribution for evidence provenance.
+
+    Tracks the origin of evidence through the pipeline with
+    component, version, and instance information.
+    """
+    system: str                 # System name (e.g., "jobforge", "runner", "truthcore")
+    component: str              # Component within system (e.g., "verifier", "collector")
+    version: str | None = None  # Version of the component
+    instance_id: str | None = None  # Instance/cluster identifier
+    entry_point: str | None = None  # Function/endpoint that generated the evidence
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        result = {
+            "system": self.system,
+            "component": self.component,
+        }
+        if self.version:
+            result["version"] = self.version
+        if self.instance_id:
+            result["instance_id"] = self.instance_id
+        if self.entry_point:
+            result["entry_point"] = self.entry_point
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SourceAttribution:
+        """Create from dictionary."""
+        return cls(
+            system=data["system"],
+            component=data["component"],
+            version=data.get("version"),
+            instance_id=data.get("instance_id"),
+            entry_point=data.get("entry_point"),
+        )
+
+
+@dataclass(frozen=True)
 class Evidence:
     """Raw or derived data that supports assertions.
 
     Evidence is the foundation - assertions are built upon it.
     Both are immutable and content-addressed.
+
+    Enhanced with provenance tracking:
+    - correlation_id: Traces evidence through the pipeline
+    - source_attribution: Explicit source information
     """
     evidence_id: str            # blake2b hash of content
     evidence_type: EvidenceType
     content_hash: str           # Hash of actual data
-    source: str                 # Where it came from
+    source: str                 # Where it came from (legacy, use source_attribution)
     timestamp: str              # ISO 8601 UTC
     validity_seconds: int | None = None  # How long valid (None = forever)
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Provenance enhancements (backward compatible - optional)
+    correlation_id: str | None = None  # Traces evidence through pipeline stages
+    source_attribution: SourceAttribution | None = None  # Explicit source info
 
     def __post_init__(self):
         # Convert datetime to ISO string if needed
@@ -70,7 +116,7 @@ class Evidence:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary with canonical ordering."""
-        return {
+        result = {
             "evidence_id": self.evidence_id,
             "evidence_type": self.evidence_type.value,
             "content_hash": self.content_hash,
@@ -79,10 +125,21 @@ class Evidence:
             "validity_seconds": self.validity_seconds,
             "metadata": dict(sorted(self.metadata.items())),
         }
+        # Add provenance fields if present (backward compatible)
+        if self.correlation_id:
+            result["correlation_id"] = self.correlation_id
+        if self.source_attribution:
+            result["source_attribution"] = self.source_attribution.to_dict()
+        return result
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Evidence:
         """Create from dictionary."""
+        # Handle source_attribution if present
+        source_attr = None
+        if "source_attribution" in data:
+            source_attr = SourceAttribution.from_dict(data["source_attribution"])
+
         return cls(
             evidence_id=data["evidence_id"],
             evidence_type=EvidenceType(data["evidence_type"]),
@@ -91,6 +148,8 @@ class Evidence:
             timestamp=data["timestamp"],
             validity_seconds=data.get("validity_seconds"),
             metadata=data.get("metadata", {}),
+            correlation_id=data.get("correlation_id"),
+            source_attribution=source_attr,
         )
 
     @classmethod

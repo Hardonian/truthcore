@@ -1,0 +1,71 @@
+{
+  "_contract": {
+    "artifact_type": "verdict",
+    "contract_version": "2.0.0",
+    "truthcore_version": "0.2.0",
+    "created_at": "2026-01-31T12:00:00Z",
+    "schema": "schemas/verdict/v2.0.0/verdict.schema.json"
+  },
+  "verdict": "FAIL",
+  "value": 0,
+  "confidence": 1.0,
+  "items": [
+    {
+      "id": "refusal-eng-001",
+      "severity": "BLOCKER",
+      "message": "[SYSTEM_ENGINE_TIMEOUT] Engine 'readiness_engine' timed out after 300s",
+      "category": "system",
+      "engine": "system_monitor",
+      "confidence": 1.0,
+      "metadata": {
+        "refusal": {
+          "code": "SYSTEM_ENGINE_TIMEOUT",
+          "details": {
+            "engine_id": "readiness_engine",
+            "timeout_seconds": 300
+          },
+          "remediation": "Increase timeout or investigate engine performance"
+        },
+        "correlation_id": "corr-jf-2026-003",
+        "pipeline_stages_completed": ["jobforge", "runner"],
+        "stage_failed": "truthcore"
+      }
+    },
+    {
+      "id": "refusal-eng-002",
+      "severity": "HIGH",
+      "message": "Engine 'security_scanner' unavailable: Connection refused to scanner endpoint",
+      "category": "system",
+      "engine": "system_monitor",
+      "confidence": 1.0,
+      "metadata": {
+        "refusal": {
+          "code": "SYSTEM_ENGINE_UNAVAILABLE",
+          "details": {
+            "engine_id": "security_scanner",
+            "reason": "Connection refused to scanner endpoint"
+          },
+          "remediation": "Check engine health and configuration"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "scenario": "jobforge_runner_refusal_engine_timeout",
+    "description": "Refusal case: Runner engine timeout prevents truthcore verification completion",
+    "pipeline": {
+      "stages": ["jobforge", "runner", "truthcore"],
+      "correlation_id": "corr-jf-2026-003",
+      "refusal_reasons": [
+        {
+          "code": "SYSTEM_ENGINE_TIMEOUT",
+          "stage": "truthcore"
+        },
+        {
+          "code": "SYSTEM_ENGINE_UNAVAILABLE",
+          "stage": "truthcore"
+        }
+      ]
+    }
+  }
+}
