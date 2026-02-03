@@ -298,6 +298,10 @@ class TestVerdictFindings:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_all_findings_have_required_fields(self, scenario_name: str):
@@ -322,6 +326,10 @@ class TestVerdictFindings:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_severity_levels_are_valid(self, scenario_name: str):
@@ -352,6 +360,10 @@ class TestVerdictStability:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_verdict_is_explainable(self, scenario_name: str):
@@ -392,6 +404,10 @@ class TestVerdictStability:
             ("style_only", (1, 5)),
             ("agent_trace_failure", (3, 10)),
             ("agent_trace_success", (1, 5)),
+            ("jobforge_runner_flow", (3, 8)),
+            ("jobforge_runner_refusal_missing_evidence", (1, 5)),
+            ("jobforge_runner_refusal_engine_timeout", (1, 5)),
+            ("jobforge_runner_refusal_policy_violation", (2, 6)),
         ],
     )
     def test_finding_count_is_reasonable(self, scenario_name: str, expected_count: tuple):
@@ -420,6 +436,10 @@ class TestVerdictMetadata:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_metadata_has_scenario_description(self, scenario_name: str):
@@ -495,3 +515,150 @@ class TestGoldenFixtureCompleteness:
         assert code_related, "No code quality scenarios found"
         assert security_related or performance_related, "No security or performance scenarios found"
         # Note: _test_related and _agent_related are validated as part of domain coverage
+
+
+class TestRefusalCodes:
+    """Test that refusal scenarios have stable, machine-readable codes."""
+
+    REFUSAL_SCENARIOS = [
+        "jobforge_runner_refusal_missing_evidence",
+        "jobforge_runner_refusal_engine_timeout",
+        "jobforge_runner_refusal_policy_violation",
+    ]
+
+    @pytest.mark.parametrize("scenario_name", REFUSAL_SCENARIOS)
+    def test_refusal_scenario_has_fail_verdict(self, scenario_name: str):
+        """All refusal scenarios must have FAIL verdict."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        assert verdict["verdict"] == "FAIL", f"Refusal scenario {scenario_name} must have FAIL verdict"
+
+    @pytest.mark.parametrize("scenario_name", REFUSAL_SCENARIOS)
+    def test_refusal_code_in_metadata(self, scenario_name: str):
+        """Refusal scenarios must have refusal codes in metadata."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        metadata = verdict.get("metadata", {})
+        pipeline = metadata.get("pipeline", {})
+        refusal_reasons = pipeline.get("refusal_reasons", [])
+        assert len(refusal_reasons) > 0, f"Refusal scenario {scenario_name} must have refusal_reasons in metadata"
+
+    @pytest.mark.parametrize("scenario_name", REFUSAL_SCENARIOS)
+    def test_refusal_codes_follow_format(self, scenario_name: str):
+        """Refusal codes must follow DOMAIN_SUBCATEGORY_DETAIL format."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        metadata = verdict.get("metadata", {})
+        pipeline = metadata.get("pipeline", {})
+        refusal_reasons = pipeline.get("refusal_reasons", [])
+
+        valid_domains = {"EVIDENCE", "POLICY", "SYSTEM", "VALIDATION", "PROCESSING"}
+
+        for reason in refusal_reasons:
+            code = reason.get("code", "")
+            parts = code.split("_")
+            assert len(parts) >= 2, f"Refusal code {code} must have at least 2 parts"
+            assert parts[0] in valid_domains, f"Refusal code {code} must start with valid domain"
+
+    @pytest.mark.parametrize("scenario_name", REFUSAL_SCENARIOS)
+    def test_refusal_code_in_findings(self, scenario_name: str):
+        """At least one finding must contain refusal code in message or metadata."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        items = verdict.get("items") or verdict.get("findings", [])
+
+        has_refusal_code = False
+        for item in items:
+            message = item.get("message", "")
+            # Check for code in message format [CODE]
+            if "[" in message and "]" in message:
+                has_refusal_code = True
+                break
+            # Check for code in metadata
+            metadata = item.get("metadata", {})
+            if "refusal" in metadata and "code" in metadata["refusal"]:
+                has_refusal_code = True
+                break
+
+        assert has_refusal_code, f"Refusal scenario {scenario_name} must have findings with refusal codes"
+
+
+class TestPipelineFlow:
+    """Test jobforge->runner->truthcore pipeline flow scenarios."""
+
+    PIPELINE_SCENARIOS = [
+        "jobforge_runner_flow",
+        "jobforge_runner_refusal_missing_evidence",
+        "jobforge_runner_refusal_engine_timeout",
+        "jobforge_runner_refusal_policy_violation",
+    ]
+
+    @pytest.mark.parametrize("scenario_name", PIPELINE_SCENARIOS)
+    def test_pipeline_has_correlation_id(self, scenario_name: str):
+        """Pipeline scenarios must have correlation ID for provenance."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        metadata = verdict.get("metadata", {})
+        pipeline = metadata.get("pipeline", {})
+        assert "correlation_id" in pipeline, f"Pipeline scenario {scenario_name} must have correlation_id"
+
+    @pytest.mark.parametrize("scenario_name", PIPELINE_SCENARIOS)
+    def test_pipeline_has_stages(self, scenario_name: str):
+        """Pipeline scenarios must document the stages."""
+        scenario_dir = get_golden_fixtures_dir() / scenario_name
+        verdict = load_expected_verdict(scenario_dir)
+        metadata = verdict.get("metadata", {})
+        pipeline = metadata.get("pipeline", {})
+        stages = pipeline.get("stages", [])
+        assert "jobforge" in stages, "Pipeline must include jobforge stage"
+        assert "runner" in stages, "Pipeline must include runner stage"
+        assert "truthcore" in stages, "Pipeline must include truthcore stage"
+
+    def test_success_flow_has_provenance_metadata(self):
+        """Successful flow scenario must have detailed provenance."""
+        scenario_dir = get_golden_fixtures_dir() / "jobforge_runner_flow"
+        verdict = load_expected_verdict(scenario_dir)
+        metadata = verdict.get("metadata", {})
+        pipeline = metadata.get("pipeline", {})
+
+        assert pipeline.get("runner_executed") is True, "Success flow must have runner_executed=True"
+        assert pipeline.get("truthcore_verified") is True, "Success flow must have truthcore_verified=True"
+
+
+class TestEvidenceProvenance:
+    """Test evidence provenance features in golden fixtures."""
+
+    def test_findings_can_have_correlation_id(self):
+        """Findings may include correlation_id for pipeline tracking."""
+        scenario_dir = get_golden_fixtures_dir() / "jobforge_runner_flow"
+        verdict = load_expected_verdict(scenario_dir)
+        items = verdict.get("items") or verdict.get("findings", [])
+
+        # At least one finding should have correlation_id in metadata
+        found_correlation = False
+        for item in items:
+            metadata = item.get("metadata", {})
+            if "correlation_id" in metadata:
+                found_correlation = True
+                break
+
+        assert found_correlation, "At least one finding should have correlation_id in metadata"
+
+    def test_findings_can_have_source_attribution(self):
+        """Findings may include source_attribution for provenance."""
+        scenario_dir = get_golden_fixtures_dir() / "jobforge_runner_flow"
+        verdict = load_expected_verdict(scenario_dir)
+        items = verdict.get("items") or verdict.get("findings", [])
+
+        # At least one finding should have source_attribution
+        found_attribution = False
+        for item in items:
+            metadata = item.get("metadata", {})
+            if "source_attribution" in metadata:
+                found_attribution = True
+                attr = metadata["source_attribution"]
+                assert "system" in attr, "Source attribution must have system"
+                assert "component" in attr, "Source attribution must have component"
+                break
+
+        assert found_attribution, "At least one finding should have source_attribution in metadata"
