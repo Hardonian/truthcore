@@ -111,7 +111,7 @@ class ContentAddressedCache:
         Returns:
             Path to cached output directory, or None if not in cache.
         """
-        index = self._load_index()
+        index = self._get_cached_index()
 
         if cache_key in index["entries"]:
             cache_path = self.cache_dir / cache_key
@@ -121,7 +121,8 @@ class ContentAddressedCache:
             else:
                 # Stale index entry, remove it
                 del index["entries"][cache_key]
-                self._save_index(index)
+                self._index_dirty = True
+                self.sync_index()
 
         return None
 
@@ -150,15 +151,18 @@ class ContentAddressedCache:
         # Copy outputs to cache
         shutil.copytree(output_dir, cache_path, dirs_exist_ok=True)
 
-        # Update index
-        index = self._load_index()
+        # Update index (in-memory first, then sync to disk)
+        index = self._get_cached_index()
         from datetime import datetime
+        # Use file count from source dir to avoid re-walking cache
+        file_count = sum(1 for _ in output_dir.rglob("*") if _.is_file())
         index["entries"][cache_key] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "manifest_hash": hash_dict(manifest),
-            "output_files": len(list(cache_path.rglob("*"))),
+            "output_files": file_count,
         }
-        self._save_index(index)
+        self._index_dirty = True
+        self.sync_index()
 
         return cache_path
 
@@ -168,7 +172,7 @@ class ContentAddressedCache:
         Returns:
             Number of entries cleared.
         """
-        index = self._load_index()
+        index = self._get_cached_index()
         count = len(index["entries"])
 
         # Remove all cached directories
@@ -179,7 +183,8 @@ class ContentAddressedCache:
 
         # Reset index
         index["entries"] = {}
-        self._save_index(index)
+        self._index_dirty = True
+        self.sync_index()
 
         return count
 
@@ -194,10 +199,10 @@ class ContentAddressedCache:
         """
         from datetime import datetime, timedelta
 
-        index = self._load_index()
+        index = self._get_cached_index()
         cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
 
-        to_remove = []
+        to_remove: list[str] = []
         for key, entry in index["entries"].items():
             entry_time = datetime.fromisoformat(entry["timestamp"])
             if entry_time < cutoff:
@@ -209,7 +214,9 @@ class ContentAddressedCache:
                 shutil.rmtree(cache_path)
             del index["entries"][key]
 
-        self._save_index(index)
+        if to_remove:
+            self._index_dirty = True
+            self.sync_index()
         return len(to_remove)
 
     def stats(self) -> dict[str, Any]:
@@ -217,8 +224,8 @@ class ContentAddressedCache:
         return self.get_stats()
 
     def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics."""
-        index = self._load_index()
+        """Get cache statistics using cached index."""
+        index = self._get_cached_index()
 
         total_size = 0
         for key in index["entries"]:
