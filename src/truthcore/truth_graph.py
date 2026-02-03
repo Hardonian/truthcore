@@ -67,6 +67,7 @@ class Node:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert node to dictionary."""
         return {
             "id": self.id,
             "type": self.type.value,
@@ -88,6 +89,7 @@ class Edge:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert edge to dictionary."""
         return {
             "id": self.id,
             "source": self.source,

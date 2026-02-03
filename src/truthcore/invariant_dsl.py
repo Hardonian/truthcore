@@ -36,6 +36,7 @@ class RuleEvaluation:
     sub_evaluations: list[RuleEvaluation] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert evaluation to dictionary."""
         return {
             "rule_id": self.rule_id,
             "passed": self.passed,
