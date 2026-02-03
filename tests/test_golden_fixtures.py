@@ -82,6 +82,10 @@ class TestVerdictContractCompliance:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_verdict_has_required_contract_fields(self, scenario_name: str):
@@ -112,6 +116,10 @@ class TestVerdictContractCompliance:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_verdict_artifact_type_is_correct(self, scenario_name: str):
@@ -131,6 +139,10 @@ class TestVerdictContractCompliance:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_verdict_state_is_valid(self, scenario_name: str):
@@ -151,6 +163,10 @@ class TestVerdictContractCompliance:
             ("style_only", "PASS"),
             ("agent_trace_failure", "FAIL"),
             ("agent_trace_success", "PASS"),
+            ("jobforge_runner_flow", "PASS"),
+            ("jobforge_runner_refusal_missing_evidence", "FAIL"),
+            ("jobforge_runner_refusal_engine_timeout", "FAIL"),
+            ("jobforge_runner_refusal_policy_violation", "FAIL"),
         ],
     )
     def test_verdict_state_matches_expected(self, scenario_name: str, expected_verdict: str):
@@ -176,6 +192,10 @@ class TestVerdictValueAndScore:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_value_or_score_exists(self, scenario_name: str):
@@ -198,6 +218,10 @@ class TestVerdictValueAndScore:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_value_in_valid_range(self, scenario_name: str):
@@ -218,6 +242,10 @@ class TestVerdictValueAndScore:
             ("style_only", 85),
             ("agent_trace_failure", 0),
             ("agent_trace_success", 90),
+            ("jobforge_runner_flow", 90),
+            ("jobforge_runner_refusal_missing_evidence", 0),
+            ("jobforge_runner_refusal_engine_timeout", 0),
+            ("jobforge_runner_refusal_policy_violation", 0),
         ],
     )
     def test_value_matches_scenario_severity(self, scenario_name: str, min_value: int):
@@ -244,6 +272,10 @@ class TestVerdictFindings:
             "style_only",
             "agent_trace_failure",
             "agent_trace_success",
+            "jobforge_runner_flow",
+            "jobforge_runner_refusal_missing_evidence",
+            "jobforge_runner_refusal_engine_timeout",
+            "jobforge_runner_refusal_policy_violation",
         ],
     )
     def test_findings_or_items_exists(self, scenario_name: str):
