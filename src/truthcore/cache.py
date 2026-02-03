@@ -6,6 +6,7 @@ import json
 import shutil
 from dataclasses import dataclass
 from datetime import UTC
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -55,14 +56,19 @@ class ContentAddressedCache:
 
         # Create index file if not exists
         self.index_path = self.cache_dir / "index.json"
+        self._index: dict[str, Any] | None = None
+        self._index_dirty = False
         self._load_index()
 
     def _load_index(self) -> dict[str, Any]:
-        """Load cache index."""
-        if self.index_path.exists():
-            with open(self.index_path, encoding="utf-8") as f:
-                return json.load(f)
-        return {"version": "1.0", "entries": {}}
+        """Load cache index into memory with caching."""
+        if self._index is None:
+            if self.index_path.exists():
+                with open(self.index_path, encoding="utf-8") as f:
+                    self._index = json.load(f)
+            else:
+                self._index = {"version": "1.0", "entries": {}}
+        return self._index
 
     def _save_index(self, index: dict[str, Any]) -> None:
         """Save cache index."""
@@ -70,6 +76,18 @@ class ContentAddressedCache:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         with open(self.index_path, "w", encoding="utf-8") as f:
             json.dump(index, f, indent=2, sort_keys=True)
+        self._index_dirty = False
+
+    def _get_cached_index(self) -> dict[str, Any]:
+        """Get cached index, loading from disk if needed."""
+        if self._index is None:
+            return self._load_index()
+        return self._index
+
+    def sync_index(self) -> None:
+        """Sync in-memory index to disk if dirty."""
+        if self._index_dirty and self._index is not None:
+            self._save_index(self._index)
 
     def compute_cache_key(
         self,
