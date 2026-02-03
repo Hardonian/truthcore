@@ -9,7 +9,6 @@ Tests all governance mechanisms:
 - Configurable category weights
 """
 
-import json
 import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path

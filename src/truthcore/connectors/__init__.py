@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorResult
-from truthcore.connectors.local import LocalConnector
 from truthcore.connectors.http import HTTPConnector
+from truthcore.connectors.local import LocalConnector
 
 # Optional connectors - import only if available
 try:
@@ -46,11 +46,11 @@ def get_connector(name: str, config: ConnectorConfig | None = None) -> BaseConne
         "github-actions": GitHubActionsConnector,
         "s3": S3Connector,
     }
-    
+
     connector_class = connectors.get(name)
     if connector_class is None:
         return None
-    
+
     try:
         instance = connector_class(config)
         return instance if instance.is_available else None
@@ -65,12 +65,12 @@ def list_connectors() -> list[dict[str, str | bool]]:
         List of connector info dicts with name and available status
     """
     result = []
-    
+
     for name in ["local", "http", "github-actions", "s3"]:
         connector = get_connector(name)
         result.append({
             "name": name,
             "available": connector is not None and connector.is_available,
         })
-    
+
     return result

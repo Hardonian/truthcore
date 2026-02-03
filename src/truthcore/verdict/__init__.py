@@ -15,6 +15,8 @@ Example:
     'NO_SHIP'  # Not optimistic by default!
 """
 
+# Import unified enums from severity module
+from truthcore.severity import Category, Severity
 from truthcore.verdict.aggregator import VerdictAggregator, aggregate_verdict
 from truthcore.verdict.models import (
     CategoryBreakdown,
@@ -25,9 +27,6 @@ from truthcore.verdict.models import (
     VerdictThresholds,
     WeightedFinding,
 )
-
-# Import unified enums from severity module
-from truthcore.severity import Category, Severity
 
 # Backwards compatibility alias
 SeverityLevel = Severity

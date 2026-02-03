@@ -15,10 +15,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -34,17 +34,9 @@ from truthcore.cache import ContentAddressedCache
 from truthcore.impact import ChangeImpactEngine
 from truthcore.invariant_dsl import InvariantExplainer
 from truthcore.manifest import RunManifest, normalize_timestamp
-from truthcore.parquet_store import HistoryCompactor, ParquetStore
+from truthcore.parquet_store import HistoryCompactor
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
-from truthcore.replay import (
-    BundleExporter,
-    ReplayBundle,
-    ReplayEngine,
-    SimulationChanges,
-    SimulationEngine,
-)
 from truthcore.security import SecurityLimits
-from truthcore.truth_graph import TruthGraph, TruthGraphBuilder
 from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 
 # Configure logging
@@ -429,7 +421,6 @@ def create_app(
                 # Handle uploaded inputs
                 inputs_path = None
                 if inputs:
-                    import shutil
                     import zipfile
 
                     inputs_zip = tmp_path / "inputs.zip"

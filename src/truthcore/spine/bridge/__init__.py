@@ -8,35 +8,36 @@ from __future__ import annotations
 
 from typing import Any
 
-from truthcore.spine.ingest import IngestionBridge
-from truthcore.spine.primitives import Override as SpineOverride, Decision as SpineDecision, DecisionType
 from truthcore.spine.graph import GraphStore
+from truthcore.spine.ingest import IngestionBridge
+from truthcore.spine.primitives import Decision as SpineDecision
+from truthcore.spine.primitives import DecisionType
+from truthcore.spine.primitives import Override as SpineOverride
 
 
 class SpineBridge:
-    """
-    High-level bridge for integrating TruthCore with Spine.
+    """High-level bridge for integrating TruthCore with Spine.
     
     Records findings, verdicts, and overrides as spine primitives.
     """
-    
+
     def __init__(self, store: GraphStore | None = None, enabled: bool = False):
         self.enabled = enabled
         self.store = store
         self.ingestion = IngestionBridge(store, enabled=enabled)
-    
+
     def record_finding(self, finding: Any) -> bool:
         """Record a finding from any TruthCore engine."""
         if not self.enabled:
             return False
         return self.ingestion.record_finding(finding)
-    
+
     def record_verdict(self, verdict: Any, actor: str = "system") -> bool:
         """Record a verdict as a decision."""
         if not self.enabled:
             return False
         return self.ingestion.record_verdict(verdict, actor)
-    
+
     def record_override(
         self,
         original: str,
@@ -49,10 +50,10 @@ class SpineBridge:
         """Record a human override."""
         if not self.enabled:
             return False
-        
+
         # First ingest as signal
         self.ingestion.record_override(original, override, actor, rationale)
-        
+
         # Also store as formal Override record
         if self.store and expires_at:
             from datetime import UTC, datetime
@@ -67,23 +68,23 @@ class SpineBridge:
                 created_at=datetime.now(UTC).isoformat(),
             )
             self._store_override(override_record)
-        
+
         return True
-    
+
     def _store_override(self, override: SpineOverride) -> None:
         """Store override record."""
         import json
         from datetime import datetime
-        
+
         # Store in overrides directory
         ts = datetime.fromisoformat(override.created_at.replace('Z', '+00:00'))
         override_dir = self.store.base_path / "overrides" / f"{ts.year}" / f"{ts.month:02d}-{ts.day:02d}"
         override_dir.mkdir(parents=True, exist_ok=True)
-        
+
         path = override_dir / f"{override.override_id}.json"
         with open(path, "w", encoding="utf-8") as f:
             json.dump(override.to_dict(), f, indent=2, sort_keys=True)
-    
+
     def shutdown(self) -> None:
         """Shutdown the bridge."""
         if self.ingestion:
@@ -92,7 +93,7 @@ class SpineBridge:
 
 class SpineConfig:
     """Configuration for Spine integration."""
-    
+
     def __init__(
         self,
         enabled: bool = False,
@@ -108,7 +109,7 @@ class SpineConfig:
         self.beliefs = beliefs
         self.decisions = decisions
         self.overrides = overrides
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SpineConfig:
         """Create config from dictionary."""
@@ -120,7 +121,7 @@ class SpineConfig:
             decisions=data.get("decisions", True),
             overrides=data.get("overrides", True),
         )
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {

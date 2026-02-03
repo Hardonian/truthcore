@@ -24,7 +24,7 @@ class ConnectorResult:
     files: list[str] = None  # type: ignore[assignment]
     metadata: dict[str, Any] = None  # type: ignore[assignment]
     error: str | None = None
-    
+
     def __post_init__(self):
         if self.files is None:
             self.files = []
@@ -48,7 +48,7 @@ class ConnectorConfig:
     allowed_extensions: list[str] | None = None
     blocked_extensions: list[str] = None  # type: ignore[assignment]
     sanitize_paths: bool = True
-    
+
     def __post_init__(self):
         if self.blocked_extensions is None:
             # Block dangerous extensions
@@ -64,7 +64,7 @@ class BaseConnector(ABC):
     Connectors fetch inputs from various sources and normalize them
     into a local directory ready for the judge to consume.
     """
-    
+
     def __init__(self, config: ConnectorConfig | None = None):
         """Initialize connector with configuration.
         
@@ -72,19 +72,19 @@ class BaseConnector(ABC):
             config: Connector configuration
         """
         self.config = config or ConnectorConfig()
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Return connector name."""
         pass
-    
+
     @property
     @abstractmethod
     def is_available(self) -> bool:
         """Return whether this connector is available (dependencies, auth, etc)."""
         pass
-    
+
     @abstractmethod
     def fetch(self, source: str, destination: Path) -> ConnectorResult:
         """Fetch inputs from source and place in destination.
@@ -97,7 +97,7 @@ class BaseConnector(ABC):
             ConnectorResult with status and metadata
         """
         pass
-    
+
     def validate_path(self, path: str) -> bool:
         """Validate that a path is safe and within limits.
         
@@ -109,28 +109,28 @@ class BaseConnector(ABC):
         """
         if not self.config.sanitize_paths:
             return True
-            
+
         # Check for path traversal attempts
         normalized = Path(path).resolve()
-        
+
         # Block absolute paths that could escape
         if path.startswith('/') or path.startswith('\\'):
             if '..' in path:
                 return False
-                
+
         # Check extension
         if self.config.blocked_extensions:
             ext = Path(path).suffix.lower()
             if ext in self.config.blocked_extensions:
                 return False
-                
+
         if self.config.allowed_extensions:
             ext = Path(path).suffix.lower()
             if ext not in self.config.allowed_extensions:
                 return False
-                
+
         return True
-    
+
     def check_size_limit(self, current_size: int, new_file_size: int) -> bool:
         """Check if adding a file would exceed size limit.
         

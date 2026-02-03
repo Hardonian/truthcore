@@ -1,6 +1,5 @@
 """Tests for Truth Core server."""
 
-import json
 import tempfile
 from pathlib import Path
 

@@ -132,3 +132,22 @@ Thumbs.db
 # TruthCore specific
 .truthcore/
 *.parquet
+
+# Node.js / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+.npm
+.eslintcache
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite / Build artifacts
+.vite/
+*.local
+
+# Coverage
+coverage/
+.nyc_output/

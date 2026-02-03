@@ -20,6 +20,14 @@ Usage:
     history = client.query.history("assertion_id")
 """
 
+from truthcore.spine.belief import BeliefEngine
+from truthcore.spine.bridge import SpineBridge, SpineConfig
+from truthcore.spine.graph import AssertionLineage, GraphStore
+from truthcore.spine.ingest import (
+    IngestionBridge,
+    IngestionEngine,
+    SignalTransformer,
+)
 from truthcore.spine.primitives import (
     Assertion,
     Belief,
@@ -31,30 +39,17 @@ from truthcore.spine.primitives import (
     MeaningVersion,
     Override,
 )
-
-from truthcore.spine.graph import GraphStore, AssertionLineage
-
-from truthcore.spine.belief import BeliefEngine
-
 from truthcore.spine.query import (
+    DependenciesResult,
+    EvidenceResult,
+    HistoryResult,
+    InvalidationResult,
+    MeaningResult,
+    OverrideResult,
     QueryEngine,
     SpineQueryClient,
     WhyResult,
-    EvidenceResult,
-    HistoryResult,
-    MeaningResult,
-    OverrideResult,
-    DependenciesResult,
-    InvalidationResult,
 )
-
-from truthcore.spine.ingest import (
-    IngestionBridge,
-    IngestionEngine,
-    SignalTransformer,
-)
-
-from truthcore.spine.bridge import SpineBridge, SpineConfig
 
 __all__ = [
     # Primitives

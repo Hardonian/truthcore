@@ -16,11 +16,11 @@ import yaml
 from truthcore.manifest import normalize_timestamp
 from truthcore.replay.bundle import ReplayBundle
 from truthcore.replay.diff import DeterministicDiff, DiffComputer
+from truthcore.verdict import SeverityLevel
 from truthcore.verdict.aggregator import VerdictAggregator
 from truthcore.verdict.models import (
     Category,
     Mode,
-    SeverityLevel,
     VerdictResult,
     VerdictStatus,
     VerdictThresholds,

@@ -1,0 +1,66 @@
+{
+  "name": "truth-core-monorepo",
+  "version": "0.2.0",
+  "description": "Truth Core - Deterministic evidence-based verification framework (Monorepo)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "pnpm run verify:python && pnpm run verify:ts",
+    "verify:python": "pnpm run python:lint && pnpm run python:typecheck && pnpm run python:test",
+    "verify:ts": "pnpm run ts:lint && pnpm run ts:typecheck && pnpm run ts:test && pnpm run ts:build",
+    "verify:ci": "pnpm run verify",
+    "python:lint": "cd src/truthcore && python -m ruff check . ../../tests --output-format=concise",
+    "python:lint:fix": "cd src/truthcore && python -m ruff check . ../../tests --fix",
+    "python:format": "cd src/truthcore && python -m ruff format . ../../tests",
+    "python:format:check": "cd src/truthcore && python -m ruff format --check . ../../tests",
+    "python:typecheck": "python -m pyright src/truthcore",
+    "python:test": "python -m pytest tests/ -v --tb=short --strict-markers",
+    "python:test:cov": "python -m pytest tests/ -v --tb=short --cov=truthcore --cov-report=xml --cov-fail-under=80",
+    "python:audit": "pip audit",
+    "ts:lint": "pnpm -r run lint",
+    "ts:lint:fix": "pnpm -r run lint --fix",
+    "ts:typecheck": "pnpm -r run typecheck",
+    "ts:test": "pnpm -r run test",
+    "ts:build": "pnpm -r run build",
+    "ts:format": "pnpm -r run format",
+    "ts:format:check": "pnpm -r run format:check",
+    "format": "pnpm run python:format && pnpm run ts:format",
+    "format:check": "pnpm run python:format:check && pnpm run ts:format:check",
+    "lint": "pnpm run python:lint && pnpm run ts:lint",
+    "lint:fix": "pnpm run python:lint:fix && pnpm run ts:lint:fix",
+    "test": "pnpm run python:test && pnpm run ts:test",
+    "typecheck": "pnpm run python:typecheck && pnpm run ts:typecheck",
+    "build": "pnpm run ts:build",
+    "clean": "pnpm -r run clean && rm -rf dist .truthcore",
+    "install:python": "pip install -e '.[dev,parquet]'",
+    "install:all": "pnpm install && pnpm run install:python",
+    "dev:dashboard": "cd dashboard && pnpm run dev",
+    "ci": "pnpm run verify:ci"
+  },
+  "keywords": [
+    "verification",
+    "testing",
+    "quality-assurance",
+    "ci",
+    "deterministic"
+  ],
+  "author": "Truth Core Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/truth-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/truth-core/issues"
+  },
+  "homepage": "https://github.com/your-org/truth-core#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "dashboard",
+    "packages/*"
+  ]
+}
