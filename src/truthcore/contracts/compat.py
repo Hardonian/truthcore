@@ -129,7 +129,7 @@ def convert_to_version(
     except MigrationNotFoundError as e:
         raise BreakingChangeError(
             f"No migration path from {current_version} to {target_version}: {e}"
-        )
+        ) from e
 
     # Update metadata to reflect new version
     result = update_metadata(result, contract_version=target_version)
@@ -141,7 +141,7 @@ def convert_to_version(
         except ValidationError as e:
             raise CompatError(
                 f"Converted artifact failed validation: {e}"
-            )
+            ) from e
 
     return result
 

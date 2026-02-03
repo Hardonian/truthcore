@@ -290,7 +290,11 @@ class ESLintTextParser(RegexLogParser):
     """Parser for ESLint text output."""
 
     # Pattern: file:line:column: severity message [rule]
-    PATTERN = r"(?P<file>[^:]+):(?P<line>\d+):(?P<column>\d+):\s*(?P<severity>error|warning)\s+(?P<message>.+?)(?:\s*\[(?P<rule>[^\]]+)\])?(?=\n|$)"
+    PATTERN = (
+        r"(?P<file>[^:]+):(?P<line>\d+):(?P<column>\d+):\s*"
+        r"(?P<severity>error|warning)\s+(?P<message>.+?)"
+        r"(?:\s*\[(?P<rule>[^\]]+)\])?(?=\n|$)"
+    )
 
     def __init__(self):
         severity_map = {
@@ -326,7 +330,11 @@ class TypeScriptCompilerParser(RegexLogParser):
     """Parser for TypeScript compiler (tsc) output."""
 
     # Pattern: file(line,column): error TS####: message
-    PATTERN = r"(?P<file>[^(]+)\((?P<line>\d+),(?P<column>\d+)\):\s*(?P<severity>error|warning)\s+(?P<code>TS\d+):\s*(?P<message>.+?)(?=\n|$)"
+    PATTERN = (
+        r"(?P<file>[^(]+)\((?P<line>\d+),(?P<column>\d+)\):\s*"
+        r"(?P<severity>error|warning)\s+(?P<code>TS\d+):\s*"
+        r"(?P<message>.+?)(?=\n|$)"
+    )
 
     def __init__(self):
         severity_map = {
@@ -364,7 +372,10 @@ class BuildLogParser(RegexLogParser):
 
     # Pattern: [timestamp] severity: message
     # [^\]\n]* ensures we don't match across newlines
-    PATTERN = r"(?:\[?[^\]\n]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)[:\s]+(?P<message>[^\n]+)"
+    PATTERN = (
+        r"(?:\[?[^\]\n]*\]?\s*)?(?P<severity>ERROR|WARN|WARNING|INFO|DEBUG|FAIL|FAILURE|SUCCESS)"
+        r"[:\s]+(?P<message>[^\n]+)"
+    )
 
     def __init__(self, tool_name: str = "build"):
         severity_map = {

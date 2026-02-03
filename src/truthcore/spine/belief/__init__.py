@@ -208,7 +208,10 @@ class BeliefEngine:
                             initial_confidence=new_confidence,
                             decay_rate=current.decay_rate,
                             upstream_belief_ids=list(current.upstream_belief_ids),
-                            rationale=f"Decay propagated from {upstream_assertion_id}: {current.confidence:.2f} -> {new_confidence:.2f}",
+                            rationale=(
+                                f"Decay propagated from {upstream_assertion_id}: "
+                                f"{current.confidence:.2f} -> {new_confidence:.2f}"
+                            ),
                         )
                         updated.append(new_belief)
 
@@ -327,5 +330,8 @@ class BeliefEngine:
             "medium_confidence": medium_confidence,
             "low_confidence": low_confidence,
             "superseded_beliefs": superseded_count,
-            "average_confidence": (high_confidence * 0.9 + medium_confidence * 0.65 + low_confidence * 0.25) / max(total_beliefs, 1),
+            "average_confidence": (
+                (high_confidence * 0.9 + medium_confidence * 0.65 + low_confidence * 0.25)
+                / max(total_beliefs, 1)
+            ),
         }

@@ -51,7 +51,11 @@ def list_contracts():
 
 @contracts_cli.command(name="validate", help="Validate an artifact against its schema")
 @click.option("--file", "file_path", type=click.Path(exists=True), help="Path to artifact file")
-@click.option("--inputs", "inputs_dir", type=click.Path(exists=True, file_okay=False), help="Directory with artifacts to validate")
+@click.option(
+    "--inputs", "inputs_dir",
+    type=click.Path(exists=True, file_okay=False),
+    help="Directory with artifacts to validate",
+)
 @click.option("--strict", is_flag=True, help="Fail on additional properties not in schema")
 @click.option("--artifact-type", help="Artifact type (inferred from metadata if not provided)")
 @click.option("--version", help="Contract version (inferred from metadata if not provided)")
@@ -172,7 +176,12 @@ def migrate_contract(
 
 
 @contracts_cli.command(name="compat", help="Convert artifacts to a target version (batch)")
-@click.option("--inputs", "input_dir", type=click.Path(exists=True, file_okay=False), required=True, help="Input directory")
+@click.option(
+    "--inputs", "input_dir",
+    type=click.Path(exists=True, file_okay=False),
+    required=True,
+    help="Input directory",
+)
 @click.option("--target-version", required=True, help="Target contract version")
 @click.option("--out", "output_dir", type=click.Path(), required=True, help="Output directory")
 @click.option("--artifact-type", multiple=True, help="Filter by artifact type (can be used multiple times)")

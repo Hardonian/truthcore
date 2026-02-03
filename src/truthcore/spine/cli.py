@@ -94,7 +94,11 @@ def register_spine_commands(cli: click.Group) -> None:
 
     @spine_group.command(name="evidence")
     @click.argument("assertion-id")
-    @click.option("--type", "evidence_type", type=click.Choice(["supporting", "weakening", "stale", "all"]), default="all")
+    @click.option(
+        "--type", "evidence_type",
+        type=click.Choice(["supporting", "weakening", "stale", "all"]),
+        default="all"
+    )
     @click.option("--format", "output_format", type=click.Choice(["json", "md"]), default="md")
     @click.option("--store", type=click.Path(path_type=Path), default=Path(".truthcore/spine"))
     def evidence_cmd(assertion_id: str, evidence_type: str, output_format: str, store: Path):
@@ -467,8 +471,8 @@ def register_spine_commands(cli: click.Group) -> None:
                 # Test read
                 store_obj.list_assertions()
                 checks["can_read"] = True
-            except:
-                pass
+            except Exception:
+                checks["can_read"] = False
 
             try:
                 # Test write (create and remove temp file)
@@ -476,8 +480,8 @@ def register_spine_commands(cli: click.Group) -> None:
                 test_path.touch()
                 test_path.unlink()
                 checks["can_write"] = True
-            except:
-                pass
+            except Exception:
+                checks["can_write"] = False
 
             all_healthy = all(checks.values())
 

@@ -177,9 +177,9 @@ def validate_artifact(
         schema_ref = registry.get_schema(artifact_type, version)
         schema = schema_ref.load()
     except ValueError as e:
-        raise SchemaNotFoundError(f"Schema not found for {artifact_type} v{version}: {e}")
+        raise SchemaNotFoundError(f"Schema not found for {artifact_type} v{version}: {e}") from e
     except FileNotFoundError as e:
-        raise SchemaNotFoundError(f"Schema file not found: {e}")
+        raise SchemaNotFoundError(f"Schema file not found: {e}") from e
 
     # Validate root type
     if "type" in schema:

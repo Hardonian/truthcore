@@ -61,10 +61,10 @@ def check_path_safety(path: Path, base_dir: Path | None = None) -> Path:
         base_resolved = base_dir.resolve()
         try:
             resolved.relative_to(base_resolved)
-        except ValueError:
+        except ValueError as err:
             raise SecurityError(
                 f"Path traversal detected: {path} is outside {base_dir}"
-            )
+            ) from err
 
     # Check for suspicious patterns
     suspicious = ["..", "~", "$HOME", "$PWD", "//"]
@@ -195,7 +195,7 @@ def safe_load_json(
     try:
         obj = json.loads(text)
     except json.JSONDecodeError as e:
-        raise SecurityError(f"Invalid JSON: {e}")
+        raise SecurityError(f"Invalid JSON: {e}") from e
 
     # Check depth
     check_json_depth(obj, max_depth=limits.max_json_depth)
@@ -244,8 +244,8 @@ def safe_extract_zip(
             target = output_dir / member_path
             try:
                 target.relative_to(output_dir)
-            except ValueError:
-                raise SecurityError(f"Zip extraction would escape target: {member}")
+            except ValueError as err:
+                raise SecurityError(f"Zip extraction would escape target: {member}") from err
 
             # Check file size if available
             info = zf.getinfo(member)

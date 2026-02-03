@@ -506,8 +506,8 @@ class TruthGraph:
                 table_edges = pa.Table.from_pandas(df_edges)
                 pq.write_table(table_edges, str(output_path / "edges.parquet"))
 
-        except ImportError:
-            raise RuntimeError("Parquet support requires pyarrow and pandas")
+        except ImportError as err:
+            raise RuntimeError("Parquet support requires pyarrow and pandas") from err
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TruthGraph:

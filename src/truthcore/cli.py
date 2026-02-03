@@ -107,7 +107,11 @@ register_spine_commands(cli)
 @click.option('--strict/--no-strict', default=None)
 @click.option('--parallel/--sequential', default=True, help='Run engines in parallel')
 @click.option('--diff', '-d', type=click.Path(exists=True, path_type=Path), help='Git diff file for impact analysis')
-@click.option('--changed-files', type=click.Path(exists=True, path_type=Path), help='Changed files list (newline or JSON)')
+@click.option(
+    '--changed-files',
+    type=click.Path(exists=True, path_type=Path),
+    help='Changed files list (newline or JSON)',
+)
 @click.option('--plan-out', type=click.Path(path_type=Path), help='Output path for run_plan.json')
 @click.option('--policy-pack', type=str, help='Policy pack to run (built-in name or path)')
 @click.option('--sign/--no-sign', default=False, help='Sign the evidence bundle (requires signing keys)')
@@ -213,7 +217,13 @@ def judge(
         # Create manifest
         run_manifest = RunManifest.create(
             command="judge",
-            config={"profile": profile, "strict": strict, "parallel": parallel, "engines": engines_to_run, "invariants": invariants_to_run},
+            config={
+                "profile": profile,
+                "strict": strict,
+                "parallel": parallel,
+                "engines": engines_to_run,
+                "invariants": invariants_to_run,
+            },
             input_dir=inputs or Path("."),
             profile=profile,
         )
@@ -314,7 +324,11 @@ def judge(
                     except SigningError as e:
                         click.echo(f"  Warning: Signing failed: {e}", err=True)
                 else:
-                    click.echo("  Warning: Signing requested but no keys configured. Set TRUTHCORE_SIGNING_PRIVATE_KEY env var.", err=True)
+                    click.echo(
+                        "  Warning: Signing requested but no keys configured. "
+                        "Set TRUTHCORE_SIGNING_PRIVATE_KEY env var.",
+                        err=True,
+                    )
 
         # Write manifest
         run_manifest.duration_ms = int((time.time() - start_time) * 1000)
@@ -572,7 +586,14 @@ def explain(ctx: click.Context, rule: str, data: Path, rules: Path):
 @click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output path for run_plan.json')
 @click.option('--source', '-s', help='Source identifier for the analysis')
 @click.pass_context
-def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, profile: str, out: Path, source: str | None):
+def plan(
+    ctx: click.Context,
+    diff: Path | None,
+    changed_files: Path | None,
+    profile: str,
+    out: Path,
+    source: str | None,
+):
     """Generate a run plan from git diff or changed files list.
 
     Analyzes changes to determine which engines and invariants should run.
@@ -632,7 +653,11 @@ def plan(ctx: click.Context, diff: Path | None, changed_files: Path | None, prof
 
 
 @cli.command(name="graph")
-@click.option('--run-dir', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Run output directory containing run_manifest.json')
+@click.option(
+    '--run-dir', '-r', required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help='Run output directory containing run_manifest.json',
+)
 @click.option('--plan', type=click.Path(exists=True, path_type=Path), help='Run plan JSON (optional)')
 @click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory for truth graph')
 @click.option('--format', type=click.Choice(['json', 'parquet', 'both']), default='json', help='Output format')
@@ -676,8 +701,15 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
 
 
 @cli.command(name="graph-query")
-@click.option('--graph', '-g', required=True, type=click.Path(exists=True, path_type=Path), help='Truth graph JSON file')
-@click.option('--where', '-w', required=True, help='Query predicate (e.g., "severity=high", "type=finding", "severity>=medium")')
+@click.option(
+    '--graph', '-g', required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help='Truth graph JSON file',
+)
+@click.option(
+    '--where', '-w', required=True,
+    help='Query predicate (e.g., "severity=high")',
+)
 @click.option('--out', '-o', type=click.Path(path_type=Path), help='Output file for results')
 @click.pass_context
 def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
@@ -725,8 +757,16 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
 
 
 @cli.command()
-@click.option('--inputs', '-i', required=True, type=click.Path(exists=True, path_type=Path), help='Input directory to scan')
-@click.option('--pack', '-p', required=True, help='Policy pack name (built-in: base, security, privacy, logging, agent) or path to YAML file')
+@click.option(
+    '--inputs', '-i', required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help='Input directory to scan',
+)
+@click.option(
+    '--pack', '-p', required=True,
+    help='Policy pack name (built-in: base, security, privacy, '
+         'logging, agent) or path to YAML file',
+)
 @click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
 @click.option('--config', '-c', type=click.Path(exists=True, path_type=Path), help='Policy configuration file')
 @click.option('--compat', is_flag=True, help='Enable backward compatibility mode (legacy formats, relaxed validation)')
@@ -823,8 +863,16 @@ def policy_explain(ctx: click.Context, rule: str, pack: str):
 
 
 @cli.command()
-@click.option('--bundle', '-b', required=True, type=click.Path(exists=True, path_type=Path), help='Bundle directory to verify')
-@click.option('--public-key', '-k', type=click.Path(exists=True, path_type=Path), help='Public key file for signature verification (optional)')
+@click.option(
+    '--bundle', '-b', required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help='Bundle directory to verify',
+)
+@click.option(
+    '--public-key', '-k',
+    type=click.Path(exists=True, path_type=Path),
+    help='Public key file for signature verification (optional)',
+)
 @click.option('--out', '-o', type=click.Path(path_type=Path), help='Output directory for verification reports')
 @click.pass_context
 def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out: Path | None):
@@ -1324,7 +1372,10 @@ def simulate(
             sim = result.simulated_verdict
 
             click.echo("\nVerdict Comparison:")
-            click.echo(f"  Original:  {orig.verdict.value} ({orig.total_findings} findings, {orig.total_points} points)")
+            click.echo(
+                f"  Original:  {orig.verdict.value} "
+                f"({orig.total_findings} findings, {orig.total_points} points)"
+            )
             click.echo(f"  Simulated: {sim.verdict.value} ({sim.total_findings} findings, {sim.total_points} points)")
 
             if orig.verdict != sim.verdict:

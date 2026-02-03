@@ -341,6 +341,26 @@ def create_app(
             with open(static_dir / "index.html", encoding="utf-8") as f:
                 return f.read()
 
+        # Build auth status HTML
+        if os.environ.get("TRUTHCORE_API_KEY"):
+            auth_status = '<p style="color: #28a745;">✅ API authentication is enabled.</p>'
+        else:
+            auth_status = (
+                '<p style="color: #dc3545;">⚠️ API authentication is DISABLED. '
+                "Set TRUTHCORE_API_KEY for production.</p>"
+            )
+
+        # Build CORS status HTML
+        cors_origins = get_cors_origins()
+        if cors_origins:
+            origins_str = ", ".join(cors_origins)
+            cors_status = f"<p>CORS enabled for: {origins_str}</p>"
+        else:
+            cors_status = (
+                "<p>CORS is disabled (same-origin only). "
+                "Set TRUTHCORE_CORS_ORIGINS to enable cross-origin requests.</p>"
+            )
+
         # Default response if no static files
         return f"""
         <!DOCTYPE html>
@@ -348,12 +368,16 @@ def create_app(
         <head>
             <title>Truth Core Server</title>
             <style>
-                body {{ font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+                body {{ font-family: system-ui, sans-serif;
+                       max-width: 800px; margin: 50px auto; padding: 20px; }}
                 h1 {{ color: #333; }}
                 .version {{ color: #666; }}
-                .endpoints {{ background: #f5f5f5; padding: 20px; border-radius: 8px; }}
-                code {{ background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }}
-                .security {{ background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                .endpoints {{ background: #f5f5f5; padding: 20px;
+                              border-radius: 8px; }}
+                code {{ background: #e0e0e0; padding: 2px 6px;
+                        border-radius: 3px; }}
+                .security {{ background: #fff3cd; padding: 15px;
+                            border-radius: 8px; margin: 20px 0; }}
             </style>
         </head>
         <body>
@@ -362,8 +386,8 @@ def create_app(
 
             <div class="security">
                 <strong>Security Notice:</strong>
-                {'<p style="color: #dc3545;">⚠️ API authentication is DISABLED. Set TRUTHCORE_API_KEY for production.</p>' if not os.environ.get("TRUTHCORE_API_KEY") else '<p style="color: #28a745;">✅ API authentication is enabled.</p>'}
-                {'<p>CORS is disabled (same-origin only). Set TRUTHCORE_CORS_ORIGINS to enable cross-origin requests.</p>' if not get_cors_origins() else f'<p>CORS enabled for: {", ".join(get_cors_origins())}</p>'}
+                {auth_status}
+                {cors_status}
             </div>
 
             <div class="endpoints">

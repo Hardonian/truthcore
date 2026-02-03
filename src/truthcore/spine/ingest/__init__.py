@@ -310,7 +310,7 @@ class IngestionEngine:
         if self._on_error:
             try:
                 self._on_error(error)
-            except:
+            except Exception:
                 pass  # Don't let error handler errors propagate
 
         # Auto-disable after repeated failures

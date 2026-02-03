@@ -253,8 +253,8 @@ def sanitize_path(path: str, base_dir: str | None = None) -> str:
         base = Path(base_dir).resolve()
         try:
             clean_path.relative_to(base)
-        except ValueError:
-            raise ValueError(f"Path {path} attempts directory traversal outside {base_dir}")
+        except ValueError as err:
+            raise ValueError(f"Path {path} attempts directory traversal outside {base_dir}") from err
 
     return str(clean_path)
 

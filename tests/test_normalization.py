@@ -231,7 +231,10 @@ src/app.js:20:3: warning Unused variable [no-unused-vars]"""
 
     def test_tsc_parser(self):
         """Test TypeScript compiler parser."""
-        log = "src/app.ts(10,5): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'."
+        log = (
+            "src/app.ts(10,5): error TS2345: "
+            "Argument of type 'string' is not assignable to parameter of type 'number'."
+        )
 
         parser = TypeScriptCompilerParser()
         findings = parser.parse(log)

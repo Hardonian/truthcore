@@ -131,13 +131,13 @@ class RedisRateLimitBackend(RateLimitBackend):
             )
             # Test connection
             self._redis.ping()
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "Redis backend requires 'redis' package. "
                 "Install with: pip install redis"
-            )
+            ) from err
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Redis: {e}")
+            raise ConnectionError(f"Failed to connect to Redis: {e}") from e
 
     def check_rate_limit(
         self,

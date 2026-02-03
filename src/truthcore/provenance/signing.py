@@ -134,14 +134,14 @@ class Signer:
         if priv_b64:
             try:
                 self._private_key = base64.b64decode(priv_b64)
-            except Exception:
-                raise SigningError("Invalid base64 in TRUTHCORE_SIGNING_PRIVATE_KEY")
+            except Exception as err:
+                raise SigningError("Invalid base64 in TRUTHCORE_SIGNING_PRIVATE_KEY") from err
 
         if pub_b64:
             try:
                 self._public_key = base64.b64decode(pub_b64)
-            except Exception:
-                raise SigningError("Invalid base64 in TRUTHCORE_SIGNING_PUBLIC_KEY")
+            except Exception as err:
+                raise SigningError("Invalid base64 in TRUTHCORE_SIGNING_PUBLIC_KEY") from err
 
     def is_configured(self) -> bool:
         """Check if signer has keys configured."""

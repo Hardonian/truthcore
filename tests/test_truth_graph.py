@@ -160,7 +160,10 @@ class TestTruthGraph:
         finding_id = graph._make_id("finding", "run-123", "readiness", "finding-1")
         entity_id = graph._make_id("entity", "file_path", "src/main.py")
 
-        affect_edges = [e for e in graph.edges.values() if e.type == EdgeType.AFFECTS and e.source == finding_id and e.target == entity_id]
+        affect_edges = [
+            e for e in graph.edges.values()
+            if e.type == EdgeType.AFFECTS and e.source == finding_id and e.target == entity_id
+        ]
         assert len(affect_edges) == 1
 
     def test_query_by_type(self):
