@@ -6,7 +6,7 @@ import json
 import shutil
 from dataclasses import dataclass
 from datetime import UTC
-from functools import lru_cache
+
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +68,7 @@ class ContentAddressedCache:
                     self._index = json.load(f)
             else:
                 self._index = {"version": "1.0", "entries": {}}
-        return self._index
+        return self._index  # type: ignore[return-value]
 
     def _save_index(self, index: dict[str, Any]) -> None:
         """Save cache index."""
