@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import io
+import random
+import time
 import zipfile
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -10,6 +12,13 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorResult
+
+
+# Default retry configuration
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_BASE_DELAY = 1.0  # seconds
+DEFAULT_MAX_DELAY = 30.0  # seconds
+DEFAULT_TIMEOUT = 30  # seconds
 
 
 class HTTPConnector(BaseConnector):
@@ -41,12 +50,41 @@ class HTTPConnector(BaseConnector):
         """Return whether HTTP connector is available (always True)."""
         return True
 
-    def fetch(self, source: str, destination: Path) -> ConnectorResult:
-        """Download artifact from HTTP(S) URL.
+    def _calculate_backoff(self, attempt: int, base_delay: float = DEFAULT_BASE_DELAY,
+                          max_delay: float = DEFAULT_MAX_DELAY) -> float:
+        """Calculate exponential backoff with jitter.
+
+        Uses exponential backoff with full jitter to avoid thundering herd.
+        Formula: min(max_delay, base_delay * 2^attempt) * random(0, 1)
+
+        Args:
+            attempt: Current attempt number (0-indexed)
+            base_delay: Base delay in seconds
+            max_delay: Maximum delay in seconds
+
+        Returns:
+            Delay in seconds
+        """
+        exponential_delay = base_delay * (2 ** attempt)
+        capped_delay = min(exponential_delay, max_delay)
+        # Add jitter to spread out retries
+        jittered_delay = capped_delay * random.random()
+        return jittered_delay
+
+    def fetch(
+        self,
+        source: str,
+        destination: Path,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> ConnectorResult:
+        """Download artifact from HTTP(S) URL with retry logic.
 
         Args:
             source: HTTP(S) URL to download
             destination: Destination directory for downloaded content
+            max_retries: Maximum number of retry attempts
+            timeout: Request timeout in seconds
 
         Returns:
             ConnectorResult with status and file list
@@ -68,38 +106,71 @@ class HTTPConnector(BaseConnector):
 
         destination.mkdir(parents=True, exist_ok=True)
 
-        try:
-            req = Request(source)
-            req.add_header("User-Agent", "truth-core/0.2.0")
+        last_error: Exception | None = None
 
-            with urlopen(req, timeout=30) as response:
-                content_type = response.headers.get("Content-Type", "")
-                data = response.read()
+        for attempt in range(max_retries + 1):
+            try:
+                req = Request(source)
+                req.add_header("User-Agent", "truth-core/0.2.0")
 
-            # Check size limit
-            if len(data) > self.config.max_size_bytes:
-                return ConnectorResult(
-                    success=False,
-                    error=f"Downloaded content exceeds size limit ({self.config.max_size_bytes} bytes)"
+                with urlopen(req, timeout=timeout) as response:
+                    content_type = response.headers.get("Content-Type", "")
+                    data = response.read()
+
+                # Check size limit
+                if len(data) > self.config.max_size_bytes:
+                    return ConnectorResult(
+                        success=False,
+                        error=f"Downloaded content exceeds size limit ({self.config.max_size_bytes} bytes)"
+                    )
+
+                # Determine if it's a zip file
+                is_zip = (
+                    source.endswith(".zip") or
+                    content_type in ("application/zip", "application/x-zip-compressed")
                 )
 
-            # Determine if it's a zip file
-            is_zip = (
-                source.endswith(".zip") or
-                content_type in ("application/zip", "application/x-zip-compressed")
+                if is_zip:
+                    return self._extract_zip(data, destination, source)
+                else:
+                    return self._save_file(data, destination, source, parsed.path)
+
+            except HTTPError as e:
+                # Don't retry on 4xx client errors (except 429 rate limit)
+                if e.code in (400, 401, 403, 404, 405, 422) and attempt == 0:
+                    return ConnectorResult(success=False, error=f"HTTP error: {e.code}")
+                # Retry on 5xx errors and 429 rate limit
+                last_error = e
+                if attempt < max_retries:
+                    delay = self._calculate_backoff(attempt)
+                    time.sleep(delay)
+                continue
+
+            except URLError as e:
+                last_error = e
+                if attempt < max_retries:
+                    delay = self._calculate_backoff(attempt)
+                    time.sleep(delay)
+                continue
+
+            except Exception as e:
+                return ConnectorResult(success=False, error=f"Error: {e}")
+
+        # All retries exhausted
+        if isinstance(last_error, HTTPError):
+            return ConnectorResult(
+                success=False,
+                error=f"HTTP error after {max_retries + 1} attempts: {last_error.code}",
             )
-
-            if is_zip:
-                return self._extract_zip(data, destination, source)
-            else:
-                return self._save_file(data, destination, source, parsed.path)
-
-        except HTTPError as e:
-            return ConnectorResult(success=False, error=f"HTTP error: {e.code}")
-        except URLError as e:
-            return ConnectorResult(success=False, error=f"Network error: {e.reason}")
-        except Exception as e:
-            return ConnectorResult(success=False, error=f"Error: {e}")
+        elif isinstance(last_error, URLError):
+            return ConnectorResult(
+                success=False,
+                error=f"Network error after {max_retries + 1} attempts: {last_error.reason}",
+            )
+        else:
+            return ConnectorResult(
+                success=False, error=f"Error after {max_retries + 1} attempts: {last_error}"
+            )
 
     def _extract_zip(self, data: bytes, destination: Path, source: str) -> ConnectorResult:
         """Extract zip file to destination.

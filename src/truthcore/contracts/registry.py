@@ -64,6 +64,10 @@ class ContractVersion:
         return ContractVersion(major=self.major, minor=self.minor, patch=self.patch + 1)
 
 
+# Schema cache: (artifact_type, version) -> schema dict
+_schema_cache: dict[tuple[str, str], dict[str, Any]] = {}
+
+
 @dataclass(frozen=True)
 class SchemaRef:
     """Reference to a schema file with caching."""
@@ -71,15 +75,14 @@ class SchemaRef:
     artifact_type: str
     version: ContractVersion
     path: Path
-    _schema_cache: dict[str, Any] | None = None
 
     def load(self) -> dict[str, Any]:
         """Load and return the schema as a dictionary with caching."""
-        # Use object.__setattr__ to bypass frozen dataclass
-        if self._schema_cache is None:
+        cache_key = (self.artifact_type, str(self.version))
+        if cache_key not in _schema_cache:
             with open(self.path, encoding="utf-8") as f:
-                object.__setattr__(self, "_schema_cache", json.load(f))
-        return self._schema_cache  # type: ignore[return-value]
+                _schema_cache[cache_key] = json.load(f)
+        return _schema_cache[cache_key]
 
 
 @dataclass
