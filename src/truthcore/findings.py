@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from truthcore.severity import Category, CategoryAssignment, Severity
+from truthcore.severity import Category, CategoryAssignment, Severity, severity_order
 
 
 @dataclass
