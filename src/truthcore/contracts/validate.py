@@ -6,10 +6,19 @@ This module provides validation of artifacts against their declared schemas.
 from __future__ import annotations
 
 import json
+import re
+from functools import lru_cache
 from typing import Any
 
 from truthcore.contracts.metadata import extract_metadata
 from truthcore.contracts.registry import get_registry
+
+
+# Compiled regex cache for pattern validation
+@lru_cache(maxsize=128)
+def _get_compiled_pattern(pattern: str) -> re.Pattern[str]:
+    """Get compiled regex pattern from cache."""
+    return re.compile(pattern)
 
 
 class ValidationError(Exception):
@@ -120,8 +129,8 @@ def _validate_value(value: Any, schema: dict[str, Any], path: str) -> list[str]:
         if "maxLength" in schema and len(value) > schema["maxLength"]:
             errors.append(f"{path}: string must be at most {schema['maxLength']} characters")
         if "pattern" in schema:
-            import re
-            if not re.match(schema["pattern"], value):
+            compiled = _get_compiled_pattern(schema["pattern"])
+            if not compiled.match(value):
                 errors.append(f"{path}: string does not match pattern {schema['pattern']}")
 
     # Check numeric constraints
