@@ -59,6 +59,9 @@ class TestGoldenFixtureStructure:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_scenario_exists(self, scenario_name: str):
@@ -86,6 +89,9 @@ class TestVerdictContractCompliance:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_verdict_has_required_contract_fields(self, scenario_name: str):
