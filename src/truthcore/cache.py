@@ -57,6 +57,7 @@ class ContentAddressedCache:
         self.index_path = self.cache_dir / "index.json"
         self._index: dict[str, Any] | None = None
         self._index_dirty = False
+        self._index_mtime: float | None = None
         self._load_index()
 
     def _load_index(self) -> dict[str, Any]:
@@ -65,8 +66,10 @@ class ContentAddressedCache:
             if self.index_path.exists():
                 with open(self.index_path, encoding="utf-8") as f:
                     self._index = json.load(f)
+                self._index_mtime = self.index_path.stat().st_mtime
             else:
                 self._index = {"version": "1.0", "entries": {}}
+                self._index_mtime = None
         return self._index  # type: ignore[return-value]
 
     def _save_index(self, index: dict[str, Any]) -> None:
@@ -76,12 +79,24 @@ class ContentAddressedCache:
         with open(self.index_path, "w", encoding="utf-8") as f:
             json.dump(index, f, indent=2, sort_keys=True)
         self._index_dirty = False
+        self._index_mtime = self.index_path.stat().st_mtime
 
     def _get_cached_index(self) -> dict[str, Any]:
         """Get cached index, loading from disk if needed."""
         if self._index is None:
             return self._load_index()
         return self._index
+
+    def _refresh_index_if_stale(self) -> None:
+        """Refresh index if another instance updated it on disk."""
+        if not self.index_path.exists():
+            return
+        if self._index_dirty:
+            return
+        current_mtime = self.index_path.stat().st_mtime
+        if self._index_mtime is None or current_mtime > self._index_mtime:
+            self._index = None
+            self._load_index()
 
     def sync_index(self) -> None:
         """Sync in-memory index to disk if dirty."""
@@ -110,6 +125,7 @@ class ContentAddressedCache:
         Returns:
             Path to cached output directory, or None if not in cache.
         """
+        self._refresh_index_if_stale()
         index = self._get_cached_index()
 
         if cache_key in index["entries"]:
@@ -237,3 +253,37 @@ class ContentAddressedCache:
             "total_size_bytes": total_size,
             "cache_dir": str(self.cache_dir),
         }
+
+
+class JsonTtlCache:
+    """Lightweight JSON cache with TTL stored on disk for cross-instance reuse."""
+
+    def __init__(self, cache_dir: Path, namespace: str) -> None:
+        self.cache_dir = cache_dir / namespace
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def _entry_path(self, cache_key: str) -> Path:
+        return self.cache_dir / f"{cache_key}.json"
+
+    def get(self, cache_key: str, now: float) -> dict[str, Any] | None:
+        """Return cached payload if present and not expired."""
+        entry_path = self._entry_path(cache_key)
+        if not entry_path.exists():
+            return None
+        try:
+            with open(entry_path, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            entry_path.unlink(missing_ok=True)
+            return None
+        expires_at = payload.get("expires_at")
+        if expires_at is None or expires_at <= now:
+            entry_path.unlink(missing_ok=True)
+            return None
+        return payload.get("data")
+
+    def put(self, cache_key: str, data: dict[str, Any], expires_at: float) -> None:
+        """Persist cached payload to disk."""
+        entry_path = self._entry_path(cache_key)
+        with open(entry_path, "w", encoding="utf-8") as f:
+            json.dump({"expires_at": expires_at, "data": data}, f, indent=2, sort_keys=True)
