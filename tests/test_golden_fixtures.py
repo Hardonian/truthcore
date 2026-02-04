@@ -211,6 +211,9 @@ class TestVerdictValueAndScore:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_value_or_score_exists(self, scenario_name: str):
