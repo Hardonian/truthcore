@@ -1,0 +1,127 @@
+{
+  "_contract": {
+    "artifact_type": "verdict",
+    "contract_version": "2.0.0",
+    "truthcore_version": "0.2.0",
+    "created_at": "2026-01-31T12:00:00Z",
+    "schema": "schemas/verdict/v2.0.0/verdict.schema.json"
+  },
+  "verdict": "FAIL",
+  "value": 10,
+  "confidence": 1.0,
+  "items": [
+    {
+      "id": "policy-conflict-001",
+      "severity": "BLOCKER",
+      "message": "[POLICY_VIOLATION_SECURITY] Policy conflict resolved: Security policy DENY overrides lower priority ALLOW",
+      "category": "security",
+      "engine": "policy_conflict_resolver",
+      "confidence": 1.0,
+      "metadata": {
+        "refusal": {
+          "code": "POLICY_VIOLATION_SECURITY",
+          "details": {
+            "policy_id": "critical-security-deny",
+            "conflicting_policy": "legacy-allow",
+            "resolution": "DENY wins over ALLOW at same priority",
+            "winner": "critical-security-deny"
+          },
+          "remediation": "Review policy configuration and adjust priorities or effects"
+        },
+        "policy_evidence": {
+          "finding_id": "policy-conflict-001",
+          "policy_id": "critical-security-deny",
+          "rule_id": "no-secrets-in-code",
+          "policy_effect": "deny",
+          "decision_trace": {
+            "decisions": [
+              {
+                "policy_id": "legacy-allow",
+                "rule_id": "allow-test-files",
+                "effect": "allow",
+                "priority": "MEDIUM",
+                "matched": true,
+                "conditions_met": true,
+                "overridden_by": "critical-security-deny",
+                "is_effective": false
+              },
+              {
+                "policy_id": "critical-security-deny",
+                "rule_id": "no-secrets-in-code",
+                "effect": "deny",
+                "priority": "CRITICAL",
+                "matched": true,
+                "conditions_met": true,
+                "overridden_by": null,
+                "is_effective": true
+              }
+            ],
+            "final_effect": "deny",
+            "final_policy_id": "critical-security-deny",
+            "conflicts_detected": [
+              {
+                "policy_a": "legacy-allow",
+                "policy_b": "critical-security-deny",
+                "resolution": "Priority CRITICAL conflict resolved: deny wins over allow",
+                "winner": "critical-security-deny"
+              }
+            ],
+            "overrides_applied": [],
+            "effective_decisions_count": 1
+          },
+          "conditions": [],
+          "override_applied": null,
+          "refusal_reason": "Policy conflict resolved in favor of security"
+        },
+        "correlation_id": "corr-policy-2026-001",
+        "pipeline_stages_completed": ["policy_evaluation", "conflict_resolution", "truthcore"],
+        "policy_violation": true,
+        "conflict_resolution": {
+          "conflict_detected": true,
+          "resolution_strategy": "priority_based",
+          "winning_policy": "critical-security-deny"
+        }
+      }
+    },
+    {
+      "id": "policy-conflict-002",
+      "severity": "HIGH",
+      "message": "Policy conflict detected: Allow and deny rules at same priority level",
+      "category": "policy",
+      "engine": "policy_conflict_resolver",
+      "confidence": 1.0,
+      "points": 50,
+      "metadata": {
+        "policy_conflict": {
+          "policy_a": "allow-rule",
+          "policy_b": "deny-rule",
+          "priority": "MEDIUM",
+          "resolution": "DENY wins over ALLOW at same priority"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "scenario": "policy_conflict_resolution",
+    "description": "Policy conflict scenario: Multiple policies with conflicting effects resolved via priority-based deterministic resolution",
+    "pipeline": {
+      "stages": ["policy_evaluation", "conflict_resolution", "truthcore"],
+      "correlation_id": "corr-policy-2026-001",
+      "refusal_reasons": [
+        {
+          "code": "POLICY_VIOLATION_SECURITY",
+          "stage": "truthcore"
+        }
+      ],
+      "policy_violations": ["critical-security-deny"],
+      "conflict_count": 2
+    },
+    "determinism_verified": true,
+    "resolution_strategy": "priority_based",
+    "explainability": {
+      "decision_trace_available": true,
+      "conflict_resolution_explained": true,
+      "all_policies_documented": true
+    }
+  }
+}
