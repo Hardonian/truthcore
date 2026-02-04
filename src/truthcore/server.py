@@ -32,7 +32,7 @@ from truthcore.anomaly_scoring import (
     ReconciliationAnomalyScorer,
     ScorecardWriter,
 )
-from truthcore.cache import ContentAddressedCache
+from truthcore.cache import ContentAddressedCache, JsonTtlCache
 from truthcore.impact import ChangeImpactEngine
 from truthcore.invariant_dsl import InvariantDSL
 from truthcore.manifest import RunManifest, normalize_timestamp
@@ -81,12 +81,18 @@ class IntelRequest(BaseModel):
     retention_days: int = 90
 
 
+class ExplainRuleset(BaseModel):
+    """Ruleset container for explain requests."""
+
+    rules: list[dict[str, Any]]
+
+
 class ExplainRequest(BaseModel):
     """Request model for explain endpoint."""
 
-    rule: str
+    rule_id: str
     data: dict[str, Any]
-    rules: dict[str, Any] | None = None
+    ruleset: ExplainRuleset
 
 
 class HealthResponse(BaseModel):
@@ -115,6 +121,7 @@ jobs: dict[str, JobStatus] = {}
 
 # Rate limiting storage: {client_id: [(timestamp, count), ...]}
 rate_limit_storage: dict[str, deque[float]] = {}
+rate_limit_last_seen: dict[str, float] = {}
 
 
 def verify_api_key(
@@ -210,6 +217,22 @@ def check_rate_limit(
     # Record this request
     client_history.append(now)
     rate_limit_storage[client_id] = client_history
+    rate_limit_last_seen[client_id] = now
+
+    # Evict stale or excess clients to bound memory growth
+    try:
+        max_clients = int(os.environ.get("TRUTHCORE_RATE_LIMIT_MAX_CLIENTS", "5000"))
+    except ValueError:
+        max_clients = 5000
+    if max_clients > 0:
+        if len(rate_limit_storage) > max_clients:
+            sorted_clients = sorted(rate_limit_last_seen.items(), key=lambda item: item[1])
+            for client_key, _last_seen in sorted_clients[: max(0, len(rate_limit_storage) - max_clients)]:
+                rate_limit_storage.pop(client_key, None)
+                rate_limit_last_seen.pop(client_key, None)
+    else:
+        rate_limit_storage.clear()
+        rate_limit_last_seen.clear()
 
     return True
 
@@ -301,6 +324,7 @@ def create_app(
     # Initialize cache
     cache = ContentAddressedCache(cache_dir) if cache_dir else None
     impact_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+    impact_shared_cache = JsonTtlCache(cache_dir, "impact") if cache_dir else None
     impact_locks: dict[str, asyncio.Lock] = {}
 
     @app.exception_handler(Exception)
@@ -725,39 +749,21 @@ def create_app(
             Explanation of rule evaluation
         """
         try:
-            rule_data: dict[str, Any] | None = None
-            if explain_request.rules:
-                if "id" in explain_request.rules:
-                    rule_data = explain_request.rules
-                elif explain_request.rule in explain_request.rules:
-                    candidate = explain_request.rules[explain_request.rule]
-                    if isinstance(candidate, dict):
-                        rule_data = candidate
-
-            if rule_data is None:
-                raw_rule = explain_request.rule.strip()
-                if raw_rule.startswith(("{", "[")):
-                    try:
-                        candidate = json.loads(raw_rule)
-                    except json.JSONDecodeError as exc:
-                        raise HTTPException(
-                            status_code=http_status.HTTP_400_BAD_REQUEST,
-                            detail="Rule must be valid JSON or referenced in rules payload",
-                        ) from exc
-                    if isinstance(candidate, dict):
-                        rule_data = candidate
-
+            rule_data = next(
+                (rule for rule in explain_request.ruleset.rules if rule.get("id") == explain_request.rule_id),
+                None,
+            )
             if rule_data is None:
                 raise HTTPException(
                     status_code=http_status.HTTP_400_BAD_REQUEST,
-                    detail="Rule must be provided as JSON or referenced in rules payload",
+                    detail=f"Rule '{explain_request.rule_id}' not found in ruleset",
                 )
 
             explainer = InvariantDSL(explain_request.data)
             explanation = explainer.explain(rule_data)
 
             return {
-                "rule": explain_request.rule,
+                "rule_id": explain_request.rule_id,
                 "explanation": explanation,
             }
 
@@ -861,6 +867,11 @@ def create_app(
                 cached = impact_cache.get(cache_key)
                 if cached and cached[0] > now:
                     return {**cached[1], "cache": {"hit": True, "ttl_s": cache_ttl}}
+                if impact_shared_cache:
+                    shared_cached = impact_shared_cache.get(cache_key, now)
+                    if shared_cached:
+                        impact_cache[cache_key] = (now + cache_ttl, shared_cached)
+                        return {**shared_cached, "cache": {"hit": True, "ttl_s": cache_ttl, "layer": "shared"}}
 
             if cache_key and cache_ttl > 0:
                 lock = impact_locks.setdefault(cache_key, asyncio.Lock())
@@ -869,6 +880,14 @@ def create_app(
                     cached = impact_cache.get(cache_key)
                     if cached and cached[0] > now:
                         return {**cached[1], "cache": {"hit": True, "ttl_s": cache_ttl}}
+                    if impact_shared_cache:
+                        shared_cached = impact_shared_cache.get(cache_key, now)
+                        if shared_cached:
+                            impact_cache[cache_key] = (now + cache_ttl, shared_cached)
+                            return {
+                                **shared_cached,
+                                "cache": {"hit": True, "ttl_s": cache_ttl, "layer": "shared"},
+                            }
 
                     engine = ChangeImpactEngine()
                     plan = engine.analyze(
@@ -891,6 +910,8 @@ def create_app(
                     impact_cache[cache_key] = (now + cache_ttl, payload)
                     if len(impact_cache) > cache_max_entries:
                         impact_cache.pop(next(iter(impact_cache)))
+                    if impact_shared_cache:
+                        impact_shared_cache.put(cache_key, payload, now + cache_ttl)
                     return {**payload, "cache": {"hit": False, "ttl_s": cache_ttl}}
 
             engine = ChangeImpactEngine()

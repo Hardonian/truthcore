@@ -8,6 +8,7 @@ from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import os
 from typing import Any
 
 
@@ -52,8 +53,15 @@ class RateLimitBackend(ABC):
 class MemoryRateLimitBackend(RateLimitBackend):
     """In-memory rate limit backend."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_clients: int | None = None) -> None:
         self._storage: dict[str, list[tuple[float, int]]] = {}
+        self._last_seen: dict[str, float] = {}
+        if max_clients is None:
+            try:
+                max_clients = int(os.environ.get("TRUTHCORE_RATE_LIMIT_MAX_CLIENTS", "5000"))
+            except ValueError:
+                max_clients = 5000
+        self._max_clients = max_clients
 
     def check_rate_limit(
         self,
@@ -91,6 +99,8 @@ class MemoryRateLimitBackend(RateLimitBackend):
 
         # Allow request
         entries.append((now, 1))
+        self._last_seen[key] = now
+        self._evict_if_needed()
 
         return RateLimitResult(
             allowed=True,
@@ -102,6 +112,20 @@ class MemoryRateLimitBackend(RateLimitBackend):
         """Reset rate limit for key."""
         if key in self._storage:
             del self._storage[key]
+            self._last_seen.pop(key, None)
+
+    def _evict_if_needed(self) -> None:
+        if self._max_clients is None or self._max_clients <= 0:
+            self._storage.clear()
+            self._last_seen.clear()
+            return
+        if len(self._storage) <= self._max_clients:
+            return
+        sorted_clients = sorted(self._last_seen.items(), key=lambda item: item[1])
+        overflow = len(self._storage) - self._max_clients
+        for client_key, _last_seen in sorted_clients[:overflow]:
+            self._storage.pop(client_key, None)
+            self._last_seen.pop(client_key, None)
 
 
 class RedisRateLimitBackend(RateLimitBackend):

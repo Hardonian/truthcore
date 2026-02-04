@@ -67,6 +67,7 @@ The server provides an HTML GUI at the root path (`/`). Features include:
 
 - `TRUTHCORE_CACHE_DIR` - Default cache directory
 - `TRUTHCORE_DEBUG` - Enable debug mode
+- `TRUTHCORE_RATE_LIMIT_MAX_CLIENTS` - Max tracked clients in rate limit storage (default: 5000)
 
 ## Usage Examples
 
@@ -111,6 +112,24 @@ curl -X POST http://localhost:8000/api/v1/intel \
     "mode": "readiness",
     "compact": false,
     "retention_days": 90
+  }'
+```
+
+### Explaining Invariant Rules
+
+The explain endpoint requires a structured payload with a ruleset and rule ID.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/explain \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rule_id": "UI_BUTTON_VISIBLE",
+    "data": {"button_text": "Save"},
+    "ruleset": {
+      "rules": [
+        {"id": "UI_BUTTON_VISIBLE", "when": "button_text == \"Save\""}
+      ]
+    }
   }'
 ```
 
