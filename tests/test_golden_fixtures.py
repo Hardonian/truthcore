@@ -126,6 +126,9 @@ class TestVerdictContractCompliance:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_verdict_artifact_type_is_correct(self, scenario_name: str):
@@ -149,6 +152,9 @@ class TestVerdictContractCompliance:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_verdict_state_is_valid(self, scenario_name: str):
@@ -173,6 +179,9 @@ class TestVerdictContractCompliance:
             ("jobforge_runner_refusal_missing_evidence", "FAIL"),
             ("jobforge_runner_refusal_engine_timeout", "FAIL"),
             ("jobforge_runner_refusal_policy_violation", "FAIL"),
+            ("policy_conflict_resolution", "FAIL"),
+            ("refusal_reasoning_deterministic", "FAIL"),
+            ("policy_override_explicit", "PASS"),
         ],
     )
     def test_verdict_state_matches_expected(self, scenario_name: str, expected_verdict: str):
