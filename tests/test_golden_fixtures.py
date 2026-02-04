@@ -501,7 +501,7 @@ class TestGoldenFixtureCompleteness:
         """Golden fixture suite must have at least 6 scenarios."""
         golden_dir = get_golden_fixtures_dir()
         scenarios = [d for d in golden_dir.iterdir() if d.is_dir()]
-        assert len(scenarios) >= 6, f"Expected at least 6 scenarios, found {len(scenarios)}"
+        assert len(scenarios) >= 9, f"Expected at least 9 scenarios, found {len(scenarios)}"
 
     def test_scenarios_cover_all_verdict_states(self):
         """Scenarios must cover all verdict states (PASS, FAIL, WARN)."""
@@ -566,6 +566,8 @@ class TestRefusalCodes:
         "jobforge_runner_refusal_missing_evidence",
         "jobforge_runner_refusal_engine_timeout",
         "jobforge_runner_refusal_policy_violation",
+        "policy_conflict_resolution",
+        "refusal_reasoning_deterministic",
     ]
 
     @pytest.mark.parametrize("scenario_name", REFUSAL_SCENARIOS)
