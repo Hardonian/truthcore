@@ -16,6 +16,22 @@ from truthcore.security import safe_read_text
 from truthcore.severity import Severity
 
 
+class PolicyEffect(Enum):
+    """Policy decision effect types."""
+    ALLOW = "allow"
+    DENY = "deny"
+    CONDITIONAL = "conditional"
+
+
+class PolicyPriority(Enum):
+    """Priority levels for policy conflict resolution."""
+    CRITICAL = 0
+    HIGH = 1
+    MEDIUM = 2
+    LOW = 3
+    DEFAULT = 4
+
+
 @dataclass
 class Matcher:
     """Pattern matcher for policy rules.
@@ -204,6 +220,8 @@ class PolicyRule:
         suggestion: Remediation suggestion
         enabled: Whether rule is enabled
         metadata: Additional metadata
+        effect: Policy effect (allow/deny/conditional)
+        priority: Policy priority for conflict resolution
     """
 
     id: str
@@ -220,6 +238,8 @@ class PolicyRule:
     suggestion: str | None = None
     enabled: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
+    effect: PolicyEffect = field(default=PolicyEffect.DENY)
+    priority: PolicyPriority = field(default=PolicyPriority.MEDIUM)
 
     def __post_init__(self):
         """Ensure rule ID is normalized."""
