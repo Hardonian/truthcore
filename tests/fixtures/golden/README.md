@@ -30,6 +30,14 @@ Golden fixtures serve as the reference standard for truth-core verification outp
 | `agent_trace_success` | PASS | Valid AI agent trace with proper FSM compliance |
 | `agent_trace_failure` | FAIL | AI agent trace with FSM violations and safety issues |
 
+### Policy Reasoning
+
+| Scenario | Verdict | Description |
+|----------|---------|-------------|
+| `policy_conflict_resolution` | FAIL | Multiple policies with conflicting effects resolved via priority |
+| `refusal_reasoning_deterministic` | FAIL | Complete deterministic reasoning chain for refusal |
+| `policy_override_explicit` | PASS | Legitimate policy override with full audit trail |
+
 ## Fixture Structure
 
 Each scenario directory contains:
