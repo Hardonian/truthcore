@@ -256,13 +256,15 @@ class PolicyRule:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        result = {
+        result: dict[str, Any] = {
             "id": self.id,
             "description": self.description,
             "severity": self.severity.value,
             "category": self.category,
             "target": self.target,
             "enabled": self.enabled,
+            "effect": self.effect.value,
+            "priority": self.priority.name,
             "metadata": dict(sorted(self.metadata.items())),
         }
         if self.matchers:
@@ -284,6 +286,16 @@ class PolicyRule:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PolicyRule:
         """Create from dictionary."""
+        # Parse effect with backward compatibility (default to DENY)
+        effect = PolicyEffect.DENY
+        if "effect" in data:
+            effect = PolicyEffect(data["effect"])
+        
+        # Parse priority with backward compatibility (default to MEDIUM)
+        priority = PolicyPriority.MEDIUM
+        if "priority" in data:
+            priority = PolicyPriority[data["priority"]]
+        
         rule = cls(
             id=data["id"],
             description=data["description"],
@@ -293,6 +305,8 @@ class PolicyRule:
             enabled=data.get("enabled", True),
             metadata=data.get("metadata", {}),
             suggestion=data.get("suggestion"),
+            effect=effect,
+            priority=priority,
         )
         if "matchers" in data:
             rule.matchers = [Matcher.from_dict(m) for m in data["matchers"]]
