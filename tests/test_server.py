@@ -129,12 +129,19 @@ def test_explain_endpoint(client):
     """Test the explain endpoint."""
     payload = {
         "rule": "test_rule",
-        "data": {"test": "data"},
+        "data": {"value": 2},
+        "rules": {
+            "test_rule": {
+                "id": "test_rule",
+                "operator": ">",
+                "left": "value",
+                "right": 1,
+            }
+        },
     }
 
     response = client.post("/api/v1/explain", json=payload)
-    # May fail if rule not found, but should return valid response
-    assert response.status_code in [200, 500]
+    assert response.status_code == 200
 
 
 def test_impact_endpoint(client):
