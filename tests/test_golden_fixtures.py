@@ -240,6 +240,9 @@ class TestVerdictValueAndScore:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_value_in_valid_range(self, scenario_name: str):
@@ -264,6 +267,9 @@ class TestVerdictValueAndScore:
             ("jobforge_runner_refusal_missing_evidence", 0),
             ("jobforge_runner_refusal_engine_timeout", 0),
             ("jobforge_runner_refusal_policy_violation", 0),
+            ("policy_conflict_resolution", 0),
+            ("refusal_reasoning_deterministic", 0),
+            ("policy_override_explicit", 90),
         ],
     )
     def test_value_matches_scenario_severity(self, scenario_name: str, min_value: int):
@@ -294,6 +300,9 @@ class TestVerdictFindings:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_findings_or_items_exists(self, scenario_name: str):
@@ -320,6 +329,9 @@ class TestVerdictFindings:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_all_findings_have_required_fields(self, scenario_name: str):
@@ -348,6 +360,9 @@ class TestVerdictFindings:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_severity_levels_are_valid(self, scenario_name: str):
@@ -382,6 +397,9 @@ class TestVerdictStability:
             "jobforge_runner_refusal_missing_evidence",
             "jobforge_runner_refusal_engine_timeout",
             "jobforge_runner_refusal_policy_violation",
+            "policy_conflict_resolution",
+            "refusal_reasoning_deterministic",
+            "policy_override_explicit",
         ],
     )
     def test_verdict_is_explainable(self, scenario_name: str):
@@ -426,6 +444,9 @@ class TestVerdictStability:
             ("jobforge_runner_refusal_missing_evidence", (1, 5)),
             ("jobforge_runner_refusal_engine_timeout", (1, 5)),
             ("jobforge_runner_refusal_policy_violation", (2, 6)),
+            ("policy_conflict_resolution", (2, 4)),
+            ("refusal_reasoning_deterministic", (1, 3)),
+            ("policy_override_explicit", (1, 3)),
         ],
     )
     def test_finding_count_is_reasonable(self, scenario_name: str, expected_count: tuple):
