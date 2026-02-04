@@ -6,6 +6,7 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import Enum
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Literal
