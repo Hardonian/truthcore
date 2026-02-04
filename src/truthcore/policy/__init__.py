@@ -5,10 +5,23 @@ This module provides a YAML-based policy rule system with:
 - Boolean composition (all/any/not)
 - Thresholds and suppressions
 - Built-in rule packs for security, privacy, logging, and agents
+- Policy reasoning with allow/deny/conditional effects
+- Priority-based conflict resolution
+- Deterministic override rules
 """
 
 from __future__ import annotations
 
+from truthcore.policy.decisions import (
+    PolicyCondition,
+    PolicyConflictResolver,
+    PolicyDecision,
+    PolicyDecisionTrace,
+    PolicyEffect,
+    PolicyEvidencePacket,
+    PolicyOverride,
+    PolicyPriority,
+)
 from truthcore.policy.engine import PolicyEngine
 from truthcore.policy.models import (
     Matcher,
@@ -34,6 +47,14 @@ __all__ = [
     "Severity",
     "Suppression",
     "Threshold",
+    "PolicyEffect",
+    "PolicyPriority",
+    "PolicyCondition",
+    "PolicyOverride",
+    "PolicyDecision",
+    "PolicyDecisionTrace",
+    "PolicyEvidencePacket",
+    "PolicyConflictResolver",
     "PolicyScanner",
     "SecretScanner",
     "PIIScanner",

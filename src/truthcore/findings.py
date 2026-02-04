@@ -15,6 +15,7 @@ from truthcore.severity import Category, CategoryAssignment, Severity
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from truthcore.policy.decisions import PolicyEvidencePacket
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Finding:
         category_assignment: Optional audit record for category assignment
         metadata: Additional context-specific data
         timestamp: When the finding was created (ISO format)
+        policy_evidence: Optional policy evidence packet for explainability
     """
 
     rule_id: str
@@ -67,6 +69,7 @@ class Finding:
     category_assignment: CategoryAssignment | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    policy_evidence: Any = None  # PolicyEvidencePacket - use Any to avoid circular import
 
     def __post_init__(self):
         """Ensure timestamp is ISO format and compute excerpt hash if needed."""
@@ -77,7 +80,7 @@ class Finding:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert finding to dictionary with stable ordering."""
-        result = {
+        result: dict[str, Any] = {
             "rule_id": self.rule_id,
             "severity": self.severity.value,
             "target": self.target,
@@ -93,6 +96,8 @@ class Finding:
             result["category"] = self.category.value
         if self.category_assignment:
             result["category_assignment"] = self.category_assignment.to_dict()
+        if self.policy_evidence:
+            result["policy_evidence"] = self.policy_evidence.to_dict() if hasattr(self.policy_evidence, 'to_dict') else self.policy_evidence
         return result
 
     @classmethod
@@ -124,6 +129,7 @@ class Finding:
             category_assignment=category_assignment,
             metadata=data.get("metadata", {}),
             timestamp=data.get("timestamp", datetime.now(UTC).isoformat()),
+            policy_evidence=data.get("policy_evidence"),
         )
 
     def with_redacted_excerpt(self) -> Finding:
@@ -141,6 +147,7 @@ class Finding:
             category_assignment=self.category_assignment,
             metadata=self.metadata,
             timestamp=self.timestamp,
+            policy_evidence=self.policy_evidence,
         )
 
     @property
