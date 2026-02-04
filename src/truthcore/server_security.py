@@ -9,6 +9,8 @@ Provides:
 
 from __future__ import annotations
 
+import logging
+import os
 import re
 import secrets
 import time
@@ -19,6 +21,8 @@ from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorCategory(str, Enum):
@@ -161,6 +165,45 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         response.headers[self.header_name] = request_id
+
+        return response
+
+
+class RequestTimingMiddleware(BaseHTTPMiddleware):
+    """Request timing middleware for lightweight telemetry."""
+
+    def __init__(
+        self,
+        app,
+        header_name: str = "X-Request-Duration-ms",
+        log_threshold_ms: float | None = None,
+    ) -> None:
+        super().__init__(app)
+        self.header_name = header_name
+        self.log_threshold_ms = log_threshold_ms
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Measure request duration and optionally log slow requests."""
+        start = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start) * 1000
+        response.headers[self.header_name] = f"{duration_ms:.2f}"
+
+        if self.log_threshold_ms is None:
+            env_threshold = os.environ.get("TRUTHCORE_TIMING_LOG_MS")
+            if env_threshold:
+                try:
+                    self.log_threshold_ms = float(env_threshold)
+                except ValueError:
+                    self.log_threshold_ms = None
+
+        if self.log_threshold_ms is not None and duration_ms >= self.log_threshold_ms:
+            logger.info(
+                "Slow request %s %s took %.2fms",
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
 
         return response
 
@@ -331,5 +374,4 @@ def generate_error_id() -> str:
     timestamp = int(time.time() * 1000)
     random_part = secrets.token_hex(8)
     return f"err_{timestamp}_{random_part}"
-
 

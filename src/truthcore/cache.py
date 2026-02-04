@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass
-from datetime import UTC
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +156,7 @@ class ContentAddressedCache:
         # Use file count from source dir to avoid re-walking cache
         file_count = sum(1 for _ in output_dir.rglob("*") if _.is_file())
         index["entries"][cache_key] = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "manifest_hash": hash_dict(manifest),
             "output_files": file_count,
         }
@@ -199,7 +199,7 @@ class ContentAddressedCache:
         from datetime import datetime, timedelta
 
         index = self._get_cached_index()
-        cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
 
         to_remove: list[str] = []
         for key, entry in index["entries"].items():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import asyncio
 import hashlib
 import json
 import logging
@@ -10,6 +11,7 @@ import os
 import secrets
 import tempfile
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -32,7 +34,7 @@ from truthcore.anomaly_scoring import (
 )
 from truthcore.cache import ContentAddressedCache
 from truthcore.impact import ChangeImpactEngine
-from truthcore.invariant_dsl import InvariantExplainer
+from truthcore.invariant_dsl import InvariantDSL
 from truthcore.manifest import RunManifest, normalize_timestamp
 from truthcore.parquet_store import HistoryCompactor
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
@@ -49,6 +51,7 @@ from truthcore.server_security import (
     ErrorSeverity,
     RateLimitError,
     RequestIDMiddleware,
+    RequestTimingMiddleware,
     SecurityMiddleware,
     ValidationError,
     create_error_response,
@@ -111,7 +114,7 @@ class JobStatus(BaseModel):
 jobs: dict[str, JobStatus] = {}
 
 # Rate limiting storage: {client_id: [(timestamp, count), ...]}
-rate_limit_storage: dict[str, list[tuple[float, int]]] = {}
+rate_limit_storage: dict[str, deque[float]] = {}
 
 
 def verify_api_key(
@@ -178,22 +181,25 @@ def check_rate_limit(
     Raises:
         RateLimitError: If rate limit exceeded
     """
-    # Get client identifier (IP + User-Agent hash)
+    # Get client identifier (IP + capped User-Agent)
     client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    client_id = hashlib.sha256(f"{client_ip}:{user_agent}".encode()).hexdigest()[:16]
+    user_agent = request.headers.get("user-agent", "unknown")[:256]
+    client_id = f"{client_ip}:{user_agent}"
 
-    now = time.time()
+    now = time.monotonic()
     window_start = now - window_seconds
 
     # Get or initialize client's request history
-    client_history = rate_limit_storage.get(client_id, [])
+    client_history = rate_limit_storage.get(client_id)
+    if client_history is None:
+        client_history = deque()
 
     # Filter to only requests within the window
-    client_history = [(ts, cnt) for ts, cnt in client_history if ts > window_start]
+    while client_history and client_history[0] <= window_start:
+        client_history.popleft()
 
     # Count total requests in window
-    total_requests = sum(cnt for _, cnt in client_history)
+    total_requests = len(client_history)
 
     if total_requests >= max_requests:
         raise RateLimitError(
@@ -202,7 +208,7 @@ def check_rate_limit(
         )
 
     # Record this request
-    client_history.append((now, 1))
+    client_history.append(now)
     rate_limit_storage[client_id] = client_history
 
     return True
@@ -289,9 +295,13 @@ def create_app(
     # Add security middleware
     app.add_middleware(SecurityMiddleware)
     app.add_middleware(RequestIDMiddleware)
+    if os.environ.get("TRUTHCORE_TIMING_ENABLED", "").lower() in {"1", "true", "yes"}:
+        app.add_middleware(RequestTimingMiddleware)
 
     # Initialize cache
     cache = ContentAddressedCache(cache_dir) if cache_dir else None
+    impact_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+    impact_locks: dict[str, asyncio.Lock] = {}
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
@@ -441,7 +451,11 @@ def create_app(
     @app.post("/api/v1/judge")
     async def judge(
         request: Request,
-        judge_request: JudgeRequest,
+        profile: str = Form(default="base"),
+        strict: bool | None = Form(default=None),
+        parallel: bool = Form(default=True),
+        policy_pack: str | None = Form(default=None),
+        sign: bool = Form(default=False),
         inputs: UploadFile | None = File(None),
         _auth: bool = Depends(verify_api_key),
         _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
@@ -460,6 +474,13 @@ def create_app(
         """
         job_id = f"judge_{int(time.time() * 1000)}"
         start_time = time.time()
+        judge_request = JudgeRequest(
+            profile=profile,
+            strict=strict,
+            parallel=parallel,
+            policy_pack=policy_pack,
+            sign=sign,
+        )
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -473,18 +494,8 @@ def create_app(
                     import zipfile
 
                     inputs_zip = tmp_path / "inputs.zip"
-                    with open(inputs_zip, "wb") as f:
-                        content = await inputs.read()
-
-                        # Validate file size (100MB max)
-                        max_size = 100 * 1024 * 1024
-                        if len(content) > max_size:
-                            raise HTTPException(
-                                status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                                detail=f"File too large. Maximum size: {max_size} bytes",
-                            )
-
-                        f.write(content)
+                    max_size = 100 * 1024 * 1024
+                    await _write_upload_to_path(inputs, inputs_zip, max_size)
 
                     inputs_path = tmp_path / "inputs"
                     inputs_path.mkdir()
@@ -505,8 +516,8 @@ def create_app(
                 )
 
                 # Check cache
+                cache_key = manifest.compute_cache_key()
                 if cache:
-                    cache_key = manifest.compute_cache_key()
                     cached = cache.get(cache_key)
                     if cached:
                         return {
@@ -554,7 +565,7 @@ def create_app(
 
                 evidence_manifest = EvidenceManifest.generate(
                     bundle_dir=out_path,
-                    run_manifest_hash=manifest.compute_cache_key(),
+                    run_manifest_hash=cache_key,
                     config_hash=manifest.config_hash,
                     limits=SecurityLimits(),
                 )
@@ -576,7 +587,6 @@ def create_app(
 
                 # Cache results
                 if cache:
-                    cache_key = manifest.compute_cache_key()
                     cache.put(cache_key, out_path, manifest.to_dict())
 
                 # Read results
@@ -603,7 +613,9 @@ def create_app(
     @app.post("/api/v1/intel")
     async def intel(
         request: Request,
-        intel_request: IntelRequest,
+        mode: str = Form(default="readiness"),
+        compact: bool = Form(default=False),
+        retention_days: int = Form(default=90),
         inputs: UploadFile | None = File(None),
         _auth: bool = Depends(verify_api_key),
         _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
@@ -621,6 +633,11 @@ def create_app(
             Analysis results
         """
         job_id = f"intel_{int(time.time() * 1000)}"
+        intel_request = IntelRequest(
+            mode=mode,
+            compact=compact,
+            retention_days=retention_days,
+        )
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -632,18 +649,8 @@ def create_app(
                     import zipfile
 
                     inputs_zip = tmp_path / "inputs.zip"
-                    with open(inputs_zip, "wb") as f:
-                        content = await inputs.read()
-
-                        # Validate file size (100MB max)
-                        max_size = 100 * 1024 * 1024
-                        if len(content) > max_size:
-                            raise HTTPException(
-                                status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                                detail=f"File too large. Maximum size: {max_size} bytes",
-                            )
-
-                        f.write(content)
+                    max_size = 100 * 1024 * 1024
+                    await _write_upload_to_path(inputs, inputs_zip, max_size)
 
                     inputs_path = tmp_path / "inputs"
                     inputs_path.mkdir()
@@ -718,13 +725,36 @@ def create_app(
             Explanation of rule evaluation
         """
         try:
-            explainer = InvariantExplainer()
-
-            # Load rules if provided
+            rule_data: dict[str, Any] | None = None
             if explain_request.rules:
-                explainer.load_rules_from_dict(explain_request.rules)
+                if "id" in explain_request.rules:
+                    rule_data = explain_request.rules
+                elif explain_request.rule in explain_request.rules:
+                    candidate = explain_request.rules[explain_request.rule]
+                    if isinstance(candidate, dict):
+                        rule_data = candidate
 
-            explanation = explainer.explain(explain_request.rule, explain_request.data)
+            if rule_data is None:
+                raw_rule = explain_request.rule.strip()
+                if raw_rule.startswith(("{", "[")):
+                    try:
+                        candidate = json.loads(raw_rule)
+                    except json.JSONDecodeError as exc:
+                        raise HTTPException(
+                            status_code=http_status.HTTP_400_BAD_REQUEST,
+                            detail="Rule must be valid JSON or referenced in rules payload",
+                        ) from exc
+                    if isinstance(candidate, dict):
+                        rule_data = candidate
+
+            if rule_data is None:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail="Rule must be provided as JSON or referenced in rules payload",
+                )
+
+            explainer = InvariantDSL(explain_request.data)
+            explanation = explainer.explain(rule_data)
 
             return {
                 "rule": explain_request.rule,
@@ -804,6 +834,17 @@ def create_app(
             Impact analysis results
         """
         try:
+            try:
+                cache_ttl = float(os.environ.get("TRUTHCORE_IMPACT_CACHE_TTL", "60"))
+            except ValueError:
+                cache_ttl = 60.0
+            try:
+                cache_max_entries = int(os.environ.get("TRUTHCORE_IMPACT_CACHE_MAX_ENTRIES", "128"))
+            except ValueError:
+                cache_max_entries = 128
+            if cache_max_entries < 1:
+                cache_ttl = 0
+
             # Validate diff size (1MB max to prevent DoS)
             max_diff_size = 1024 * 1024
             if len(diff) > max_diff_size:
@@ -811,6 +852,46 @@ def create_app(
                     status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     detail=f"Diff too large. Maximum size: {max_diff_size} bytes",
                 )
+
+            cache_key = None
+            now = time.monotonic()
+            if cache_ttl > 0:
+                diff_hash = hashlib.blake2s(diff.encode("utf-8"), digest_size=16).hexdigest()
+                cache_key = f"{profile}:{diff_hash}"
+                cached = impact_cache.get(cache_key)
+                if cached and cached[0] > now:
+                    return {**cached[1], "cache": {"hit": True, "ttl_s": cache_ttl}}
+
+            if cache_key and cache_ttl > 0:
+                lock = impact_locks.setdefault(cache_key, asyncio.Lock())
+                async with lock:
+                    now = time.monotonic()
+                    cached = impact_cache.get(cache_key)
+                    if cached and cached[0] > now:
+                        return {**cached[1], "cache": {"hit": True, "ttl_s": cache_ttl}}
+
+                    engine = ChangeImpactEngine()
+                    plan = engine.analyze(
+                        diff_text=diff,
+                        changed_files=None,
+                        profile=profile,
+                        source="api",
+                    )
+
+                    payload = {
+                        "engines": [
+                            {"id": e.engine_id, "include": e.include, "reason": e.reason}
+                            for e in plan.engines
+                        ],
+                        "invariants": [
+                            {"id": i.rule_id, "include": i.include, "reason": i.reason}
+                            for i in plan.invariants
+                        ],
+                    }
+                    impact_cache[cache_key] = (now + cache_ttl, payload)
+                    if len(impact_cache) > cache_max_entries:
+                        impact_cache.pop(next(iter(impact_cache)))
+                    return {**payload, "cache": {"hit": False, "ttl_s": cache_ttl}}
 
             engine = ChangeImpactEngine()
             plan = engine.analyze(
@@ -862,3 +943,31 @@ def create_app(
             app.mount("/static", StaticFiles(directory=GUI_DIR), name="static")
 
     return app
+
+
+async def _write_upload_to_path(
+    upload: UploadFile,
+    destination: Path,
+    max_size: int,
+) -> int:
+    """Stream an uploaded file to disk with size enforcement."""
+    bytes_written = 0
+    try:
+        with open(destination, "wb") as f:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > max_size:
+                    f.close()
+                    destination.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=http_status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File too large. Maximum size: {max_size} bytes",
+                    )
+                f.write(chunk)
+    finally:
+        await upload.close()
+
+    return bytes_written
