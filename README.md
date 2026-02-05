@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/your-org/truth-core)
 
-> **Deterministic, evidence-based verification framework for software systems.**
+> Deterministic, evidence-based verification framework for software systems.
 
-Truth Core provides a cutting-edge platform for deterministic verification, featuring content-addressed caching, parallel execution, security hardening, and comprehensive anomaly detection—all without non-deterministic external dependencies.
+Truth Core provides a verification platform featuring content-addressed caching, parallel execution, and comprehensive anomaly detection. All operations run without non-deterministic external dependencies.
 
 ## Features
 
@@ -73,10 +73,10 @@ pip install truth-core[dev,parquet]
 ```
 
 **Profiles:**
-- `readylayer` - PR/CI quality gates (pass ≥90)
-- `settler` - Release readiness (pass ≥95)
-- `aias` - AI agent trace validation (pass ≥92)
-- `keys` - Security credential verification (pass ≥98)
+- `readylayer` - PR/CI quality gates (threshold configurable)
+- `settler` - Release readiness (threshold configurable)
+- `aias` - AI agent trace validation (threshold configurable)
+- `keys` - Security credential verification (threshold configurable)
 
 ### 2. TypeScript SDK
 
@@ -125,6 +125,8 @@ Truth Core includes a professional static dashboard for viewing results:
 - **Accessibility** - Keyboard navigation, screen reader friendly
 
 ### Using the Dashboard
+
+Truth Core artifacts remain with your organization. The dashboard is designed to integrate into existing operating models and internal controls.
 
 ```bash
 # Build with embedded runs
@@ -191,7 +193,7 @@ Full chain of custody for all evidence. Know exactly when, how, and by whom each
 The final decision: PASS, FAIL, or CONDITIONAL. Includes a score (0-100) and detailed findings.
 
 ### Replay/Simulation
-Re-run past verifications with the same inputs, or simulate "what-if" scenarios by changing thresholds and rules.
+Re-run past verifications with the same inputs, or simulate "what-if" scenarios by adjusting thresholds and rules. All simulation results are clearly labeled as projections and require human review.
 
 ### Contracts
 Versioned schemas for all artifacts ensure backward compatibility. Migrate between versions automatically.
@@ -217,13 +219,15 @@ Each command produces:
 
 ## Security
 
-Truth Core implements defense in depth:
+Truth Core implements defense in depth with the following controls:
 
 - **Path Traversal Protection** - All paths validated before access
 - **Resource Limits** - Configurable limits on file size, JSON depth
 - **Output Sanitization** - Markdown outputs sanitized to prevent injection
 - **Safe Archive Extraction** - Zip extraction with traversal checks
 - **Evidence Signing** - Ed25519 signatures for tamper detection
+
+All verification workflows include human-in-the-loop review points. Least privilege access is enforced through configurable permission boundaries.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
@@ -278,5 +282,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 **Version:** 0.2.0  
-**Python:** 3.11+  
-**Status:** Production Ready
+**Python:** 3.11+
