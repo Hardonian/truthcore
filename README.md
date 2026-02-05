@@ -198,7 +198,7 @@ The final decision: PASS, FAIL, or CONDITIONAL. Includes a score (0-100) and det
 Re-run past verifications with the same inputs, or simulate "what-if" scenarios by adjusting thresholds and rules. All simulation results are clearly labeled as projections and require human review.
 
 ### Contracts
-Versioned schemas for all artifacts ensure backward compatibility. Migrate between versions automatically.
+Versioned schemas for all artifacts ensure backward compatibility. Migrate between versions through documented procedures. Schema versions are explicit in all artifacts.
 
 ## Output Artifacts
 
