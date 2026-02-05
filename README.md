@@ -55,6 +55,8 @@ pip install truth-core[dev,parquet]
 
 ## Integrate in 3 Minutes
 
+## Integrate in 3 Minutes
+
 ### 1. GitHub Actions (10 lines of YAML)
 
 ```yaml
@@ -207,6 +209,8 @@ Each command produces:
 - `verdict.md` - Human-readable report
 - `*.csv` - Tabular data (where applicable)
 
+All artifacts remain under your organization's control. No artifacts are transmitted to external services.
+
 ### Cache Directory Structure
 
 ```
@@ -233,13 +237,15 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## Determinism
 
-All operations are deterministic:
+All operations are designed to be deterministic:
 
 - Stable sorting of all collections
 - Normalized UTC timestamps
 - Canonical JSON serialization
 - Content-addressed hashing (blake2b, sha256, sha3)
 - No random sampling or probabilistic methods
+
+Outputs are reproducible for verification and audit purposes.
 
 ## Documentation
 

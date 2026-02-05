@@ -7,7 +7,7 @@ TypeScript SDK for truth-core contracts. Provides typed models and validators fo
 - **Full Type Safety**: Complete TypeScript definitions for truth-core artifact contracts
 - **Version Compatibility**: Supports both v1 and v2 verdict formats
 - **Runtime Validation**: Helper functions to load and validate verdict artifacts
-- **Analysis Utilities**: Filter, sort, and summarize findings with ease
+- **Analysis Utilities**: Filter, sort, and summarize findings
 - **Zero Dependencies**: Lightweight with no runtime dependencies
 - **ESM + CJS**: Works with both module systems
 
