@@ -180,16 +180,16 @@ truthctl dashboard demo --out ./demo-out
 ## Key Concepts
 
 ### Evidence
-Immutable, signed artifacts produced by verification runs. Each piece of evidence includes content hashes for integrity verification.
+Immutable, signed artifacts produced by verification runs. Each piece of evidence includes content hashes for integrity verification. Evidence remains under your organization's custody.
 
 ### Invariants
-Declarative rules that define "must always be true" conditions for your system. Invariants are checked automatically during verification.
+Declarative rules that define "must always be true" conditions for your system. Invariants are checked automatically during verification. All rule evaluations are auditable.
 
 ### Policy
-Policy-as-code for security, privacy, and compliance checks. Define rules in YAML and run them against any codebase.
+Policy-as-code for security, privacy, and compliance checks. Define rules in YAML and run them against any codebase. Policies integrate with your existing approval structures.
 
 ### Provenance
-Full chain of custody for all evidence. Know exactly when, how, and by whom each artifact was created.
+Full chain of custody for all evidence. Know exactly when, how, and by whom each artifact was created. All provenance data is preserved in local artifacts.
 
 ### Verdict
 The final decision: PASS, FAIL, or CONDITIONAL. Includes a score (0-100) and detailed findings.
@@ -249,7 +249,7 @@ Outputs are reproducible for verification and audit purposes.
 
 ## Documentation
 
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [Contributing Guide](CONTRIBUTING.md) - Development guidelines
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community standards
 - [Security Policy](SECURITY.md) - Security information
 - [Governance](GOVERNANCE.md) - Project governance
