@@ -4,12 +4,12 @@ A static, offline-capable dashboard for viewing Truth Core verification results.
 
 ## Features
 
-- **Fully Offline** - No external CDN dependencies, works without internet
-- **GitHub Pages Ready** - Build once, host anywhere
-- **Import/Export** - Load runs from local directories, export snapshots
+- **Fully Offline** - No external CDN dependencies, operates without internet connectivity
+- **GitHub Pages Ready** - Build once, host on internal or external infrastructure
+- **Import/Export** - Load runs from local directories, export for compliance
 - **Interactive Visualizations** - SVG charts generated locally (no external chart libraries)
 - **Dark/Light Theme** - Toggle between themes, preference persisted locally
-- **Accessible** - Keyboard navigation, screen reader friendly
+- **Accessible** - Keyboard navigation, screen reader compatible
 
 ## Quick Start
 
@@ -50,12 +50,14 @@ truthctl dashboard snapshot --runs ./my-runs --out ./snapshot
 
 ## Architecture
 
-The dashboard is built with:
+The dashboard is built with enterprise deployment in mind:
 
 - **Vanilla TypeScript** - No frameworks, minimal bundle size
 - **Vite** - Fast builds, hot module replacement
 - **SVG Charts** - Self-generated, no external chart libraries
 - **File System Access API** - Modern browsers can load directories directly
+
+All code is auditable with no hidden dependencies.
 
 ### File Structure
 
@@ -164,22 +166,17 @@ The dashboard supports light and dark themes via CSS custom properties:
 
 ## Snapshots
 
-Snapshots are self-contained directories with:
+Snapshots are self-contained directories designed for compliance and audit purposes:
 
 1. All run data embedded in JavaScript
 2. Dashboard built as static files
 3. No external dependencies
-
-To create a snapshot:
-
-```bash
-truthctl dashboard snapshot --runs ./runs --out ./my-snapshot
-```
+4. All artifacts remain under organizational control
 
 The resulting `my-snapshot/` can be:
-- Hosted on GitHub Pages
-- Shared as a ZIP file
-- Archived for compliance
+- Hosted on internal infrastructure
+- Shared as a ZIP file within your organization
+- Archived for compliance requirements
 
 ## Development
 
@@ -211,10 +208,11 @@ Edit `src/styles.css`. The design uses:
 
 ## Security Considerations
 
-- All dynamic content is HTML-escaped
-- File paths are validated before access
+- All dynamic content is HTML-escaped before rendering
+- File paths are validated against traversal attacks
 - No inline scripts in user content
 - CSP-friendly (no eval, no inline event handlers)
+- Runs locally, no data transmitted externally
 
 ## License
 
