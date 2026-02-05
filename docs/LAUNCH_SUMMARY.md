@@ -66,15 +66,15 @@ docs/
 
 ## Verification Checklist
 
-- ✅ All tests pass (`pytest -q`)
-- ✅ No lint errors (`ruff check .`)
-- ✅ No type errors (`pyright src/truthcore`)
-- ✅ Build succeeds (`python -m build`)
-- ✅ Dashboard builds (`npm run build` in dashboard/)
-- ✅ Demo runs successfully (`truthctl dashboard demo`)
-- ✅ No secrets in repo
-- ✅ No deprecated APIs
-- ✅ Documentation complete
+- All tests pass (`pytest -q`)
+- No lint errors (`ruff check .`)
+- No type errors (`pyright src/truthcore`)
+- Build succeeds (`python -m build`)
+- Dashboard builds (`npm run build` in dashboard/)
+- Demo runs successfully (`truthctl dashboard demo`)
+- No secrets in repo
+- No deprecated APIs
+- Documentation complete
 
 ## Key Deliverables
 
