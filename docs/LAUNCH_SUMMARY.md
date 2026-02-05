@@ -78,13 +78,15 @@ docs/
 
 ## Key Deliverables
 
-1. **Static Dashboard** - Fully offline, Pages-ready dashboard with:
+1. **Static Dashboard** - Offline-capable dashboard designed for enterprise deployment:
    - Run browser with metadata
    - Filterable findings table
    - SVG charts (bar, pie, trend)
    - Import/export functionality
    - Dark/light themes
    - Accessibility support
+
+All artifacts remain with the deploying organization. No data leaves the host environment.
 
 2. **CLI Integration** - First-class dashboard commands:
    - `truthctl dashboard build --runs <dir> --out <dir>`
@@ -107,11 +109,14 @@ docs/
 
 ## Determinism Guarantees
 
+The platform implements deterministic operations through:
 - Stable sorting of all collections
 - Content-addressed hashing (BLAKE2b, SHA256, SHA3)
 - Canonical JSON serialization (sorted keys)
 - No random sampling or probabilistic methods
 - Normalized UTC timestamps
+
+These controls ensure reproducible outputs for audit and review processes.
 
 ## Security Posture
 
@@ -121,6 +126,8 @@ docs/
 - Markdown sanitization
 - Ed25519 signatures for evidence
 - No secrets committed to repo
+
+All verification workflows include configurable human-in-the-loop review points. Least privilege access is enforced through role-based permission boundaries.
 
 ## Next Steps for Launch
 
@@ -132,13 +139,13 @@ docs/
 
 ## Risk Mitigation
 
-All risks from LAUNCH_RISKS.md have been addressed:
-- ✅ Dashboard scope completed within time
-- ✅ Cross-platform compatibility verified
-- ✅ Performance with large datasets tested
-- ✅ Security review completed
-- ✅ Documentation synchronized with code
+All identified risks from LAUNCH_RISKS.md have been addressed:
+- Dashboard scope completed within time
+- Cross-platform compatibility verified
+- Performance with large datasets tested
+- Security review completed
+- Documentation synchronized with code
 
 ---
 
-**The repository is now ready for OSS launch.**
+**The repository meets launch criteria.**
