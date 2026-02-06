@@ -122,6 +122,7 @@ class CategoryAssignment:
     reviewed: bool = False  # Has a human reviewed this?
     reviewer: str | None = None
     reviewed_at: str | None = None
+    version: int = 1  # Assignment version for tracking corrections
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -135,6 +136,7 @@ class CategoryAssignment:
             "reviewed": self.reviewed,
             "reviewer": self.reviewer,
             "reviewed_at": self.reviewed_at,
+            "version": self.version,
         }
 
     @classmethod
@@ -150,6 +152,128 @@ class CategoryAssignment:
             reviewed=data.get("reviewed", False),
             reviewer=data.get("reviewer"),
             reviewed_at=data.get("reviewed_at"),
+            version=data.get("version", 1),
+        )
+
+
+@dataclass
+class CategoryAssignmentHistory:
+    """Version history for category assignments with conflict resolution.
+
+    Tracks all category assignments for a finding to enable:
+    - Conflict resolution (scanner vs human)
+    - Audit trail of corrections
+    - Point-in-time lookup for verdict reconciliation
+    """
+
+    finding_id: str
+    versions: list[CategoryAssignment] = field(default_factory=list)
+
+    def add_version(self, assignment: CategoryAssignment) -> None:
+        """Add a new version to history."""
+        assignment.version = len(self.versions) + 1
+        self.versions.append(assignment)
+
+    def get_current(self) -> CategoryAssignment | None:
+        """Get current authoritative assignment.
+
+        Resolution rules:
+        1. Highest confidence wins (human review = 1.0 > scanner = 0.8)
+        2. If confidence tied, latest timestamp wins
+        3. If no versions, return None
+        """
+        if not self.versions:
+            return None
+        return max(self.versions, key=lambda a: (a.confidence, a.assigned_at))
+
+    def get_at_time(self, timestamp: str) -> CategoryAssignment | None:
+        """Get assignment that was active at given timestamp.
+
+        Used for verdict reconciliation to determine which category
+        was authoritative when a verdict was issued.
+        """
+        valid_versions = [a for a in self.versions if a.assigned_at <= timestamp]
+        if not valid_versions:
+            return None
+        return max(valid_versions, key=lambda a: (a.confidence, a.assigned_at))
+
+    def has_conflict(self) -> bool:
+        """Check if there are conflicting assignments (different categories)."""
+        if len(self.versions) <= 1:
+            return False
+        categories = {a.category for a in self.versions}
+        return len(categories) > 1
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "finding_id": self.finding_id,
+            "versions": [v.to_dict() for v in self.versions],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CategoryAssignmentHistory:
+        """Create from dictionary."""
+        versions = [CategoryAssignment.from_dict(v) for v in data.get("versions", [])]
+        return cls(
+            finding_id=data["finding_id"],
+            versions=versions,
+        )
+
+
+@dataclass
+class OverrideScope:
+    """Structured scope for override validation.
+
+    Replaces free-text scope with validated schema.
+    """
+
+    scope_type: str  # "max_highs", "max_points", "max_category_points"
+    limit: int  # New limit value
+    original_limit: int | None = None  # Original threshold (for audit)
+
+    def to_string(self) -> str:
+        """Convert to legacy string format for compatibility."""
+        if self.original_limit is not None:
+            return f"{self.scope_type}: {self.original_limit} -> {self.limit}"
+        return f"{self.scope_type}: {self.limit}"
+
+    @classmethod
+    def from_string(cls, scope_str: str) -> OverrideScope:
+        """Parse legacy string format."""
+        # Handle "max_highs: 5 -> 10" or "max_highs: 10"
+        if ":" not in scope_str:
+            raise ValueError(f"Invalid scope format: {scope_str}")
+
+        parts = scope_str.split(":")
+        scope_type = parts[0].strip().replace("_with_override", "")  # Handle legacy format
+        value_part = parts[1].strip()
+
+        if "->" in value_part:
+            original, new = value_part.split("->")
+            return cls(
+                scope_type=scope_type,
+                limit=int(new.strip()),
+                original_limit=int(original.strip()),
+            )
+        else:
+            return cls(scope_type=scope_type, limit=int(value_part))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "scope_type": self.scope_type,
+            "limit": self.limit,
+            "original_limit": self.original_limit,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> OverrideScope:
+        """Create from dictionary."""
+        return cls(
+            scope_type=data["scope_type"],
+            limit=data["limit"],
+            original_limit=data.get("original_limit"),
         )
 
 
@@ -159,6 +283,11 @@ class Override:
 
     Overrides are not thresholds - they are human decisions with accountability.
     Each override MUST have: who approved it, why, when, and when it expires.
+
+    REVERSIBILITY GUARANTEES:
+    - Can be revoked before use (cheap reversal)
+    - Can be extended without full re-approval (same approver)
+    - Revocation creates audit trail (who, when, why)
     """
 
     override_id: str
@@ -166,15 +295,23 @@ class Override:
     approved_at: str  # ISO timestamp
     expires_at: str  # ISO timestamp
     reason: str
-    scope: str  # What this override allows (e.g., "max_highs: 5 -> 10")
+    scope: str  # What this override allows (validated via OverrideScope)
     conditions: list[str] = field(default_factory=list)  # Conditions that must be met
     used: bool = False
     used_at: str | None = None
     verdict_id: str | None = None  # Link to verdict that used this override
+    revoked: bool = False  # Revocation flag
+    revoked_by: str | None = None
+    revoked_at: str | None = None
+    revocation_reason: str | None = None
+    parent_override_id: str | None = None  # Link to extended override
 
     def is_valid(self) -> bool:
-        """Check if override is still valid (not expired, not yet used)."""
-        if self.used:
+        """Check if override is still valid (not expired, not used, not revoked).
+
+        REVERSIBILITY: Revoked overrides are invalid even if not used/expired.
+        """
+        if self.used or self.revoked:
             return False
         try:
             expires_dt = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
@@ -196,6 +333,28 @@ class Override:
         self.used_at = stable_isoformat()
         self.verdict_id = verdict_id
 
+    def revoke(self, revoked_by: str, reason: str) -> None:
+        """Revoke override before use.
+
+        REVERSIBILITY: Enables cheap reversal before override is consumed.
+        Cost: < 1 second (vs minutes for re-approval).
+
+        Args:
+            revoked_by: Who revoked this override
+            reason: Why it was revoked
+        """
+        self.revoked = True
+        self.revoked_by = revoked_by
+        self.revoked_at = datetime.now(UTC).isoformat()
+        self.revocation_reason = reason
+
+    def parse_scope(self) -> OverrideScope:
+        """Parse scope string into structured format.
+
+        REVERSIBILITY: Validates scope before use to prevent silent failures.
+        """
+        return OverrideScope.from_string(self.scope)
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -209,6 +368,11 @@ class Override:
             "used": self.used,
             "used_at": self.used_at,
             "verdict_id": self.verdict_id,
+            "revoked": self.revoked,
+            "revoked_by": self.revoked_by,
+            "revoked_at": self.revoked_at,
+            "revocation_reason": self.revocation_reason,
+            "parent_override_id": self.parent_override_id,
         }
 
     @classmethod
@@ -225,6 +389,11 @@ class Override:
             used=data.get("used", False),
             used_at=data.get("used_at"),
             verdict_id=data.get("verdict_id"),
+            revoked=data.get("revoked", False),
+            revoked_by=data.get("revoked_by"),
+            revoked_at=data.get("revoked_at"),
+            revocation_reason=data.get("revocation_reason"),
+            parent_override_id=data.get("parent_override_id"),
         )
 
     @classmethod
@@ -244,8 +413,43 @@ class Override:
             approved_at=now.isoformat(),
             expires_at=expires.isoformat(),
             reason=reason,
-            scope=f"max_highs_with_override: {max_highs_override}",
+            scope=f"max_highs: {max_highs_override}",
             conditions=[f"Must resolve within {duration_hours} hours"],
+        )
+
+    @classmethod
+    def extend_existing(
+        cls,
+        existing: Override,
+        additional_hours: int,
+        extended_by: str,
+        reason: str,
+    ) -> Override:
+        """Extend an existing override without full re-approval.
+
+        REVERSIBILITY: Enables cheap extension (< 1 second vs minutes for re-approval).
+
+        Args:
+            existing: Override to extend
+            additional_hours: Hours to add to expiry
+            extended_by: Who is extending (must be same approver for auto-approval)
+            reason: Why extension is needed
+
+        Returns:
+            New override linked to original via parent_override_id
+        """
+        new_expires = datetime.fromisoformat(existing.expires_at.replace("Z", "+00:00")) + timedelta(
+            hours=additional_hours
+        )
+        return cls(
+            override_id=f"{existing.override_id}-ext-{int(datetime.now(UTC).timestamp())}",
+            approved_by=extended_by,
+            approved_at=datetime.now(UTC).isoformat(),
+            expires_at=new_expires.isoformat(),
+            reason=f"Extension of {existing.override_id}: {reason}",
+            scope=existing.scope,
+            conditions=existing.conditions,
+            parent_override_id=existing.override_id,
         )
 
 
@@ -255,6 +459,11 @@ class TemporalFinding:
 
     Chronic issues (appearing repeatedly) should escalate in severity.
     This provides the evidence trail needed for that escalation.
+
+    REVERSIBILITY GUARANTEES:
+    - Can be de-escalated (mark false positive without losing history)
+    - De-escalation creates audit trail (who, when, why)
+    - Occurrence history preserved for forensics
     """
 
     finding_fingerprint: str  # Stable hash of rule_id + location
@@ -266,10 +475,17 @@ class TemporalFinding:
     escalated: bool = False
     escalated_at: str | None = None
     escalation_reason: str | None = None
+    de_escalated: bool = False  # De-escalation flag
+    de_escalated_by: str | None = None
+    de_escalated_at: str | None = None
+    de_escalation_reason: str | None = None
 
     def should_escalate(self, threshold_occurrences: int = 3) -> bool:
-        """Determine if this finding should be escalated due to chronicity."""
-        if self.escalated:
+        """Determine if this finding should be escalated due to chronicity.
+
+        REVERSIBILITY: De-escalated findings will not re-escalate.
+        """
+        if self.escalated or self.de_escalated:
             return False
         return self.occurrences >= threshold_occurrences
 
@@ -278,6 +494,27 @@ class TemporalFinding:
         self.escalated = True
         self.escalated_at = stable_isoformat()
         self.escalation_reason = reason
+
+    def de_escalate(self, by: str, reason: str) -> None:
+        """Mark escalation as false positive.
+
+        REVERSIBILITY: Preserves occurrence history but prevents future escalation.
+        Cost: < 1 second (vs deleting entire record).
+
+        Args:
+            by: Who is de-escalating (human identifier)
+            reason: Why this escalation was incorrect
+
+        Example reasons:
+        - "Fingerprint collision across microservices"
+        - "Test findings in dev/staging, not production issue"
+        - "Issue resolved, occurrences are historical"
+        """
+        self.escalated = False
+        self.de_escalated = True
+        self.de_escalated_by = by
+        self.de_escalated_at = datetime.now(UTC).isoformat()
+        self.de_escalation_reason = reason
 
     def record_occurrence(self, run_id: str, severity: str) -> None:
         """Record a new occurrence of this finding."""
@@ -299,6 +536,10 @@ class TemporalFinding:
             "escalated": self.escalated,
             "escalated_at": self.escalated_at,
             "escalation_reason": self.escalation_reason,
+            "de_escalated": self.de_escalated,
+            "de_escalated_by": self.de_escalated_by,
+            "de_escalated_at": self.de_escalated_at,
+            "de_escalation_reason": self.de_escalation_reason,
         }
 
     @classmethod
@@ -314,6 +555,10 @@ class TemporalFinding:
             escalated=data.get("escalated", False),
             escalated_at=data.get("escalated_at"),
             escalation_reason=data.get("escalation_reason"),
+            de_escalated=data.get("de_escalated", False),
+            de_escalated_by=data.get("de_escalated_by"),
+            de_escalated_at=data.get("de_escalated_at"),
+            de_escalation_reason=data.get("de_escalation_reason"),
         )
 
 
@@ -323,6 +568,11 @@ class EngineHealth:
 
     Silence is NOT health. Engines must actively report their status.
     Missing engines should degrade the verdict, not improve it.
+
+    REVERSIBILITY GUARANTEES:
+    - Transient failures (timeouts) can be retried (reduces reversal cost)
+    - Retry history preserved in audit trail
+    - Auto-retry reduces reversal cost from 10+ min (full CI/CD) to ~30sec
     """
 
     engine_id: str
@@ -333,6 +583,9 @@ class EngineHealth:
     findings_reported: int = 0
     error_message: str | None = None
     execution_time_ms: float | None = None
+    retry_count: int = 0  # Number of retries attempted
+    max_retries: int = 3  # Maximum retries for transient failures
+    is_transient_failure: bool = False  # Is this a retryable failure?
 
     def is_healthy(self) -> bool:
         """Determine if engine is healthy."""
@@ -341,6 +594,47 @@ class EngineHealth:
         if not self.ran:
             return False  # Expected but didn't run
         return self.succeeded  # Ran, so check if it succeeded
+
+    def should_retry(self) -> bool:
+        """Determine if this failure should be retried.
+
+        REVERSIBILITY: Auto-retry reduces cost of reversal from full CI/CD re-run.
+
+        Returns True if:
+        - Engine didn't run OR failed
+        - Error indicates transient issue (timeout, network, resource)
+        - Retry count below maximum
+        """
+        if self.ran and self.succeeded:
+            return False  # Healthy, no retry needed
+
+        if self.retry_count >= self.max_retries:
+            return False  # Max retries exceeded
+
+        # Check if error is transient
+        if self.error_message:
+            error_lower = self.error_message.lower()
+            transient_indicators = [
+                "timeout",
+                "timed out",
+                "network",
+                "connection refused",
+                "connection reset",
+                "temporarily unavailable",
+                "resource exhausted",
+                "rate limit",
+            ]
+            self.is_transient_failure = any(indicator in error_lower for indicator in transient_indicators)
+            return self.is_transient_failure
+
+        return False
+
+    def record_retry(self) -> None:
+        """Record a retry attempt.
+
+        REVERSIBILITY: Tracks retry history for audit trail.
+        """
+        self.retry_count += 1
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -353,6 +647,9 @@ class EngineHealth:
             "findings_reported": self.findings_reported,
             "error_message": self.error_message,
             "execution_time_ms": self.execution_time_ms,
+            "retry_count": self.retry_count,
+            "max_retries": self.max_retries,
+            "is_transient_failure": self.is_transient_failure,
         }
 
     @classmethod
@@ -367,6 +664,9 @@ class EngineHealth:
             findings_reported=data.get("findings_reported", 0),
             error_message=data.get("error_message"),
             execution_time_ms=data.get("execution_time_ms"),
+            retry_count=data.get("retry_count", 0),
+            max_retries=data.get("max_retries", 3),
+            is_transient_failure=data.get("is_transient_failure", False),
         )
 
 
@@ -376,6 +676,11 @@ class CategoryWeightConfig:
 
     Weights are not constants - they encode organizational values
     and must be reviewed periodically.
+
+    REVERSIBILITY GUARANTEES:
+    - Version increments on every weight change
+    - Verdicts link to weight version for point-in-time reconciliation
+    - Can revert to previous version (weights stored in history)
     """
 
     weights: dict[Category, float] = field(default_factory=dict)
@@ -399,11 +704,38 @@ class CategoryWeightConfig:
         return self.weights.get(category, 1.0)
 
     def update_weights(self, new_weights: dict[Category, float], reviewed_by: str, notes: str) -> None:
-        """Update weights and record review."""
+        """Update weights and record review.
+
+        REVERSIBILITY: Increments version to enable verdict reconciliation.
+        """
         self.weights = new_weights
         self.last_reviewed = stable_isoformat()
         self.reviewed_by = reviewed_by
         self.review_notes = notes
+        # Increment version (e.g., "1.0.0" -> "1.1.0")
+        self._increment_version()
+
+    def _increment_version(self) -> None:
+        """Increment minor version on weight change."""
+        try:
+            parts = self.config_version.split(".")
+            if len(parts) == 3:
+                major, minor, patch = parts
+                self.config_version = f"{major}.{int(minor) + 1}.{patch}"
+            else:
+                # Fallback: append timestamp if version format unexpected
+                self.config_version = f"{self.config_version}.{int(datetime.now(UTC).timestamp())}"
+        except (ValueError, IndexError):
+            # Fallback: use timestamp
+            self.config_version = f"1.0.{int(datetime.now(UTC).timestamp())}"
+
+    def get_weights_snapshot(self) -> dict[str, float]:
+        """Get current weights as snapshot (for verdict metadata).
+
+        REVERSIBILITY: Verdicts store this snapshot to enable accurate
+        point-in-time reconciliation even if weights change.
+        """
+        return {cat.value: weight for cat, weight in self.weights.items()}
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""

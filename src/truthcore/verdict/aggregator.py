@@ -105,6 +105,22 @@ class VerdictAggregator:
             raise ValueError(f"Override {override.override_id} is not valid (expired or already used)")
         self.overrides.append(override)
 
+    def remove_override(self, override_id: str) -> bool:
+        """Remove an override before it's used.
+
+        REVERSIBILITY: Enables cheap reversal of override registration.
+        Cost: < 1 second (vs minutes for creating new override).
+
+        Args:
+            override_id: ID of override to remove
+
+        Returns:
+            True if override was removed, False if not found
+        """
+        initial_count = len(self.overrides)
+        self.overrides = [o for o in self.overrides if o.override_id != override_id]
+        return len(self.overrides) < initial_count
+
     def register_engine_health(self, health: EngineHealth) -> None:
         """Register health status for an engine.
 
@@ -372,6 +388,11 @@ class VerdictAggregator:
         # Get thresholds for mode
         thresholds = self.thresholds or VerdictThresholds.for_mode(mode)
 
+        # REVERSIBILITY: Capture weight snapshot and version
+        weight_config = thresholds.category_weight_config
+        category_weights_snapshot = weight_config.get_weights_snapshot()
+        weight_version = weight_config.config_version
+
         # Initialize result
         result = VerdictResult(
             verdict=VerdictStatus.NO_SHIP,  # NOT OPTIMISTIC - starts as NO_SHIP
@@ -380,6 +401,8 @@ class VerdictAggregator:
             profile=profile,
             inputs=inputs or [],
             thresholds=thresholds,
+            category_weights_used=category_weights_snapshot,
+            weight_version=weight_version,
         )
 
         # Engine health check - CRITICAL
@@ -542,15 +565,23 @@ class VerdictAggregator:
             # Look for valid override
             override_found = None
             for override in self.overrides:
-                if override.is_valid() and "max_highs" in override.scope:
-                    # Extract override limit
+                if override.is_valid():
+                    # REVERSIBILITY: Use validated scope parsing
                     try:
-                        override_limit = int(override.scope.split(":")[-1].strip())
-                        if result.highs <= override_limit:
+                        scope = override.parse_scope()
+                        if scope.scope_type == "max_highs" and result.highs <= scope.limit:
                             override_found = override
                             break
-                    except (ValueError, IndexError):
-                        pass
+                    except (ValueError, AttributeError):
+                        # Fallback to legacy parsing for compatibility
+                        if "max_highs" in override.scope:
+                            try:
+                                override_limit = int(override.scope.split(":")[-1].strip())
+                                if result.highs <= override_limit:
+                                    override_found = override
+                                    break
+                            except (ValueError, IndexError):
+                                pass
 
             if override_found:
                 # Apply override

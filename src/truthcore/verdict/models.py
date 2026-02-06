@@ -276,11 +276,17 @@ class VerdictThresholds:
 
 @dataclass
 class VerdictResult:
-    """Complete verdict result with full governance."""
+    """Complete verdict result with full governance.
+
+    REVERSIBILITY GUARANTEES:
+    - Stores category_weights_used snapshot for point-in-time reconciliation
+    - Links to weight_version to identify when weights changed
+    - Enables accurate comparison of verdicts across time
+    """
 
     # Basic info
     verdict: VerdictStatus
-    version: str = "3.0"  # Bumped version for governance enhancements
+    version: str = "3.1"  # Bumped for reversibility enhancements
     timestamp: str = ""
     mode: Mode = Mode.PR
 
@@ -320,6 +326,10 @@ class VerdictResult:
     temporal_escalations: list[TemporalFinding] = field(default_factory=list)
     category_assignments: list[CategoryAssignment] = field(default_factory=list)
 
+    # REVERSIBILITY: Point-in-time weight tracking
+    category_weights_used: dict[str, float] = field(default_factory=dict)  # Snapshot of weights at verdict time
+    weight_version: str = "1.0.0"  # Links to CategoryWeightConfig.config_version
+
     # Optional: profile used
     profile: str | None = None
 
@@ -357,6 +367,8 @@ class VerdictResult:
                 "overrides_applied": [o.to_dict() for o in self.overrides_applied],
                 "temporal_escalations": [t.to_dict() for t in self.temporal_escalations],
                 "category_assignments": [c.to_dict() for c in self.category_assignments],
+                "category_weights_used": self.category_weights_used,
+                "weight_version": self.weight_version,
             },
             "thresholds": self.thresholds.to_dict() if self.thresholds else None,
         }
