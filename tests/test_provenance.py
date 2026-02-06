@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from pathlib import Path
 
 import pytest
@@ -12,14 +13,7 @@ from truthcore.provenance.verifier import BundleVerifier, VerificationResult
 from truthcore.security import SecurityError, SecurityLimits
 
 # Check if cryptography is available for signature tests
-try:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-        Ed25519PrivateKey,
-        Ed25519PublicKey,
-    )
-    HAS_CRYPTOGRAPHY = True
-except ImportError:
-    HAS_CRYPTOGRAPHY = False
+HAS_CRYPTOGRAPHY = find_spec("cryptography.hazmat.primitives.asymmetric.ed25519") is not None
 
 
 class TestManifestEntry:
@@ -379,9 +373,7 @@ class TestVerificationResult:
     def test_markdown_output(self, tmp_path: Path):
         """Test markdown report generation."""
         result = VerificationResult(valid=False, manifest_valid=True)
-        result.files_tampered = [
-            {"path": "file.txt", "expected_hash": "abc", "actual_hash": "def"}
-        ]
+        result.files_tampered = [{"path": "file.txt", "expected_hash": "abc", "actual_hash": "def"}]
 
         md_path = tmp_path / "report.md"
         result.write_markdown(md_path)

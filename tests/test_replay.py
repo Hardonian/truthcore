@@ -86,6 +86,7 @@ class TestBundleExporter:
 
             # Verify bundle structure
             assert bundle_dir.exists()
+            assert bundle.bundle_dir == bundle_dir
             assert (bundle_dir / "run_manifest.json").exists()
             assert (bundle_dir / "inputs").exists()
             assert (bundle_dir / "outputs").exists()
@@ -238,13 +239,16 @@ class TestReplayEngine:
 
             # Create minimal findings
             with open(bundle_dir / "outputs" / "readiness.json", "w") as f:
-                json.dump({
-                    "version": "0.2.0",
-                    "profile": "pr",
-                    "timestamp": "2026-01-31T12:00:00Z",
-                    "passed": True,
-                    "findings": [],
-                }, f)
+                json.dump(
+                    {
+                        "version": "0.2.0",
+                        "profile": "pr",
+                        "timestamp": "2026-01-31T12:00:00Z",
+                        "passed": True,
+                        "findings": [],
+                    },
+                    f,
+                )
 
             # Load and replay
             bundle = ReplayBundle.load(bundle_dir)
@@ -366,20 +370,23 @@ class TestSimulationEngine:
 
             # Create findings
             with open(bundle_dir / "outputs" / "readiness.json", "w") as f:
-                json.dump({
-                    "version": "0.2.0",
-                    "profile": "pr",
-                    "timestamp": "2026-01-31T12:00:00Z",
-                    "passed": False,
-                    "findings": [
-                        {
-                            "id": "f1",
-                            "severity": "HIGH",
-                            "category": "ui",
-                            "message": "Test finding",
-                        }
-                    ],
-                }, f)
+                json.dump(
+                    {
+                        "version": "0.2.0",
+                        "profile": "pr",
+                        "timestamp": "2026-01-31T12:00:00Z",
+                        "passed": False,
+                        "findings": [
+                            {
+                                "id": "f1",
+                                "severity": "HIGH",
+                                "category": "ui",
+                                "message": "Test finding",
+                            }
+                        ],
+                    },
+                    f,
+                )
 
             # Load and simulate
             bundle = ReplayBundle.load(bundle_dir)

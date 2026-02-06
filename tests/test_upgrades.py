@@ -12,6 +12,7 @@ from truthcore.manifest import (
     normalize_timestamp,
 )
 from truthcore.security import (
+    SecurityError,
     SecurityLimits,
     check_path_safety,
     safe_load_json,
@@ -103,7 +104,7 @@ class TestSecurity:
         assert safe == (base / "subdir").resolve()
 
         # Unsafe path should raise
-        with pytest.raises(Exception):
+        with pytest.raises(SecurityError):
             check_path_safety(tmp_path / "outside", base)
 
     def test_safe_load_json_depth(self):
@@ -118,7 +119,7 @@ class TestSecurity:
         json_str = json.dumps(data)
         limits = SecurityLimits(max_json_depth=100)
 
-        with pytest.raises(Exception):
+        with pytest.raises(SecurityError):
             safe_load_json(json_str, limits)
 
     def test_sanitize_markdown(self):
@@ -200,7 +201,7 @@ class TestInvariantDSL:
             "all": [
                 {"left": "errors", "operator": "==", "right": 0},
                 {"left": "warnings", "operator": "<", "right": 5},
-            ]
+            ],
         }
 
         passed, _ = dsl.evaluate_rule(rule)

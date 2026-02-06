@@ -24,6 +24,7 @@ class DiffEntry:
         new_value: Value from the new/comparison
         diff_type: Type of difference (added, removed, changed, normalized)
     """
+
     path: str
     old_value: Any
     new_value: Any
@@ -42,6 +43,7 @@ class DeterministicDiff:
         normalized_differences: Differences that were normalized away
         entries: List of all diff entries
     """
+
     identical: bool
     total_differences: int
     content_differences: int
@@ -192,7 +194,7 @@ class DiffComputer:
     ) -> None:
         """Recursively compare two objects."""
         # Handle type mismatches
-        if type(old_obj) != type(new_obj):
+        if type(old_obj) is not type(new_obj):
             self._add_entry(path, old_obj, new_obj, entries)
             return
 
@@ -238,12 +240,14 @@ class DiffComputer:
             # Check if this field is in the allowlist
             if key in self.allowlist or field_path in self.allowlist:
                 if old_dict[key] != new_dict[key]:
-                    entries.append(DiffEntry(
-                        path=field_path,
-                        old_value=old_dict[key],
-                        new_value=new_dict[key],
-                        diff_type="allowed",
-                    ))
+                    entries.append(
+                        DiffEntry(
+                            path=field_path,
+                            old_value=old_dict[key],
+                            new_value=new_dict[key],
+                            diff_type="allowed",
+                        )
+                    )
                 continue
 
             self._compare_objects(old_dict[key], new_dict[key], field_path, entries)
@@ -268,7 +272,7 @@ class DiffComputer:
         old_sorted = self._sort_list(old_list)
         new_sorted = self._sort_list(new_list)
 
-        for i, (old_item, new_item) in enumerate(zip(old_sorted, new_sorted)):
+        for i, (old_item, new_item) in enumerate(zip(old_sorted, new_sorted, strict=True)):
             item_path = f"{path}[{i}]"
             self._compare_objects(old_item, new_item, item_path, entries)
 
@@ -299,30 +303,36 @@ class DiffComputer:
     ) -> None:
         """Add a diff entry with appropriate type."""
         if diff_type:
-            entries.append(DiffEntry(
-                path=path,
-                old_value=old_value,
-                new_value=new_value,
-                diff_type=diff_type,
-            ))
+            entries.append(
+                DiffEntry(
+                    path=path,
+                    old_value=old_value,
+                    new_value=new_value,
+                    diff_type=diff_type,
+                )
+            )
             return
 
         # Determine diff type
         if self.normalize_timestamps and self._is_timestamp(old_value) and self._is_timestamp(new_value):
             # Both are timestamps - consider them normalized
-            entries.append(DiffEntry(
-                path=path,
-                old_value=old_value,
-                new_value=new_value,
-                diff_type="normalized",
-            ))
+            entries.append(
+                DiffEntry(
+                    path=path,
+                    old_value=old_value,
+                    new_value=new_value,
+                    diff_type="normalized",
+                )
+            )
         else:
-            entries.append(DiffEntry(
-                path=path,
-                old_value=old_value,
-                new_value=new_value,
-                diff_type="changed",
-            ))
+            entries.append(
+                DiffEntry(
+                    path=path,
+                    old_value=old_value,
+                    new_value=new_value,
+                    diff_type="changed",
+                )
+            )
 
     def _is_timestamp(self, value: Any) -> bool:
         """Check if value looks like a timestamp."""
@@ -331,6 +341,7 @@ class DiffComputer:
 
         # ISO 8601 patterns
         import re
+
         iso_pattern = r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}"
         return bool(re.match(iso_pattern, value))
 
@@ -352,11 +363,7 @@ def compute_content_hash(data: dict[str, Any], allowlist: set[str] | None = None
 
     def clean_value(obj: Any) -> Any:
         if isinstance(obj, dict):
-            return {
-                k: clean_value(v)
-                for k, v in sorted(obj.items())
-                if k not in allowlist
-            }
+            return {k: clean_value(v) for k, v in sorted(obj.items()) if k not in allowlist}
         elif isinstance(obj, list):
             return [clean_value(item) for item in obj]
         return obj

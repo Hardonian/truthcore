@@ -6,7 +6,6 @@ Computes and manages beliefs with confidence scoring, decay, and versioning.
 from __future__ import annotations
 
 import json
-import math
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -156,16 +155,16 @@ class BeliefEngine:
         if not history:
             return None
 
-        target_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        target_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
         # Find the belief that was current at that time
         current = None
         for belief in history:
-            formed_time = datetime.fromisoformat(belief.formed_at.replace('Z', '+00:00'))
+            formed_time = datetime.fromisoformat(belief.formed_at.replace("Z", "+00:00"))
             if formed_time <= target_time:
                 # Check if it was superseded before target time
                 if belief.superseded_at:
-                    superseded_time = datetime.fromisoformat(belief.superseded_at.replace('Z', '+00:00'))
+                    superseded_time = datetime.fromisoformat(belief.superseded_at.replace("Z", "+00:00"))
                     if superseded_time > target_time:
                         current = belief
                 else:
@@ -227,10 +226,7 @@ class BeliefEngine:
         This is a simple heuristic - can be replaced with more sophisticated ML.
         """
         if evidence_list is None:
-            evidence_list = [
-                self.store.get_evidence(eid)
-                for eid in assertion.evidence_ids
-            ]
+            evidence_list = [self.store.get_evidence(eid) for eid in assertion.evidence_ids]
             evidence_list = [e for e in evidence_list if e is not None]
 
         if not evidence_list:
@@ -277,6 +273,7 @@ class BeliefEngine:
         except (OSError, NotImplementedError):
             # Fallback: copy the file
             import shutil
+
             shutil.copy2(version_file, current_link)
 
         return version_file
@@ -331,7 +328,6 @@ class BeliefEngine:
             "low_confidence": low_confidence,
             "superseded_beliefs": superseded_count,
             "average_confidence": (
-                (high_confidence * 0.9 + medium_confidence * 0.65 + low_confidence * 0.25)
-                / max(total_beliefs, 1)
+                (high_confidence * 0.9 + medium_confidence * 0.65 + low_confidence * 0.25) / max(total_beliefs, 1)
             ),
         }

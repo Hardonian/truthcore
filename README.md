@@ -53,7 +53,29 @@ pip install truth-core[parquet]
 pip install truth-core[dev,parquet]
 ```
 
-## Integrate in 3 Minutes
+## Environment Variables
+
+Copy `.env.example` to `.env` and configure at least:
+
+- `TRUTHCORE_API_KEY` (enable API authentication)
+- `TRUTHCORE_CORS_ORIGINS`
+- `TRUTHCORE_RATE_LIMIT_MAX`, `TRUTHCORE_RATE_LIMIT_WINDOW`
+- `TRUTHCORE_CACHE_DIR`, `TRUTHCORE_CACHE_ENABLED`
+
+## Development & Verification
+
+```bash
+# Install deps
+pip install -e '.[dev,parquet]'
+pnpm install
+
+# Lint and typecheck
+pnpm run lint
+pnpm run typecheck
+
+# Tests
+pnpm run test
+```
 
 ## Integrate in 3 Minutes
 
@@ -252,6 +274,9 @@ Outputs are reproducible for verification and audit purposes.
 - [Contributing Guide](CONTRIBUTING.md) - Development guidelines
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community standards
 - [Security Policy](SECURITY.md) - Security information
+- [Reality Map](docs/REALITY_MAP.md) - Stack and flow overview
+- [Deployment Guide](docs/DEPLOYMENT.md) - Local and production deployment
+- [Security Notes](docs/SECURITY.md) - Threat model and controls
 - [Governance](GOVERNANCE.md) - Project governance
 - [Upgrade Notes](UPGRADE_NOTES.md) - Version upgrade guide
 - [Changelog](CHANGELOG.md) - Version history

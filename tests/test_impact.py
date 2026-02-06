@@ -157,7 +157,7 @@ index 1234..5678 100644
 @@ -1,5 +1,5 @@
  from truthcore.impact import ChangeImpactEngine
 +from truthcore.truth_graph import TruthGraph
- 
+
 -@route("/api/v1/users")
 -def get_users():
 +@route("/api/v2/users")
@@ -312,6 +312,7 @@ index 1234..5678 100644
         assert output_path.exists()
 
         import json
+
         with open(output_path) as f:
             data = json.load(f)
 

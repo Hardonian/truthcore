@@ -27,6 +27,7 @@ OPS = {
 @dataclass
 class RuleEvaluation:
     """Result of evaluating a rule with full evidence."""
+
     rule_id: str
     passed: bool
     operator: str
@@ -170,13 +171,7 @@ class InvariantDSL:
 
         # Apply filter if specified
         if filter_spec:
-            data = [
-                item for item in data
-                if all(
-                    self._get_nested(item, k) == v
-                    for k, v in filter_spec.items()
-                )
-            ]
+            data = [item for item in data if all(self._get_nested(item, k) == v for k, v in filter_spec.items())]
 
         # Apply aggregation
         if agg_type == "count":
@@ -353,7 +348,7 @@ class InvariantExplainer:
         """Explain all rules."""
         lines = ["# Invariant Explanation Report", ""]
 
-        for rule_id, rule in sorted(self.rules.items()):
+        for _rule_id, rule in sorted(self.rules.items()):
             lines.append(self.dsl.explain(rule))
             lines.append("---")
 

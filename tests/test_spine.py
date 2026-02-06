@@ -184,6 +184,7 @@ class TestPhase1GraphAndBelief:
         """Test GraphStore initialization."""
         with tempfile.TemporaryDirectory() as tmpdir:
             store = GraphStore(tmpdir)
+            assert store is not None
             assert (Path(tmpdir) / "assertions").exists()
             assert (Path(tmpdir) / "evidence").exists()
 
@@ -293,12 +294,12 @@ class TestPhase1GraphAndBelief:
             store.store_assertion(assertion)
 
             # Form belief at specific time
-            old_time = "2024-01-01T12:00:00+00:00"
             belief = engine.form_belief(
                 assertion,
                 initial_confidence=0.9,
                 rationale="Test at specific time",
             )
+            assert belief is not None
 
             # Get current belief
             current = engine.get_current_belief(assertion.assertion_id)
@@ -473,6 +474,7 @@ class TestPhase2Ingestion:
             }
 
             from truthcore.spine.ingest import SignalTransformer
+
             transformer = SignalTransformer(store)
             evidence, assertion = transformer.transform_signal(signal)
 
