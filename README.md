@@ -256,11 +256,44 @@ Outputs are reproducible for verification and audit purposes.
 - [Upgrade Notes](UPGRADE_NOTES.md) - Version upgrade guide
 - [Changelog](CHANGELOG.md) - Version history
 
+## Contract Kit & CI Enforcement
+
+Truth Core includes a shared Contract Kit (`/contracts`) that defines schemas for cross-repo integration. CI enforces these contracts on every push and PR.
+
+### Contract Schemas
+
+Located in `/contracts`:
+
+| Schema | Description |
+|--------|-------------|
+| `config.schema.json` | Runtime configuration |
+| `module_manifest.schema.json` | Run manifest / provenance |
+| `evidence_packet.schema.json` | Evidence bundle with chain of custody |
+| `structured_log_event.schema.json` | Structured log events |
+| `error_envelope.schema.json` | Typed error responses |
+| `contracts.version.json` | Version file for the contract kit |
+
+Artifact schemas (verdict, readiness) live in `src/truthcore/schemas/`.
+
+### How to Run Contracts Check + Doctor
+
+```bash
+# Validate all contracts, SDK exports, CLI entrypoints, and schema sync
+pnpm contracts:check
+
+# Verify environment: versions, dependencies, build tools, secret scan
+pnpm doctor
+
+# Run full CI pipeline (lint + typecheck + test + contracts:check + doctor)
+pnpm ci
+```
+
 ## Development
 
 ```bash
 # Setup
 pip install -e '.[dev,parquet]'
+pnpm install
 
 # Run tests
 pytest -q
@@ -271,6 +304,12 @@ ruff format .
 
 # Type checking
 pyright src/truthcore
+
+# Validate contracts
+pnpm contracts:check
+
+# Environment health check
+pnpm doctor
 
 # Build package
 python -m build

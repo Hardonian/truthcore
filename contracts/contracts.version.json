@@ -1,0 +1,17 @@
+{
+  "kit": "truth-core-contracts",
+  "version": "1.0.0",
+  "schemas": {
+    "config": "1.0.0",
+    "module_manifest": "1.0.0",
+    "evidence_packet": "1.0.0",
+    "structured_log_event": "1.0.0",
+    "error_envelope": "1.0.0"
+  },
+  "artifact_schemas": {
+    "verdict_v1": "1.0.0",
+    "verdict_v2": "2.0.0",
+    "readiness_v1": "1.0.0"
+  },
+  "updated_at": "2026-02-06T00:00:00Z"
+}
