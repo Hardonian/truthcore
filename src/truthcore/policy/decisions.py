@@ -142,7 +142,7 @@ class PolicyOverride:
         if self.expires_at:
             try:
                 expiry = datetime.fromisoformat(self.expires_at)
-                if datetime.now(UTC) > expiry:
+                if stable_now() > expiry:
                     return False
             except ValueError:
                 return False

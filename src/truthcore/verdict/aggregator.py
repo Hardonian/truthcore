@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+from truthcore.determinism import stable_isoformat, stable_now
 from truthcore.manifest import normalize_timestamp
 from truthcore.severity import (
     Category,
@@ -171,12 +171,12 @@ class VerdictAggregator:
             finding_id=finding_id,
             category=category,
             assigned_by=assigned_by,
-            assigned_at=datetime.now(UTC).isoformat(),
+            assigned_at=stable_isoformat(),
             reason=assignment_reason,
             confidence=1.0 if assigned_by != "system" else 0.8,
             reviewed=assigned_by != "system",
             reviewer=assigned_by if assigned_by != "system" else None,
-            reviewed_at=datetime.now(UTC).isoformat() if assigned_by != "system" else None,
+            reviewed_at=stable_isoformat() if assigned_by != "system" else None,
         )
         self.category_assignments.append(category_assignment)
 
@@ -211,11 +211,11 @@ class VerdictAggregator:
             # First occurrence
             temporal_record = TemporalFinding(
                 finding_fingerprint=fingerprint,
-                first_seen=datetime.now(UTC).isoformat(),
-                last_seen=datetime.now(UTC).isoformat(),
+                first_seen=stable_isoformat(),
+                last_seen=stable_isoformat(),
                 occurrences=1,
                 runs_with_finding=[run_id] if run_id else [],
-                severity_history=[(datetime.now(UTC).isoformat(), severity.value)],
+                severity_history=[(stable_isoformat(), severity.value)],
             )
             self.temporal_findings[fingerprint] = temporal_record
 
@@ -447,7 +447,7 @@ class VerdictAggregator:
                 and engine.points_contributed < thresholds.max_total_points / max(len(engines_map), 1)
             )
 
-        result.engines = list(engines_map.values())
+        result.engines = sorted(engines_map.values(), key=lambda e: e.engine_id)
 
         # Build category breakdowns with audit trails
         categories_map: dict[Category, CategoryBreakdown] = {}
@@ -469,7 +469,7 @@ class VerdictAggregator:
             if finding.category_assignment:
                 breakdown.assignments.append(finding.category_assignment)
 
-        result.categories = list(categories_map.values())
+        result.categories = sorted(categories_map.values(), key=lambda c: c.category.value)
 
         # Sort findings by severity and points for top findings
         severity_order_map = {
@@ -481,13 +481,16 @@ class VerdictAggregator:
         }
         sorted_findings = sorted(
             self.findings,
-            key=lambda f: (severity_order_map.get(f.severity, 5), -f.points),
+            key=lambda f: (severity_order_map.get(f.severity, 5), -f.points, f.finding_id),
         )
         result.top_findings = sorted_findings
 
         # Governance records
         result.category_assignments = self.category_assignments
-        result.temporal_escalations = [tf for tf in self.temporal_findings.values() if tf.escalated]
+        result.temporal_escalations = sorted(
+            [tf for tf in self.temporal_findings.values() if tf.escalated],
+            key=lambda tf: tf.finding_fingerprint,
+        )
 
         # Determine verdict with governance
         result.verdict, result.ship_reasons, result.no_ship_reasons = self._determine_verdict(result, thresholds)
@@ -551,7 +554,7 @@ class VerdictAggregator:
 
             if override_found:
                 # Apply override
-                override_found.mark_used(f"verdict_{datetime.now(UTC).timestamp()}")
+                override_found.mark_used(f"verdict_{stable_now().timestamp()}")
                 result.overrides_applied.append(override_found)
                 ship_reasons.append(
                     f"Override applied for {result.highs} high severity issues "

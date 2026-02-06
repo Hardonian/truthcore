@@ -11,35 +11,28 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from truthcore import __version__
+from truthcore.determinism import is_deterministic, stable_git_sha, stable_now
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 def get_git_sha() -> str | None:
-    """Get git SHA if available."""
-    try:
-        import subprocess
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()[:12]
-    except Exception:
-        pass
-    return None
+    """Get git SHA if available.
+
+    In determinism mode, returns a fixed value.
+    """
+    return stable_git_sha()
 
 
 def normalize_timestamp(ts: datetime | str | None = None) -> str:
     """Generate normalized ISO timestamp in UTC.
 
     All timestamps are converted to UTC and formatted consistently.
+    In determinism mode with no input, returns a fixed timestamp.
     """
     if ts is None:
-        ts = datetime.now(UTC)
+        ts = stable_now()
     elif isinstance(ts, str):
         # Parse and re-format to ensure consistency
         ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
@@ -103,9 +96,11 @@ def hash_content(content: bytes | str, algorithm: str = "blake2b", digest_size: 
 def hash_dict(data: dict[str, Any], algorithm: str = "blake2b", digest_size: int = 16) -> str:
     """Compute deterministic hash of a dictionary.
 
-    Uses canonical JSON representation with sorted keys.
+    Uses canonical JSON representation with sorted keys and stable
+    normalization via the canonical module.
     """
-    canonical = json.dumps(data, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
+    from truthcore.canonical import canonical_json
+    canonical = canonical_json(data)
     return hash_content(canonical.encode("utf-8"), algorithm, digest_size)
 
 
@@ -160,7 +155,9 @@ class RunManifest:
     os_name: str = field(default_factory=lambda: platform.system())
     os_release: str = field(default_factory=lambda: platform.release())
     cpu_arch: str = field(default_factory=lambda: platform.machine())
-    timezone: str = field(default_factory=lambda: datetime.now().astimezone().tzname() or "UTC")
+    timezone: str = field(
+        default_factory=lambda: "UTC" if is_deterministic() else (datetime.now().astimezone().tzname() or "UTC"),
+    )
 
     # Cache status
     cache_hit: bool = False
@@ -191,11 +188,11 @@ class RunManifest:
         cache_key: str | None = None,
     ) -> RunManifest:
         """Create a new run manifest."""
-        import uuid
+        from truthcore.determinism import stable_run_id
 
-        # Generate run ID from timestamp + random component
-        now = datetime.now(UTC)
-        run_id = f"{now.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        # Generate run ID from timestamp + random component (fixed in determinism mode)
+        now = stable_now()
+        run_id = stable_run_id()
 
         # Hash config
         config_hash = hash_dict(config)

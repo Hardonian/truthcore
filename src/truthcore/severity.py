@@ -7,9 +7,11 @@ that are shared across findings, verdicts, and policy systems.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
+
+from truthcore.determinism import stable_isoformat, stable_now
 
 
 class Severity(Enum):
@@ -176,7 +178,7 @@ class Override:
             return False
         try:
             expires_dt = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
-            return datetime.now(UTC) < expires_dt
+            return stable_now() < expires_dt
         except ValueError:
             return False
 
@@ -184,14 +186,14 @@ class Override:
         """Check if override has expired."""
         try:
             expires_dt = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
-            return datetime.now(UTC) >= expires_dt
+            return stable_now() >= expires_dt
         except ValueError:
             return True
 
     def mark_used(self, verdict_id: str) -> None:
         """Mark override as used."""
         self.used = True
-        self.used_at = datetime.now(UTC).isoformat()
+        self.used_at = stable_isoformat()
         self.verdict_id = verdict_id
 
     def to_dict(self) -> dict[str, Any]:
@@ -234,7 +236,7 @@ class Override:
         duration_hours: int = 24,
     ) -> Override:
         """Convenience constructor for high-severity overrides."""
-        now = datetime.now(UTC)
+        now = stable_now()
         expires = now + timedelta(hours=duration_hours)
         return cls(
             override_id=f"override-highs-{int(now.timestamp())}",
@@ -274,16 +276,16 @@ class TemporalFinding:
     def escalate(self, reason: str) -> None:
         """Mark finding as escalated."""
         self.escalated = True
-        self.escalated_at = datetime.now(UTC).isoformat()
+        self.escalated_at = stable_isoformat()
         self.escalation_reason = reason
 
     def record_occurrence(self, run_id: str, severity: str) -> None:
         """Record a new occurrence of this finding."""
-        self.last_seen = datetime.now(UTC).isoformat()
+        self.last_seen = stable_isoformat()
         self.occurrences += 1
         if run_id not in self.runs_with_finding:
             self.runs_with_finding.append(run_id)
-        self.severity_history.append((datetime.now(UTC).isoformat(), severity))
+        self.severity_history.append((stable_isoformat(), severity))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -378,7 +380,7 @@ class CategoryWeightConfig:
 
     weights: dict[Category, float] = field(default_factory=dict)
     config_version: str = "1.0.0"
-    last_reviewed: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    last_reviewed: str = field(default_factory=stable_isoformat)
     review_frequency_days: int = 90  # Require review every 90 days
     reviewed_by: str | None = None
     review_notes: str | None = None
@@ -388,7 +390,7 @@ class CategoryWeightConfig:
         try:
             last_review_dt = datetime.fromisoformat(self.last_reviewed.replace("Z", "+00:00"))
             next_review = last_review_dt + timedelta(days=self.review_frequency_days)
-            return datetime.now(UTC) >= next_review
+            return stable_now() >= next_review
         except ValueError:
             return True  # If we can't parse, assume review is needed
 
@@ -399,7 +401,7 @@ class CategoryWeightConfig:
     def update_weights(self, new_weights: dict[Category, float], reviewed_by: str, notes: str) -> None:
         """Update weights and record review."""
         self.weights = new_weights
-        self.last_reviewed = datetime.now(UTC).isoformat()
+        self.last_reviewed = stable_isoformat()
         self.reviewed_by = reviewed_by
         self.review_notes = notes
 
@@ -421,7 +423,7 @@ class CategoryWeightConfig:
         return cls(
             weights=weights,
             config_version=data.get("config_version", "1.0.0"),
-            last_reviewed=data.get("last_reviewed", datetime.now(UTC).isoformat()),
+            last_reviewed=data.get("last_reviewed", stable_isoformat()),
             review_frequency_days=data.get("review_frequency_days", 90),
             reviewed_by=data.get("reviewed_by"),
             review_notes=data.get("review_notes"),

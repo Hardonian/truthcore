@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from truthcore.determinism import stable_isoformat
 from truthcore.severity import Category, CategoryAssignment, Severity
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class Finding:
     category: Category | None = None
     category_assignment: CategoryAssignment | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    timestamp: str = field(default_factory=stable_isoformat)
     policy_evidence: Any = None  # PolicyEvidencePacket - use Any to avoid circular import
 
     def __post_init__(self):
@@ -130,7 +131,7 @@ class Finding:
             category=category,
             category_assignment=category_assignment,
             metadata=data.get("metadata", {}),
-            timestamp=data.get("timestamp", datetime.now(UTC).isoformat()),
+            timestamp=data.get("timestamp", stable_isoformat()),
             policy_evidence=data.get("policy_evidence"),
         )
 
@@ -166,7 +167,7 @@ class FindingReport:
     tool: str = "unknown"
     tool_version: str = "unknown"
     run_id: str | None = None
-    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    timestamp: str = field(default_factory=stable_isoformat)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):

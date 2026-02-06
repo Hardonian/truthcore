@@ -5,6 +5,13 @@ Provides rich rule composition:
 - Thresholds and comparisons
 - Aggregations: count, rate, avg, max, min
 - Explain mode for debugging
+
+Determinism guarantees:
+- Rules are evaluated in declaration order (array position)
+- Batch evaluation sorts rules by ID for stable ordering
+- Filter specs iterate keys in sorted order
+- Tie-breaking: alphabetical by rule_id, then by declaration order
+- Each evaluation step has a stable sequence number
 """
 
 from __future__ import annotations
@@ -33,6 +40,7 @@ class RuleEvaluation:
     operator: str
     left_value: Any
     right_value: Any
+    sequence: int = 0  # Stable evaluation order counter
     context: dict[str, Any] = field(default_factory=dict)
     sub_evaluations: list[RuleEvaluation] = field(default_factory=list)
 
@@ -44,13 +52,19 @@ class RuleEvaluation:
             "operator": self.operator,
             "left_value": self.left_value,
             "right_value": self.right_value,
+            "sequence": self.sequence,
             "context": self.context,
             "sub_evaluations": [e.to_dict() for e in self.sub_evaluations],
         }
 
 
 class InvariantDSL:
-    """Domain-specific language for invariant rules."""
+    """Domain-specific language for invariant rules.
+
+    Determinism: evaluation order is stable. Rules within composite
+    operators (all/any) are evaluated in array order. The batch
+    evaluate_rules() method sorts by rule ID for predictable ordering.
+    """
 
     def __init__(self, data: dict[str, Any]) -> None:
         """Initialize with data context.
@@ -61,6 +75,7 @@ class InvariantDSL:
         self.data = data
         self.explain_mode = False
         self.evaluations: list[RuleEvaluation] = []
+        self._eval_sequence = 0  # Monotonic counter for evaluation order
 
     def set_explain_mode(self, enabled: bool = True) -> None:
         """Enable explain mode to capture intermediate values."""
@@ -136,12 +151,14 @@ class InvariantDSL:
 
         evaluation = None
         if self.explain_mode:
+            self._eval_sequence += 1
             evaluation = RuleEvaluation(
                 rule_id=rule_id,
                 passed=result,
                 operator=op_str,
                 left_value=left,
                 right_value=right,
+                sequence=self._eval_sequence,
                 context={"rule": rule},
             )
             self.evaluations.append(evaluation)
@@ -169,9 +186,15 @@ class InvariantDSL:
         if not isinstance(data, list):
             return 0
 
-        # Apply filter if specified
+        # Apply filter if specified (sorted keys for deterministic iteration)
         if filter_spec:
-            data = [item for item in data if all(self._get_nested(item, k) == v for k, v in filter_spec.items())]
+            data = [
+                item for item in data
+                if all(
+                    self._get_nested(item, k) == v
+                    for k, v in sorted(filter_spec.items())
+                )
+            ]
 
         # Apply aggregation
         if agg_type == "count":
@@ -210,8 +233,24 @@ class InvariantDSL:
 
         return value
 
+    def evaluate_rules(self, rules: list[dict[str, Any]]) -> list[tuple[bool, RuleEvaluation | None]]:
+        """Evaluate multiple rules in stable order.
+
+        Rules are sorted by ID before evaluation to ensure deterministic
+        ordering regardless of input order.
+
+        Args:
+            rules: List of rule dicts to evaluate
+
+        Returns:
+            List of (passed, evaluation) tuples in rule-ID-sorted order
+        """
+        # Sort by rule ID for deterministic evaluation order
+        sorted_rules = sorted(rules, key=lambda r: r.get("id", ""))
+        return [self.evaluate_rule(rule) for rule in sorted_rules]
+
     def _evaluate_all(self, rules: list[dict], rule_id: str) -> tuple[bool, RuleEvaluation]:
-        """Evaluate all rules (AND)."""
+        """Evaluate all rules (AND). Rules evaluated in array order."""
         results = []
         sub_evals = []
 
@@ -223,12 +262,14 @@ class InvariantDSL:
 
         passed = all(results)
 
+        self._eval_sequence += 1
         evaluation = RuleEvaluation(
             rule_id=rule_id,
             passed=passed,
             operator="all",
             left_value=results,
             right_value=True,
+            sequence=self._eval_sequence,
             sub_evaluations=sub_evals,
         )
 
@@ -238,7 +279,7 @@ class InvariantDSL:
         return passed, evaluation
 
     def _evaluate_any(self, rules: list[dict], rule_id: str) -> tuple[bool, RuleEvaluation]:
-        """Evaluate any rule (OR)."""
+        """Evaluate any rule (OR). Rules evaluated in array order."""
         results = []
         sub_evals = []
 
@@ -250,12 +291,14 @@ class InvariantDSL:
 
         passed = any(results)
 
+        self._eval_sequence += 1
         evaluation = RuleEvaluation(
             rule_id=rule_id,
             passed=passed,
             operator="any",
             left_value=results,
             right_value=True,
+            sequence=self._eval_sequence,
             sub_evaluations=sub_evals,
         )
 
@@ -269,12 +312,14 @@ class InvariantDSL:
         result, eval_data = self.evaluate_rule(rule)
         passed = not result
 
+        self._eval_sequence += 1
         evaluation = RuleEvaluation(
             rule_id=rule_id,
             passed=passed,
             operator="not",
             left_value=result,
             right_value=False,
+            sequence=self._eval_sequence,
             sub_evaluations=[eval_data] if eval_data else [],
         )
 
