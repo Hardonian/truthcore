@@ -35,7 +35,9 @@
     "install:python": "pip install -e '.[dev,parquet]'",
     "install:all": "pnpm install && pnpm run install:python",
     "dev:dashboard": "cd dashboard && pnpm run dev",
-    "ci": "pnpm run verify:ci"
+    "contracts:check": "python scripts/contracts_check.py",
+    "doctor": "python scripts/doctor.py",
+    "ci": "pnpm run verify:ci && pnpm run contracts:check && pnpm run doctor"
   },
   "keywords": [
     "verification",
