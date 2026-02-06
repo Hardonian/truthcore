@@ -1,0 +1,28 @@
+{
+  "packet_id": "GP-0020",
+  "schema_version": "1.0.0",
+  "description": "Privacy pack: localhost/private IPs should be allowlisted (false positive guard)",
+  "tags": ["privacy", "pii", "negative-test", "allowlist", "edge-case", "boundary"],
+  "rule_id": "PII_IP_ADDRESS",
+  "rule_version": "1.0.0",
+  "pack_name": "privacy",
+  "input_facts": {
+    "files": [
+      {
+        "path": "config.yaml",
+        "content": "servers:\n  - host: 127.0.0.1\n    port: 8080\n  - host: 192.168.1.100\n    port: 3000\n  - host: 10.0.0.5\n    port: 443\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": false,
+    "finding_count_min": 0,
+    "finding_count_max": 0,
+    "has_blocking": false
+  },
+  "explanation_trace": {
+    "why_triggered": "All IP addresses (127.0.0.1, 192.168.x.x, 10.x.x.x) are in the PIIScanner ALLOWLIST for private/localhost ranges",
+    "scanner_type": "PIIScanner",
+    "edge_case_notes": "Tests that private network IPs (RFC 1918) and loopback addresses are correctly allowlisted"
+  }
+}

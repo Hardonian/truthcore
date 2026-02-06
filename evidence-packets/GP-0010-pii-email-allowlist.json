@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0010",
+  "schema_version": "1.0.0",
+  "description": "Privacy pack: email at example.com should be allowlisted (false positive guard)",
+  "tags": ["privacy", "pii", "negative-test", "allowlist", "edge-case"],
+  "rule_id": "PII_EMAIL_ADDRESS",
+  "rule_version": "1.0.0",
+  "pack_name": "privacy",
+  "input_facts": {
+    "files": [
+      {
+        "path": "docs/setup.md",
+        "content": "# Setup Guide\n\nContact support at user@example.com for help.\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": false,
+    "finding_count_min": 0,
+    "finding_count_max": 0,
+    "has_blocking": false
+  },
+  "explanation_trace": {
+    "why_triggered": "Email pattern matches but example.com is in the PIIScanner ALLOWLIST, so finding is suppressed",
+    "matched_pattern": "user@example.com",
+    "scanner_type": "PIIScanner",
+    "edge_case_notes": "Tests the allowlist mechanism: example.com addresses should not trigger PII findings"
+  }
+}

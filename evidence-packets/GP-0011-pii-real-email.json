@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0011",
+  "schema_version": "1.0.0",
+  "description": "Privacy pack: real email address should trigger PII detection",
+  "tags": ["privacy", "pii", "email"],
+  "rule_id": "PII_EMAIL_ADDRESS",
+  "rule_version": "1.0.0",
+  "pack_name": "privacy",
+  "input_facts": {
+    "files": [
+      {
+        "path": "users.csv",
+        "content": "id,name,email\n1,Alice,alice.jones@corporate-domain.io\n2,Bob,bob.smith@another-org.com\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "MEDIUM"
+  },
+  "explanation_trace": {
+    "why_triggered": "File contains email addresses at non-allowlisted domains that match the built-in email PII pattern",
+    "matched_pattern": "alice.jones@corporate-domain.io",
+    "scanner_type": "PIIScanner",
+    "edge_case_notes": "These are real-looking emails at domains not in the allowlist (not example.com, localhost, etc.)"
+  }
+}

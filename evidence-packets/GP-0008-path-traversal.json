@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0008",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect dangerous eval() usage in source code",
+  "tags": ["security", "code-execution", "eval"],
+  "rule_id": "EVAL_USAGE",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": "handler.py",
+        "content": "def process_input(user_data):\n    result = eval(user_data)\n    return result\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "HIGH"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content matches the eval usage regex: (?<![a-zA-Z0-9_])eval\\s*\\( which detects eval() calls",
+    "matched_pattern": "eval(user_data)",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "The negative lookbehind ensures we don't match method names like 'my_eval(' but do match standalone 'eval('"
+  }
+}

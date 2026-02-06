@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0002",
+  "schema_version": "1.0.0",
+  "description": "Base pack: detect private key (BLOCKER severity)",
+  "tags": ["base", "security", "blocker", "secret-detection"],
+  "rule_id": "SECRET_PRIVATE_KEY_DETECTED",
+  "rule_version": "1.0.0",
+  "pack_name": "base",
+  "input_facts": {
+    "files": [
+      {
+        "path": "certs/server.key",
+        "content": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF5PBIbkMcqEv\n-----END RSA PRIVATE KEY-----"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": true,
+    "severity": "BLOCKER"
+  },
+  "explanation_trace": {
+    "why_triggered": "File contains a PEM-encoded RSA private key header which matches the built-in private_key pattern",
+    "matched_pattern": "-----BEGIN RSA PRIVATE KEY-----",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "This should always be BLOCKER severity since private keys are critical secrets"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "packet_id": "GP-0013",
+  "schema_version": "1.0.0",
+  "description": "Agent pack: safe agent config should NOT trigger unsafe code execution",
+  "tags": ["agent", "negative-test", "false-positive-guard"],
+  "rule_id": "AGENT_UNSAFE_CODE_EXECUTION",
+  "rule_version": "1.0.0",
+  "pack_name": "agent",
+  "input_facts": {
+    "files": [
+      {
+        "path": "agent_config.yaml",
+        "content": "agent:\n  name: read-only-bot\n  capabilities:\n    exec_code: false\n    network_access: false\n    human_approval: true\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": false,
+    "finding_count_min": 0,
+    "finding_count_max": 0,
+    "has_blocking": false
+  },
+  "explanation_trace": {
+    "why_triggered": "exec_code is set to false, which does not match the regex pattern requiring 'true'",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "Negative test: the pattern requires exec_code/run_shell/subprocess = true, not false"
+  }
+}

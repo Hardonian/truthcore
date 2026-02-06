@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0019",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect overly permissive CORS configuration (wildcard origin)",
+  "tags": ["security", "config", "cors", "web-security"],
+  "rule_id": "CONFIG_PERMISSIVE_CORS",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": "cors.yaml",
+        "content": "server:\n  cors:\n    access_control_allow_origin: *\n    allow_methods: GET, POST\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "MEDIUM"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content matches the permissive CORS regex: access-control-allow-origin followed by : and wildcard '*'",
+    "matched_pattern": "access_control_allow_origin: *",
+    "scanner_type": "ConfigScanner",
+    "edge_case_notes": "Uses YAML config format with : separator which matches the regex. The regex accepts both hyphens and underscores as separators."
+  }
+}

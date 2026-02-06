@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0012",
+  "schema_version": "1.0.0",
+  "description": "Agent pack: detect unsafe code execution capability (BLOCKER)",
+  "tags": ["agent", "security", "blocker", "code-execution"],
+  "rule_id": "AGENT_UNSAFE_CODE_EXECUTION",
+  "rule_version": "1.0.0",
+  "pack_name": "agent",
+  "input_facts": {
+    "files": [
+      {
+        "path": "agent_config.yaml",
+        "content": "agent:\n  name: data-processor\n  capabilities:\n    exec_code: true\n    network_access: false\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": true,
+    "severity": "BLOCKER"
+  },
+  "explanation_trace": {
+    "why_triggered": "Config matches the regex pattern for unsafe code execution: exec_code: true",
+    "matched_pattern": "exec_code: true",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "Agent rules use category 'security' which routes to SecretScanner via PolicyEngine._get_scanner"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0009",
+  "schema_version": "1.0.0",
+  "description": "Privacy pack: detect credit card number (BLOCKER)",
+  "tags": ["privacy", "pii", "blocker", "pci-dss"],
+  "rule_id": "PII_CREDIT_CARD",
+  "rule_version": "1.0.0",
+  "pack_name": "privacy",
+  "input_facts": {
+    "files": [
+      {
+        "path": "payment_log.txt",
+        "content": "Transaction processed for card 4111-1111-1111-1111 at 2025-01-15T10:30:00Z\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": true,
+    "severity": "BLOCKER"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content contains a credit card number matching the built-in credit_card PII pattern (4 groups of 4 digits)",
+    "matched_pattern": "4111-1111-1111-1111",
+    "scanner_type": "PIIScanner",
+    "edge_case_notes": "Uses the classic Visa test card number. PIIScanner uses built-in patterns since rule has no explicit matchers."
+  }
+}

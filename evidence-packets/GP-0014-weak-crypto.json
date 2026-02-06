@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0014",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect usage of weak cryptographic algorithm (MD5) in config",
+  "tags": ["security", "config", "crypto", "weak-algorithm"],
+  "rule_id": "CONFIG_WEAK_CRYPTO",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": "crypto.conf",
+        "content": "[hashing]\nalgorithm = md5\niterations = 1000\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "HIGH"
+  },
+  "explanation_trace": {
+    "why_triggered": "Config file contains 'md5' which matches the weak crypto regex: (?i)(md5|sha1|des|rc4)\\b",
+    "matched_pattern": "md5",
+    "scanner_type": "ConfigScanner",
+    "edge_case_notes": "ConfigScanner only processes files with config extensions (.conf, .yaml, .json, etc.). The regex is case-insensitive with word boundary."
+  }
+}

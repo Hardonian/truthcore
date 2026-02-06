@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0016",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect JWT token in source code",
+  "tags": ["security", "jwt", "token", "edge-case"],
+  "rule_id": "SECRET_JWT_TOKEN",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": "test_auth.py",
+        "content": "# Test JWT for integration tests\nTEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "HIGH"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content contains a JWT token matching the eyJ...eyJ...signature pattern",
+    "matched_pattern": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi...",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "This is the well-known jwt.io example token. Even test tokens should be flagged since the rule cannot distinguish test from production."
+  }
+}
