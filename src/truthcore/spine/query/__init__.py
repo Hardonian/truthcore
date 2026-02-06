@@ -2,7 +2,7 @@
 
 Implements the 7 MVP query types:
 - Why Query: Belief provenance and lineage
-- Evidence Query: Supporting/weakening evidence  
+- Evidence Query: Supporting/weakening evidence
 - History Query: Belief version timeline
 - Meaning Query: Semantic version resolution
 - Override Query: Human intervention tracking
@@ -13,7 +13,6 @@ Implements the 7 MVP query types:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from truthcore.spine.belief import BeliefEngine
 from truthcore.spine.graph import GraphStore
@@ -23,6 +22,7 @@ from truthcore.spine.primitives import Assertion, Belief, Evidence, MeaningVersi
 @dataclass
 class WhyResult:
     """Result of a 'why' query."""
+
     assertion: Assertion
     current_belief: Belief | None
     confidence_explanation: str
@@ -34,6 +34,7 @@ class WhyResult:
 @dataclass
 class EvidenceResult:
     """Result of an evidence query."""
+
     assertion_id: str
     supporting_evidence: list[Evidence]
     weakening_evidence: list[Evidence]
@@ -44,6 +45,7 @@ class EvidenceResult:
 @dataclass
 class HistoryResult:
     """Result of a history query."""
+
     assertion_id: str
     beliefs: list[Belief]
     change_summary: list[str]
@@ -52,6 +54,7 @@ class HistoryResult:
 @dataclass
 class MeaningResult:
     """Result of a meaning query."""
+
     concept: str
     current_version: MeaningVersion | None
     all_versions: list[MeaningVersion]
@@ -61,6 +64,7 @@ class MeaningResult:
 @dataclass
 class OverrideResult:
     """Result of an override query."""
+
     decision_id: str
     override: Override | None
     is_expired: bool
@@ -70,6 +74,7 @@ class OverrideResult:
 @dataclass
 class DependenciesResult:
     """Result of a dependencies query."""
+
     assertion_id: str
     direct_dependencies: list[str]
     transitive_dependencies: list[str]
@@ -80,6 +85,7 @@ class DependenciesResult:
 @dataclass
 class InvalidationResult:
     """Result of an invalidation query."""
+
     assertion_id: str
     potential_counter_evidence: list[str]
     semantic_conflicts: list[str]
@@ -110,10 +116,7 @@ class QueryEngine:
         belief = self.belief_engine.get_current_belief(assertion_id)
 
         # Get evidence
-        evidence_list = [
-            self.store.get_evidence(eid)
-            for eid in assertion.evidence_ids
-        ]
+        evidence_list = [self.store.get_evidence(eid) for eid in assertion.evidence_ids]
         evidence_list = [e for e in evidence_list if e is not None]
 
         # Build confidence explanation
@@ -200,7 +203,7 @@ class QueryEngine:
             if i == 0:
                 changes.append(f"v1: Initial formation (confidence: {belief.confidence:.2f})")
             else:
-                prev = beliefs[i-1]
+                prev = beliefs[i - 1]
                 delta = belief.confidence - prev.confidence
                 direction = "increased" if delta > 0 else "decreased"
                 changes.append(
@@ -241,7 +244,8 @@ class QueryEngine:
         # Find current version
         if timestamp:
             from datetime import datetime
-            target_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+
+            target_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             current = None
             for m in meanings:
                 if m.is_current(target_time):
@@ -257,9 +261,7 @@ class QueryEngine:
             latest = meanings[-1]
             for m in meanings[:-1]:
                 if not m.is_compatible_with(latest):
-                    warnings.append(
-                        f"Version {m.version} is incompatible with current ({latest.version})"
-                    )
+                    warnings.append(f"Version {m.version} is incompatible with current ({latest.version})")
 
         return MeaningResult(
             concept=concept,
@@ -373,9 +375,7 @@ class QueryEngine:
             for dep_id in belief.upstream_belief_ids:
                 dep = self.belief_engine.get_current_belief(dep_id)
                 if dep and dep.current_confidence() < 0.5:
-                    semantic_conflicts.append(
-                        f"Upstream belief {dep_id} has low confidence"
-                    )
+                    semantic_conflicts.append(f"Upstream belief {dep_id} has low confidence")
 
         # Dependency failures
         dependency_failures = []
@@ -410,6 +410,7 @@ class QueryEngine:
         meanings = []
         for f in meaning_dir.glob("v*.json"):
             import json
+
             with open(f, encoding="utf-8") as file:
                 data = json.load(file)
                 meanings.append(MeaningVersion.from_dict(data))
@@ -429,6 +430,7 @@ class QueryEngine:
             if subdir.is_dir():
                 for f in subdir.glob("*.json"):
                     import json
+
                     with open(f, encoding="utf-8") as file:
                         data = json.load(file)
                         if data.get("override_id") == decision_id or data.get("decision_id") == decision_id:

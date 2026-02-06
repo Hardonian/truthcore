@@ -594,7 +594,7 @@ class TruthGraphBuilder:
             return nodes
 
         # Add readiness engine node
-        engine_node = self.graph.add_engine(
+        self.graph.add_engine(
             engine_id="readiness",
             run_id=run_id,
             engine_type="readiness",

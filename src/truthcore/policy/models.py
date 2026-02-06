@@ -19,6 +19,7 @@ from truthcore.severity import Severity
 
 class PolicyEffect(Enum):
     """Policy decision effect types."""
+
     ALLOW = "allow"
     DENY = "deny"
     CONDITIONAL = "conditional"
@@ -26,6 +27,7 @@ class PolicyEffect(Enum):
 
 class PolicyPriority(Enum):
     """Priority levels for policy conflict resolution."""
+
     CRITICAL = 0
     HIGH = 1
     MEDIUM = 2
@@ -290,12 +292,12 @@ class PolicyRule:
         effect = PolicyEffect.DENY
         if "effect" in data:
             effect = PolicyEffect(data["effect"])
-        
+
         # Parse priority with backward compatibility (default to MEDIUM)
         priority = PolicyPriority.MEDIUM
         if "priority" in data:
             priority = PolicyPriority[data["priority"]]
-        
+
         rule = cls(
             id=data["id"],
             description=data["description"],

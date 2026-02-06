@@ -5,10 +5,11 @@ Supports both in-memory and Redis-based rate limiting.
 
 from __future__ import annotations
 
+import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import os
+from importlib.util import find_spec
 from typing import Any
 
 
@@ -145,9 +146,12 @@ class RedisRateLimitBackend(RateLimitBackend):
 
     def _connect(self) -> None:
         """Connect to Redis."""
-        try:
-            import redis as redis_lib
+        if find_spec("redis") is None:
+            raise ImportError("Redis backend requires 'redis' package. Install with: pip install redis")
 
+        import redis as redis_lib
+
+        try:
             self._redis = redis_lib.from_url(
                 self.redis_url,
                 socket_timeout=self.timeout,
@@ -155,11 +159,6 @@ class RedisRateLimitBackend(RateLimitBackend):
             )
             # Test connection
             self._redis.ping()
-        except ImportError as err:
-            raise ImportError(
-                "Redis backend requires 'redis' package. "
-                "Install with: pip install redis"
-            ) from err
         except Exception as e:
             raise ConnectionError(f"Failed to connect to Redis: {e}") from e
 

@@ -16,7 +16,6 @@ from truthcore.severity import Category, CategoryAssignment, Severity
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from truthcore.policy.decisions import PolicyEvidencePacket
 
 
 @dataclass
@@ -98,7 +97,10 @@ class Finding:
         if self.category_assignment:
             result["category_assignment"] = self.category_assignment.to_dict()
         if self.policy_evidence:
-            result["policy_evidence"] = self.policy_evidence.to_dict() if hasattr(self.policy_evidence, 'to_dict') else self.policy_evidence
+            if hasattr(self.policy_evidence, "to_dict"):
+                result["policy_evidence"] = self.policy_evidence.to_dict()
+            else:
+                result["policy_evidence"] = self.policy_evidence
         return result
 
     @classmethod
@@ -292,5 +294,4 @@ class FindingReport:
                     finding.message,
                     finding.excerpt_hash or "",
                 ])
-
 

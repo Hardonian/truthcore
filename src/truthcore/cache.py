@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass
-from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -168,11 +167,11 @@ class ContentAddressedCache:
 
         # Update index (in-memory first, then sync to disk)
         index = self._get_cached_index()
-        from datetime import datetime
+        from datetime import UTC, datetime
         # Use file count from source dir to avoid re-walking cache
         file_count = sum(1 for _ in output_dir.rglob("*") if _.is_file())
         index["entries"][cache_key] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "manifest_hash": hash_dict(manifest),
             "output_files": file_count,
         }
@@ -212,10 +211,10 @@ class ContentAddressedCache:
         Returns:
             Number of entries removed.
         """
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
         index = self._get_cached_index()
-        cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+        cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
 
         to_remove: list[str] = []
         for key, entry in index["entries"].items():

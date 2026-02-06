@@ -393,7 +393,7 @@ class InvariantExplainer:
         """Explain all rules."""
         lines = ["# Invariant Explanation Report", ""]
 
-        for rule_id, rule in sorted(self.rules.items()):
+        for _rule_id, rule in sorted(self.rules.items()):
             lines.append(self.dsl.explain(rule))
             lines.append("---")
 

@@ -210,6 +210,7 @@ class TestSecretScanner:
 
         findings = scanner.scan(rule)
         # May still find generic patterns, but should be minimal
+        assert isinstance(findings, list)
 
 
 class TestPolicyEngine:

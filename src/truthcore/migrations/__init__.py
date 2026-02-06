@@ -23,4 +23,5 @@ __all__ = [
     "list_available_migrations",
     "migrate",
     "register_migration",
+    "verdict",
 ]

@@ -8,16 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
 # Parquet is optional - only import if available
-try:
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-    PYARROW_AVAILABLE = True
-except ImportError:
-    PYARROW_AVAILABLE = False
+PYARROW_AVAILABLE = find_spec("pyarrow") is not None
 
 
 class ParquetStore:
@@ -71,6 +67,7 @@ class ParquetStore:
         # Create table and write
         try:
             import pandas as pd
+
             df = pd.DataFrame(rows)
             path = self.store_dir / f"findings_{run_id}.parquet"
             df.to_parquet(path, index=False, compression="zstd")
@@ -135,10 +132,7 @@ class ParquetStore:
 
         for parquet_file in self.store_dir.glob("*.parquet"):
             # Check file modification time
-            mtime = datetime.fromtimestamp(
-                parquet_file.stat().st_mtime,
-                tz=UTC
-            )
+            mtime = datetime.fromtimestamp(parquet_file.stat().st_mtime, tz=UTC)
 
             if mtime < cutoff:
                 size = parquet_file.stat().st_size
@@ -170,6 +164,7 @@ class ParquetStore:
 @dataclass
 class CompactionPolicy:
     """Policy for history compaction."""
+
     retention_days: int = 90
     max_file_size: int = 100 * 1024 * 1024  # 100 MB
     compress_after_days: int = 7
