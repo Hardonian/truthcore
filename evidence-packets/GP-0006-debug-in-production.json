@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0006",
+  "schema_version": "1.0.0",
+  "description": "Base pack: detect debug mode enabled in config file",
+  "tags": ["base", "config", "debug-mode"],
+  "rule_id": "CONFIG_DEBUG_IN_PRODUCTION",
+  "rule_version": "1.0.0",
+  "pack_name": "base",
+  "input_facts": {
+    "files": [
+      {
+        "path": "production.yaml",
+        "content": "app:\n  name: myservice\n  debug: true\n  port: 8080\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "HIGH"
+  },
+  "explanation_trace": {
+    "why_triggered": "YAML config file contains debug: true which matches the built-in debug_true pattern in ConfigScanner",
+    "matched_pattern": "debug: true",
+    "scanner_type": "ConfigScanner",
+    "edge_case_notes": "ConfigScanner checks both regex patterns and structured config (YAML/JSON) for debug=true"
+  }
+}

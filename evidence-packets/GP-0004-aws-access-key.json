@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0004",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect AWS access key ID (AKIA prefix)",
+  "tags": ["security", "aws", "blocker", "cloud-credentials"],
+  "rule_id": "SECRET_AWS_ACCESS_KEY",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": "deploy.sh",
+        "content": "#!/bin/bash\nexport AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\nexport AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": true,
+    "severity": "BLOCKER"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content matches the AKIA[0-9A-Z]{16} regex pattern for AWS access keys",
+    "matched_pattern": "AKIAIOSFODNN7EXAMPLE",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "Uses the well-known AKIA prefix pattern. Real AWS keys always start with AKIA."
+  }
+}

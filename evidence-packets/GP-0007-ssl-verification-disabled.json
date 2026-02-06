@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0007",
+  "schema_version": "1.0.0",
+  "description": "Base pack: detect disabled SSL verification in config",
+  "tags": ["base", "config", "ssl", "security"],
+  "rule_id": "CONFIG_SSL_VERIFICATION_DISABLED",
+  "rule_version": "1.0.0",
+  "pack_name": "base",
+  "input_facts": {
+    "files": [
+      {
+        "path": "settings.yaml",
+        "content": "http_client:\n  timeout: 30\n  ssl_verify: false\n  retry_count: 3\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "HIGH"
+  },
+  "explanation_trace": {
+    "why_triggered": "Config file contains ssl_verify: false matching both the regex pattern and structured config check",
+    "matched_pattern": "ssl_verify: false",
+    "scanner_type": "ConfigScanner",
+    "edge_case_notes": "ConfigScanner detects both ssl_verify and verify_ssl variants with false/no/0/off values"
+  }
+}

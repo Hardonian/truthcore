@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0018",
+  "schema_version": "1.0.0",
+  "description": "Agent pack: detect agent configured without human-in-the-loop",
+  "tags": ["agent", "governance", "human-oversight"],
+  "rule_id": "AGENT_NO_HUMAN_IN_THE_LOOP",
+  "rule_version": "1.0.0",
+  "pack_name": "agent",
+  "input_facts": {
+    "files": [
+      {
+        "path": "agent.yaml",
+        "content": "agent:\n  name: auto-trader\n  capabilities:\n    trade_execution: true\n    human_approval: false\n    max_trade_size: 100000\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": false,
+    "severity": "MEDIUM"
+  },
+  "explanation_trace": {
+    "why_triggered": "Config matches the regex: human_approval: false (or require_confirmation: false)",
+    "matched_pattern": "human_approval: false",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "Agent rules with category 'security' route through SecretScanner. The pattern is case-insensitive."
+  }
+}

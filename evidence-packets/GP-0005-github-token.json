@@ -1,0 +1,29 @@
+{
+  "packet_id": "GP-0005",
+  "schema_version": "1.0.0",
+  "description": "Security pack: detect GitHub personal access token",
+  "tags": ["security", "github", "blocker", "token"],
+  "rule_id": "SECRET_GITHUB_TOKEN",
+  "rule_version": "1.0.0",
+  "pack_name": "security",
+  "input_facts": {
+    "files": [
+      {
+        "path": ".env",
+        "content": "GITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij1234\n"
+      }
+    ]
+  },
+  "expected": {
+    "triggered": true,
+    "finding_count_min": 1,
+    "has_blocking": true,
+    "severity": "BLOCKER"
+  },
+  "explanation_trace": {
+    "why_triggered": "Content matches gh[pousr]_[A-Za-z0-9_]{36,} regex for GitHub tokens",
+    "matched_pattern": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij1234",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "GitHub PATs use the ghp_ prefix (personal), gho_ (OAuth), ghu_ (user-to-server), ghs_ (server-to-server), ghr_ (refresh)"
+  }
+}

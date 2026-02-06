@@ -1,0 +1,28 @@
+{
+  "packet_id": "GP-0022",
+  "schema_version": "1.0.0",
+  "description": "Base pack: empty file should produce no findings (boundary test)",
+  "tags": ["base", "boundary", "edge-case", "negative-test"],
+  "rule_id": "SECRET_API_KEY_DETECTED",
+  "rule_version": "1.0.0",
+  "pack_name": "base",
+  "input_facts": {
+    "files": [
+      {
+        "path": "empty.py",
+        "content": ""
+      }
+    ]
+  },
+  "expected": {
+    "triggered": false,
+    "finding_count_min": 0,
+    "finding_count_max": 0,
+    "has_blocking": false
+  },
+  "explanation_trace": {
+    "why_triggered": "Empty file has no content to match any patterns against",
+    "scanner_type": "SecretScanner",
+    "edge_case_notes": "Boundary test: ensures scanner handles empty files gracefully without errors or false positives"
+  }
+}
