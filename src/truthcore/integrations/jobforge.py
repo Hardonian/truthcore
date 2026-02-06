@@ -7,7 +7,7 @@ and decision traceability).
 
 Usage:
     from truthcore.integrations.jobforge import JobForgePolicyValidator
-    
+
     validator = JobForgePolicyValidator()
     result = validator.validate_for_jobforge(
         jobforge_output=job_data,
@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from truthcore.findings import Finding, FindingReport, Location
+from truthcore.findings import Finding, Location
 from truthcore.policy.decisions import (
     PolicyConflictResolver,
     PolicyDecision,
@@ -32,7 +32,7 @@ from truthcore.policy.decisions import (
     PolicyOverride,
     PolicyPriority,
 )
-from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
+from truthcore.policy.engine import PolicyPackLoader
 from truthcore.policy.models import PolicyPack, PolicyRule
 from truthcore.refusal_codes import RefusalCode, RefusalReason
 
@@ -40,7 +40,7 @@ from truthcore.refusal_codes import RefusalCode, RefusalReason
 @dataclass
 class JobForgePolicyResult:
     """Result of JobForge policy validation.
-    
+
     Attributes:
         passed: Whether validation passed
         findings: List of findings from policy evaluation
@@ -49,14 +49,14 @@ class JobForgePolicyResult:
         correlation_id: Correlation ID for provenance
         metadata: Additional metadata
     """
-    
+
     passed: bool
     findings: list[Finding] = field(default_factory=list)
     decision_trace: PolicyDecisionTrace = field(default_factory=PolicyDecisionTrace)
     refusal_reasons: list[RefusalReason] = field(default_factory=list)
     correlation_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -72,11 +72,11 @@ class JobForgePolicyResult:
 
 class JobForgePolicyValidator:
     """Explicit policy validator for JobForge integration.
-    
+
     This validator provides JobForge with the ability to request
     policy validation explicitly, receiving full decision traces
     and evidence packets for explainability.
-    
+
     Key features:
     - Explicit policy pack selection
     - Priority-based conflict resolution
@@ -84,16 +84,16 @@ class JobForgePolicyValidator:
     - Deterministic override support
     - Refusal reason generation
     """
-    
+
     def __init__(self, policy_packs_dir: Path | None = None) -> None:
         """Initialize the validator.
-        
+
         Args:
             policy_packs_dir: Optional directory containing policy packs
         """
         self.policy_packs_dir = policy_packs_dir
         self._cache: dict[str, PolicyPack] = {}
-    
+
     def validate_for_jobforge(
         self,
         jobforge_output: dict[str, Any],
@@ -103,29 +103,29 @@ class JobForgePolicyValidator:
         context: dict[str, Any] | None = None,
     ) -> JobForgePolicyResult:
         """Validate JobForge output against policies.
-        
+
         Args:
             jobforge_output: Output from JobForge to validate
             correlation_id: Optional correlation ID for provenance
             explicit_policies: List of policy pack names to apply
             overrides: Optional list of policy overrides
             context: Optional evaluation context
-            
+
         Returns:
             JobForgePolicyResult with findings and decision trace
         """
         explicit_policies = explicit_policies or ["base", "security"]
         overrides = overrides or []
         context = context or {}
-        
+
         result = JobForgePolicyResult(
             passed=True,
             correlation_id=correlation_id,
         )
-        
+
         # Load and evaluate each policy pack
         all_decisions: list[PolicyDecision] = []
-        
+
         for pack_name in explicit_policies:
             try:
                 pack = self._load_pack(pack_name)
@@ -145,7 +145,7 @@ class JobForgePolicyValidator:
                     )
                 )
                 result.passed = False
-        
+
         # Resolve conflicts and determine final outcome
         if all_decisions:
             final_effect, trace = PolicyConflictResolver.resolve(
@@ -154,7 +154,7 @@ class JobForgePolicyValidator:
                 context=context,
             )
             result.decision_trace = trace
-            
+
             # Convert effective decisions to findings
             for decision in trace.get_effective_decisions():
                 if decision.effect == PolicyEffect.DENY:
@@ -165,7 +165,7 @@ class JobForgePolicyValidator:
                     )
                     result.findings.append(finding)
                     result.passed = False
-                    
+
                     # Generate refusal reason
                     result.refusal_reasons.append(
                         RefusalReason(
@@ -178,7 +178,7 @@ class JobForgePolicyValidator:
                             },
                         )
                     )
-        
+
         # Record metadata
         result.metadata = {
             "policies_evaluated": explicit_policies,
@@ -186,15 +186,15 @@ class JobForgePolicyValidator:
             "effective_decisions_count": len(result.decision_trace.get_effective_decisions()),
             "overrides_count": len(overrides),
         }
-        
+
         return result
-    
+
     def _load_pack(self, name: str) -> PolicyPack:
         """Load a policy pack with caching."""
         if name not in self._cache:
             self._cache[name] = PolicyPackLoader.load_pack(name)
         return self._cache[name]
-    
+
     def _evaluate_pack(
         self,
         pack: PolicyPack,
@@ -202,17 +202,17 @@ class JobForgePolicyValidator:
         context: dict[str, Any],
     ) -> list[PolicyDecision]:
         """Evaluate a policy pack against JobForge output.
-        
+
         Args:
             pack: Policy pack to evaluate
             jobforge_output: JobForge output to check
             context: Evaluation context
-            
+
         Returns:
             List of policy decisions
         """
         decisions: list[PolicyDecision] = []
-        
+
         for rule in pack.get_enabled_rules():
             decision = self._evaluate_rule(
                 rule=rule,
@@ -221,9 +221,9 @@ class JobForgePolicyValidator:
                 context=context,
             )
             decisions.append(decision)
-        
+
         return decisions
-    
+
     def _evaluate_rule(
         self,
         rule: PolicyRule,
@@ -232,26 +232,26 @@ class JobForgePolicyValidator:
         context: dict[str, Any],
     ) -> PolicyDecision:
         """Evaluate a single rule against JobForge output.
-        
+
         Args:
             rule: Policy rule to evaluate
             pack_name: Name of the policy pack
             jobforge_output: JobForge output to check
             context: Evaluation context
-            
+
         Returns:
             PolicyDecision with evaluation result
         """
         # Check if rule matches JobForge output
         matched = self._rule_matches(rule, jobforge_output)
-        
+
         # Check conditions if conditional
         conditions_met = True
         if rule.effect == PolicyEffect.CONDITIONAL and matched:
             # For now, assume conditions are in rule metadata
             conditions = rule.metadata.get("conditions", [])
             conditions_met = self._evaluate_conditions(conditions, context)
-        
+
         return PolicyDecision(
             policy_id=pack_name,
             rule_id=rule.id,
@@ -265,60 +265,60 @@ class JobForgePolicyValidator:
                 "rule_category": rule.category,
             },
         )
-    
+
     def _rule_matches(
         self,
         rule: PolicyRule,
         jobforge_output: dict[str, Any],
     ) -> bool:
         """Check if a rule matches the JobForge output.
-        
+
         This is a simplified implementation that checks:
         - If rule target matches JobForge output structure
         - If rule matchers match values in output
-        
+
         Args:
             rule: Policy rule
             jobforge_output: JobForge output
-            
+
         Returns:
             True if rule matches
         """
         # For now, simple keyword matching in output
         output_str = str(jobforge_output).lower()
-        
+
         # Check matchers if present
         if rule.matchers:
             for matcher in rule.matchers:
                 if matcher.matches(output_str):
                     return True
             return False
-        
+
         # Default: check if rule category appears in output
         return rule.category.lower() in output_str
-    
+
     def _evaluate_conditions(
         self,
         conditions: list[dict[str, Any]],
         context: dict[str, Any],
     ) -> bool:
         """Evaluate a list of conditions.
-        
+
         Args:
             conditions: List of condition dictionaries
             context: Evaluation context
-            
+
         Returns:
             True if all conditions are met
         """
         from truthcore.policy.decisions import PolicyCondition
-        
+
         for cond_data in conditions:
             condition = PolicyCondition.from_dict(cond_data)
             if not condition.evaluate(context):
                 return False
         return True
-    
+
     def _decision_to_finding(
         self,
         decision: PolicyDecision,
@@ -326,12 +326,12 @@ class JobForgePolicyValidator:
         trace: PolicyDecisionTrace,
     ) -> Finding:
         """Convert a policy decision to a Finding.
-        
+
         Args:
             decision: Policy decision
             correlation_id: Correlation ID for provenance
             trace: Full decision trace
-            
+
         Returns:
             Finding with policy evidence packet
         """
@@ -344,8 +344,10 @@ class JobForgePolicyValidator:
             decision_trace=trace,
             refusal_reason=f"Policy violation: {decision.rule_id}" if decision.effect == PolicyEffect.DENY else None,
         )
-        
+
         # Create finding
+        rule_description = decision.metadata.get("rule_description", "No description")
+        message = f"[{decision.effect.value.upper()}] Policy '{decision.policy_id}': {rule_description}"
         finding = Finding(
             rule_id=decision.rule_id,
             severity=self._priority_to_severity(decision.priority),
@@ -353,7 +355,7 @@ class JobForgePolicyValidator:
             location=Location(
                 path=f"policy://{decision.policy_id}/{decision.rule_id}",
             ),
-            message=f"[{decision.effect.value.upper()}] Policy '{decision.policy_id}': {decision.metadata.get('rule_description', 'No description')}",
+            message=message,
             policy_evidence=evidence,
             metadata={
                 "correlation_id": correlation_id,
@@ -362,20 +364,20 @@ class JobForgePolicyValidator:
                 "pipeline_stages_completed": ["jobforge", "policy_validation", "truthcore"],
             },
         )
-        
+
         return finding
-    
+
     def _priority_to_severity(self, priority: PolicyPriority) -> Any:
         """Convert policy priority to finding severity.
-        
+
         Args:
             priority: Policy priority
-            
+
         Returns:
             Severity level
         """
         from truthcore.severity import Severity
-        
+
         mapping = {
             PolicyPriority.CRITICAL: Severity.BLOCKER,
             PolicyPriority.HIGH: Severity.HIGH,
@@ -392,15 +394,15 @@ def create_jobforge_policy_result(
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a standardized JobForge policy result.
-    
+
     This is a convenience function for creating simple results
     without using the full validator.
-    
+
     Args:
         passed: Whether validation passed
         reason: Optional reason string
         correlation_id: Optional correlation ID
-        
+
     Returns:
         Dictionary with standardized result format
     """

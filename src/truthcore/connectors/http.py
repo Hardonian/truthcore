@@ -13,7 +13,6 @@ from urllib.request import Request, urlopen
 
 from truthcore.connectors.base import BaseConnector, ConnectorConfig, ConnectorResult
 
-
 # Default retry configuration
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BASE_DELAY = 1.0  # seconds

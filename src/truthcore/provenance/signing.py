@@ -14,16 +14,19 @@ import base64
 import hashlib
 import os
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 
 
 class SigningError(Exception):
     """Error during signing operation."""
+
     pass
 
 
 class VerificationError(Exception):
     """Error during verification."""
+
     pass
 
 
@@ -59,7 +62,6 @@ class Signature:
         if data[:2] != b"ED":
             raise VerificationError("Invalid signature algorithm")
 
-        key_id = data[2:10]
         signature = data[10:74]
 
         # Extract trusted comment if present
@@ -105,12 +107,9 @@ class Signer:
             self._load_keys_from_env()
 
         # Try to import cryptography library
-        try:
+        if find_spec("cryptography.hazmat.primitives.asymmetric.ed25519") is not None:
             from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-                Ed25519PrivateKey,
-                Ed25519PublicKey,
-            )
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
             self._has_crypto = True
 
@@ -122,7 +121,7 @@ class Signer:
                         encoding=serialization.Encoding.Raw,
                         format=serialization.PublicFormat.Raw,
                     )
-        except ImportError:
+        else:
             # Fall back to hash-based deterministic signing
             self._has_crypto = False
 
@@ -208,12 +207,10 @@ class Signer:
         pub_key = signature.public_key or self._public_key
 
         if self._has_crypto:
-            try:
-                from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-                    Ed25519PublicKey,
-                )
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-                verify_key = Ed25519PublicKey.from_public_bytes(pub_key)
+            verify_key = Ed25519PublicKey.from_public_bytes(pub_key)
+            try:
                 verify_key.verify(signature.signature, message)
                 return True
             except Exception:
@@ -222,8 +219,7 @@ class Signer:
             # Without cryptography library, we cannot do proper signature verification
             # The HMAC-based approach requires the private key, which the verifier doesn't have
             raise VerificationError(
-                "Signature verification requires the 'cryptography' library. "
-                "Install with: pip install cryptography"
+                "Signature verification requires the 'cryptography' library. Install with: pip install cryptography"
             )
 
     def sign_file(self, file_path: Path, output_path: Path | None = None) -> Path:
@@ -256,11 +252,9 @@ class Signer:
         Returns:
             Tuple of (private_key, public_key) as bytes
         """
-        try:
+        if find_spec("cryptography.hazmat.primitives.asymmetric.ed25519") is not None:
             from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-                Ed25519PrivateKey,
-            )
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
             private_key = Ed25519PrivateKey.generate()
             private_bytes = private_key.private_bytes(
@@ -273,13 +267,13 @@ class Signer:
                 format=serialization.PublicFormat.Raw,
             )
             return (private_bytes, public_bytes)
-        except ImportError:
-            # Generate deterministic keys using hash
-            import secrets
 
-            private_bytes = secrets.token_bytes(32)
-            public_bytes = hashlib.sha256(private_bytes).digest()[:32]
-            return (private_bytes, public_bytes)
+        # Generate deterministic keys using hash
+        import secrets
+
+        private_bytes = secrets.token_bytes(32)
+        public_bytes = hashlib.sha256(private_bytes).digest()[:32]
+        return (private_bytes, public_bytes)
 
     @classmethod
     def keys_to_env_format(cls, private_key: bytes, public_key: bytes) -> tuple[str, str]:

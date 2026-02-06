@@ -10,8 +10,6 @@ from typing import Any
 
 from truthcore.spine.graph import GraphStore
 from truthcore.spine.ingest import IngestionBridge
-from truthcore.spine.primitives import Decision as SpineDecision
-from truthcore.spine.primitives import DecisionType
 from truthcore.spine.primitives import Override as SpineOverride
 
 
@@ -57,6 +55,7 @@ class SpineBridge:
         # Also store as formal Override record
         if self.store and expires_at:
             from datetime import UTC, datetime
+
             override_record = SpineOverride(
                 override_id=f"override_{original}_{datetime.now(UTC).isoformat()}",
                 original_decision=original,
@@ -77,7 +76,7 @@ class SpineBridge:
         from datetime import datetime
 
         # Store in overrides directory
-        ts = datetime.fromisoformat(override.created_at.replace('Z', '+00:00'))
+        ts = datetime.fromisoformat(override.created_at.replace("Z", "+00:00"))
         override_dir = self.store.base_path / "overrides" / f"{ts.year}" / f"{ts.month:02d}-{ts.day:02d}"
         override_dir.mkdir(parents=True, exist_ok=True)
 

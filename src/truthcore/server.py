@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import functools
 import asyncio
+import functools
 import hashlib
 import json
 import logging
@@ -18,6 +18,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi import status as http_status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -38,11 +39,7 @@ from truthcore.invariant_dsl import InvariantDSL
 from truthcore.manifest import RunManifest, normalize_timestamp
 from truthcore.parquet_store import HistoryCompactor
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
-from truthcore.security import SecurityLimits
-from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from truthcore.security import SecurityLimits, safe_extract_zip
 
 # Import security utilities
 from truthcore.server_security import (
@@ -58,9 +55,15 @@ from truthcore.server_security import (
     generate_error_id,
     validate_api_key_format,
 )
+from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Security configuration
 SECURITY_BEARER = HTTPBearer(auto_error=False)
+SECURITY_BEARER_DEPENDENCY = Depends(SECURITY_BEARER)
+UPLOAD_FILE_FIELD = File(None)
 
 
 class JudgeRequest(BaseModel):
@@ -125,7 +128,7 @@ rate_limit_last_seen: dict[str, float] = {}
 
 
 def verify_api_key(
-    credentials: HTTPAuthorizationCredentials | None = Depends(SECURITY_BEARER),
+    credentials: HTTPAuthorizationCredentials | None = SECURITY_BEARER_DEPENDENCY,
     api_key: str | None = None,
 ) -> bool:
     """Verify API key authentication.
@@ -261,8 +264,7 @@ async def lifespan(app: FastAPI):
 
     if not api_key:
         logger.warning(
-            "TRUTHCORE_API_KEY not set - API authentication is DISABLED. "
-            "This is INSECURE for production deployments."
+            "TRUTHCORE_API_KEY not set - API authentication is DISABLED. This is INSECURE for production deployments."
         )
     else:
         logger.info("API authentication enabled")
@@ -331,7 +333,7 @@ def create_app(
     async def generic_exception_handler(request: Request, exc: Exception):
         """Handle uncaught exceptions with standardized error envelopes."""
         error_id = generate_error_id()
-        request_id = getattr(request.state, 'request_id', 'unknown')
+        request_id = getattr(request.state, "request_id", "unknown")
 
         # Determine error category based on exception type
         if isinstance(exc, ValidationError):
@@ -368,6 +370,36 @@ def create_app(
             content=error_content,
         )
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """Wrap HTTP exceptions in a standardized error envelope."""
+        error_id = generate_error_id()
+        request_id = getattr(request.state, "request_id", "unknown")
+        error_content = create_error_response(
+            error_id=error_id,
+            request_id=request_id,
+            error=exc,
+            category=ErrorCategory.VALIDATION if exc.status_code < 500 else ErrorCategory.INTERNAL,
+            severity=ErrorSeverity.WARNING if exc.status_code < 500 else ErrorSeverity.ERROR,
+            include_traceback=debug,
+        )
+        return JSONResponse(status_code=exc.status_code, content=error_content)
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+        """Wrap request validation errors in a standardized envelope."""
+        error_id = generate_error_id()
+        request_id = getattr(request.state, "request_id", "unknown")
+        error_content = create_error_response(
+            error_id=error_id,
+            request_id=request_id,
+            error=exc,
+            category=ErrorCategory.VALIDATION,
+            severity=ErrorSeverity.WARNING,
+            include_traceback=debug,
+        )
+        return JSONResponse(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, content=error_content)
+
     @app.get("/", response_class=HTMLResponse)
     async def root():
         """Serve the HTML GUI."""
@@ -380,8 +412,7 @@ def create_app(
             auth_status = '<p style="color: #28a745;">✅ API authentication is enabled.</p>'
         else:
             auth_status = (
-                '<p style="color: #dc3545;">⚠️ API authentication is DISABLED. '
-                "Set TRUTHCORE_API_KEY for production.</p>"
+                '<p style="color: #dc3545;">⚠️ API authentication is DISABLED. Set TRUTHCORE_API_KEY for production.</p>'
             )
 
         # Build CORS status HTML
@@ -480,7 +511,7 @@ def create_app(
         parallel: bool = Form(default=True),
         policy_pack: str | None = Form(default=None),
         sign: bool = Form(default=False),
-        inputs: UploadFile | None = File(None),
+        inputs: UploadFile | None = UPLOAD_FILE_FIELD,
         _auth: bool = Depends(verify_api_key),
         _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
     ):
@@ -515,17 +546,13 @@ def create_app(
                 # Handle uploaded inputs
                 inputs_path = None
                 if inputs:
-                    import zipfile
-
                     inputs_zip = tmp_path / "inputs.zip"
                     max_size = 100 * 1024 * 1024
                     await _write_upload_to_path(inputs, inputs_zip, max_size)
 
                     inputs_path = tmp_path / "inputs"
                     inputs_path.mkdir()
-
-                    with zipfile.ZipFile(inputs_zip, "r") as zf:
-                        zf.extractall(inputs_path)
+                    safe_extract_zip(inputs_zip, inputs_path, SecurityLimits(max_file_size=max_size))
 
                 # Create manifest
                 manifest = RunManifest.create(
@@ -640,7 +667,7 @@ def create_app(
         mode: str = Form(default="readiness"),
         compact: bool = Form(default=False),
         retention_days: int = Form(default=90),
-        inputs: UploadFile | None = File(None),
+        inputs: UploadFile | None = UPLOAD_FILE_FIELD,
         _auth: bool = Depends(verify_api_key),
         _rate: bool = Depends(functools.partial(check_rate_limit, max_requests=10, window_seconds=60)),
     ):
@@ -670,17 +697,13 @@ def create_app(
                 # Handle uploaded inputs
                 inputs_path = None
                 if inputs:
-                    import zipfile
-
                     inputs_zip = tmp_path / "inputs.zip"
                     max_size = 100 * 1024 * 1024
                     await _write_upload_to_path(inputs, inputs_zip, max_size)
 
                     inputs_path = tmp_path / "inputs"
                     inputs_path.mkdir()
-
-                    with zipfile.ZipFile(inputs_zip, "r") as zf:
-                        zf.extractall(inputs_path)
+                    safe_extract_zip(inputs_zip, inputs_path, SecurityLimits(max_file_size=max_size))
 
                 inputs_path = inputs_path or Path(".")
 
@@ -899,12 +922,10 @@ def create_app(
 
                     payload = {
                         "engines": [
-                            {"id": e.engine_id, "include": e.include, "reason": e.reason}
-                            for e in plan.engines
+                            {"id": e.engine_id, "include": e.include, "reason": e.reason} for e in plan.engines
                         ],
                         "invariants": [
-                            {"id": i.rule_id, "include": i.include, "reason": i.reason}
-                            for i in plan.invariants
+                            {"id": i.rule_id, "include": i.include, "reason": i.reason} for i in plan.invariants
                         ],
                     }
                     impact_cache[cache_key] = (now + cache_ttl, payload)
@@ -923,14 +944,8 @@ def create_app(
             )
 
             return {
-                "engines": [
-                    {"id": e.engine_id, "include": e.include, "reason": e.reason}
-                    for e in plan.engines
-                ],
-                "invariants": [
-                    {"id": i.rule_id, "include": i.include, "reason": i.reason}
-                    for i in plan.invariants
-                ],
+                "engines": [{"id": e.engine_id, "include": e.include, "reason": e.reason} for e in plan.engines],
+                "invariants": [{"id": i.rule_id, "include": i.include, "reason": i.reason} for i in plan.invariants],
             }
 
         except HTTPException:
