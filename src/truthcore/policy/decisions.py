@@ -131,20 +131,20 @@ class PolicyOverride:
     
     def is_active(self, context: dict[str, Any]) -> bool:
         """Check if override is currently active.
-        
+
         Args:
             context: Evaluation context
-            
+
         Returns:
             True if override applies
         """
-        from datetime import UTC, datetime
-        
+        from truthcore.determinism import stable_now
+
         # Check expiry
         if self.expires_at:
             try:
                 expiry = datetime.fromisoformat(self.expires_at)
-                if datetime.now(UTC) > expiry:
+                if stable_now() > expiry:
                     return False
             except ValueError:
                 return False

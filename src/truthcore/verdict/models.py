@@ -532,6 +532,16 @@ class VerdictResult:
             Severity.INFO: "⚪",
         }.get(severity, "⚪")
 
+    def to_envelope(self) -> dict[str, Any]:
+        """Wrap verdict in an explainability envelope.
+
+        Returns a dict with decision, reasons mapped to rule IDs,
+        evidence refs, uncertainty notes, and content hash.
+        """
+        from truthcore.envelope import ExplainabilityEnvelope
+        envelope = ExplainabilityEnvelope.from_verdict_result(self)
+        return envelope.to_dict()
+
     def write_json(self, path: Path) -> None:
         """Write verdict to JSON file."""
         import json
@@ -539,6 +549,14 @@ class VerdictResult:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2, sort_keys=True)
+
+    def write_envelope_json(self, path: Path) -> None:
+        """Write verdict wrapped in explainability envelope to JSON file."""
+        import json
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_envelope(), f, indent=2, sort_keys=True)
 
     def write_markdown(self, path: Path) -> None:
         """Write verdict to Markdown file."""

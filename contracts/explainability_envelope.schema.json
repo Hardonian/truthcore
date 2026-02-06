@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://truthcore.dev/schemas/explainability_envelope/v1.0.0/envelope.schema.json",
+  "title": "TruthCore Explainability Envelope",
+  "description": "Wraps any TruthCore output with decision, reasons mapped to rule IDs, evidence refs, and uncertainty notes.",
+  "type": "object",
+  "required": [
+    "envelope_version",
+    "decision",
+    "reasons",
+    "evidence_refs",
+    "uncertainty",
+    "timestamp",
+    "truthcore_version",
+    "content_hash",
+    "payload"
+  ],
+  "properties": {
+    "envelope_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "decision": {
+      "type": "string",
+      "description": "The final outcome (e.g., SHIP, NO_SHIP, PASS, FAIL)"
+    },
+    "reasons": {
+      "type": "array",
+      "description": "List of reasons, each mapped to a rule ID",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "description", "effect"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "description": "Stable identifier for the rule that produced this reason"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable explanation"
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["ship", "no_ship", "degrade", "info"],
+            "description": "How this reason affects the decision"
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "description": "Severity level if applicable"
+          },
+          "evidence_ref": {
+            "type": ["string", "null"],
+            "description": "Reference to supporting evidence"
+          }
+        }
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "description": "Sorted list of evidence packet hashes or IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uncertainty": {
+      "type": "array",
+      "description": "Explicit notes about unknowns (no fake precision)",
+      "items": {
+        "type": "object",
+        "required": ["source", "description", "impact"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "What produced this uncertainty"
+          },
+          "description": {
+            "type": "string",
+            "description": "What is uncertain"
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["may_change_verdict", "informational", "needs_review"],
+            "description": "How it affects the decision"
+          },
+          "confidence_range": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[low, high] confidence bounds"
+          }
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 timestamp"
+    },
+    "truthcore_version": {
+      "type": "string",
+      "description": "TruthCore version that produced this envelope"
+    },
+    "content_hash": {
+      "type": "string",
+      "description": "Blake2b hash of (decision + reasons + evidence_refs + payload)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "The actual output data"
+    }
+  },
+  "additionalProperties": false
+}
