@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import time
+import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from truthcore.evidence import EvidencePacket, RuleEvaluation
 from truthcore.findings import Finding, FindingReport
 from truthcore.policy.models import PolicyPack, PolicyRule
 from truthcore.policy.scanners import (
@@ -143,6 +148,216 @@ class PolicyEngine:
             return ArtifactScanner(self.context)
 
         return SecretScanner(self.context)
+
+    def run_pack_with_evidence(
+        self,
+        pack: PolicyPack,
+        config: dict[str, Any] | None = None,
+    ) -> tuple[PolicyResult, EvidencePacket]:
+        """Run a policy pack and generate evidence packet.
+
+        Returns:
+            Tuple of (PolicyResult, EvidencePacket)
+        """
+        import hashlib
+        import time
+
+        start_time = time.time()
+        result = PolicyResult(
+            pack_name=pack.name,
+            pack_version=pack.version,
+        )
+
+        # Validate input directory is safe
+        try:
+            check_path_safety(self.input_dir)
+        except Exception as e:
+            result.metadata["error"] = f"Invalid input directory: {e}"
+            # Create minimal evidence packet for error case
+            input_hash = hashlib.sha256(str(self.input_dir).encode()).hexdigest()
+            input_summary = {"error": str(e)}
+            rule_evaluations = []
+            # Compute policy pack hash inline to avoid circular import
+            pack_content = str(sorted(pack.to_dict().items()))
+            policy_pack_hash = hashlib.sha256(pack_content.encode("utf-8")).hexdigest()[:16]
+
+            evidence = EvidencePacket(
+                evaluation_id=str(uuid.uuid4()),
+                timestamp=datetime.now(UTC).isoformat(),
+                version="1.0.0",
+                policy_pack_name=pack.name,
+                policy_pack_version=pack.version,
+                policy_pack_hash=policy_pack_hash,
+                input_hash=input_hash,
+                input_summary=input_summary,
+                rules_evaluated=0,
+                rules_triggered=0,
+                rule_evaluations=rule_evaluations,
+                decision="deny",
+                decision_reason="Input validation failed",
+                blocking_findings=0,
+                execution_metadata={"error": str(e)},
+            )
+            return result, evidence
+
+        # Compute input hash and summary
+        input_hash = self._compute_input_hash()
+        input_summary = self._compute_input_summary()
+
+        # Run each enabled rule and collect evaluations
+        rule_evaluations = []
+        for rule in pack.get_enabled_rules():
+            rule_eval = self._run_rule_with_evaluation(rule)
+            rule_evaluations.append(rule_eval)
+            if rule_eval.triggered:
+                result.rules_triggered += 1
+                result.findings.extend(rule_eval.findings)
+            result.rules_evaluated += 1
+
+        result.scan_duration_ms = int((time.time() - start_time) * 1000)
+
+        # Determine decision
+        decision, decision_reason = self._determine_decision(result)
+
+        # Compute policy pack hash inline to avoid circular import
+        pack_content = str(sorted(pack.to_dict().items()))
+        policy_pack_hash = hashlib.sha256(pack_content.encode("utf-8")).hexdigest()[:16]
+
+        # Count blocking findings
+        blocking_findings = sum(
+            len(r.findings) for r in rule_evaluations
+            if r.triggered and any(f.severity.value == "BLOCKER" for f in r.findings)
+        )
+
+        # Create evidence packet
+        evidence = EvidencePacket(
+            evaluation_id=str(uuid.uuid4()),
+            timestamp=datetime.now(UTC).isoformat(),
+            version="1.0.0",
+            policy_pack_name=pack.name,
+            policy_pack_version=pack.version,
+            policy_pack_hash=policy_pack_hash,
+            input_hash=input_hash,
+            input_summary=input_summary,
+            rules_evaluated=result.rules_evaluated,
+            rules_triggered=result.rules_triggered,
+            rule_evaluations=rule_evaluations,
+            decision=decision,
+            decision_reason=decision_reason,
+            blocking_findings=blocking_findings,
+            execution_metadata={
+                "scan_duration_ms": result.scan_duration_ms,
+                "rules_evaluated": result.rules_evaluated,
+                "rules_triggered": result.rules_triggered,
+            },
+        )
+
+        return result, evidence
+
+    def _run_rule_with_evaluation(self, rule: PolicyRule) -> RuleEvaluation:
+        """Run a single rule and return detailed evaluation."""
+        findings = self._run_rule(rule)
+
+        # Check if rule was triggered
+        triggered = len(findings) > 0
+
+        # Check threshold
+        threshold_met = True
+        if rule.threshold:
+            if rule.threshold.count is not None:
+                threshold_met = len(findings) >= rule.threshold.count
+            if rule.threshold.distinct is not None:
+                distinct_values = len(set(str(f.target) for f in findings))
+                threshold_met = threshold_met and distinct_values >= rule.threshold.distinct
+            triggered = triggered and threshold_met
+
+        # Check suppressions
+        suppressed = False
+        suppressed_reason = None
+        if triggered:
+            for finding in findings:
+                if rule.is_suppressed(finding.target):
+                    suppressed = True
+                    suppressed_reason = "Finding suppressed by rule configuration"
+                    break
+
+        # Generate alternatives not triggered
+        alternatives_not_triggered = self._explain_alternatives(rule, findings)
+
+        return RuleEvaluation(
+            rule_id=rule.id,
+            rule_description=rule.description,
+            triggered=triggered and not suppressed,
+            matches_found=len(findings),
+            threshold_met=threshold_met,
+            suppressed=suppressed,
+            suppressed_reason=suppressed_reason,
+            findings=findings,
+            alternatives_not_triggered=alternatives_not_triggered,
+        )
+
+    def _explain_alternatives(self, rule: PolicyRule, findings: list[Finding]) -> list[str]:
+        """Explain why alternative conditions did not trigger."""
+        reasons = []
+
+        if not findings:
+            reasons.append("No matches found for any rule patterns")
+
+        if rule.threshold:
+            if rule.threshold.count is not None and len(findings) < rule.threshold.count:
+                reasons.append(f"Match count ({len(findings)}) below threshold ({rule.threshold.count})")
+            if rule.threshold.distinct is not None:
+                distinct_values = len(set(str(f.target) for f in findings))
+                if distinct_values < rule.threshold.distinct:
+                    reasons.append(f"Distinct values ({distinct_values}) below threshold ({rule.threshold.distinct})")
+
+        if rule.matchers:
+            matched_any = any(
+                any(matcher.matches(f.target) for matcher in rule.matchers)
+                for f in findings
+            )
+            if not matched_any:
+                reasons.append("No findings matched the rule's pattern matchers")
+
+        return reasons
+
+    def _compute_input_hash(self) -> str:
+        """Compute hash of input directory for integrity."""
+        import hashlib
+
+        # Simple hash of directory path and file count for now
+        # In production, this could hash file contents
+        dir_str = str(self.input_dir)
+        file_count = sum(1 for _ in self.input_dir.rglob("*") if _.is_file())
+        content = f"{dir_str}:{file_count}"
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def _compute_input_summary(self) -> dict[str, Any]:
+        """Compute summary of input without sensitive data."""
+        file_count = sum(1 for _ in self.input_dir.rglob("*") if _.is_file())
+        dir_count = sum(1 for _ in self.input_dir.rglob("*") if _.is_dir())
+
+        # Get file extensions
+        extensions = {}
+        for file_path in self.input_dir.rglob("*"):
+            if file_path.is_file():
+                ext = file_path.suffix.lower()
+                extensions[ext] = extensions.get(ext, 0) + 1
+
+        return {
+            "total_files": file_count,
+            "total_directories": dir_count,
+            "file_extensions": dict(sorted(extensions.items())),
+        }
+
+    def _determine_decision(self, result: PolicyResult) -> tuple[str, str]:
+        """Determine overall decision from results."""
+        if result.has_blocking():
+            return "deny", "Blocking findings detected"
+        elif result.findings:
+            return "conditional", "Non-blocking findings require review"
+        else:
+            return "allow", "All checks passed"
 
     def write_outputs(
         self,

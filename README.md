@@ -77,6 +77,64 @@ pnpm run typecheck
 pnpm run test
 ```
 
+## Provable Rules Engine
+
+Truth Core provides a deterministic rules engine that produces auditable evidence packets for all policy evaluations.
+
+### Clean API
+
+```python
+from truthcore.rules_engine import evaluate
+
+# Evaluate input against a policy pack
+result = evaluate("./src", "security")
+print(f"Decision: {result['decision']}")  # "allow", "deny", or "conditional"
+print(f"Evidence: {result['evidence']}")  # EvidencePacket object
+print(result['summary'])  # Human-readable markdown summary
+```
+
+### Evidence Packets
+
+Every evaluation produces a machine-readable JSON evidence packet containing:
+
+- **Inputs**: Content hash and summary of evaluated data
+- **Rules Evaluated**: Detailed evaluation of each rule with match counts and thresholds
+- **Decisions**: Final decision with reasoning
+- **Timestamps & Versions**: For auditability
+- **Explain Why Not**: For each rule, why alternatives didn't trigger
+
+### How to Add a Rule Safely
+
+1. **Define the rule** in YAML under `src/truthcore/policy/packs/`:
+   ```yaml
+   - id: YOUR_RULE_ID
+     description: What this rule detects
+     severity: HIGH  # BLOCKER, HIGH, MEDIUM, LOW
+     category: security  # security, privacy, config, artifact
+     target: files  # files, logs, json_fields, findings, traces
+     matchers:
+       - type: regex
+         pattern: "your-pattern"
+     suggestion: How to fix violations
+   ```
+
+2. **Test locally** with the new API:
+   ```bash
+   truthctl policy run --inputs ./test-data --pack base --out ./test-results
+   ```
+
+3. **Add golden tests** in `tests/test_evidence_golden.py` to ensure deterministic behavior
+
+4. **Update documentation** - rules are self-documenting via evidence packets
+
+### Interpreting Evidence
+
+- **Decision = "allow"**: All checks passed, no violations found
+- **Decision = "conditional"**: Non-blocking findings found, review recommended
+- **Decision = "deny"**: Blocking violations detected, action required
+
+Evidence packets include "Explain Why Not" for each rule, showing why alternatives didn't trigger (e.g., "No matches found for pattern", "Threshold not met").
+
 ## Integrate in 3 Minutes
 
 ### 1. GitHub Actions (10 lines of YAML)
@@ -209,6 +267,8 @@ Declarative rules that define "must always be true" conditions for your system. 
 
 ### Policy
 Policy-as-code for security, privacy, and compliance checks. Define rules in YAML and run them against any codebase. Policies integrate with your existing approval structures.
+
+**Provable Rules Engine** - All policy evaluations produce auditable evidence packets containing inputs, rules evaluated, decisions, and timestamps. Outputs are deterministic and verifiable.
 
 ### Provenance
 Full chain of custody for all evidence. Know exactly when, how, and by whom each artifact was created. All provenance data is preserved in local artifacts.

@@ -289,12 +289,23 @@ def judge(
 
             pack = PolicyPackLoader.load_pack(policy_pack)
             policy_engine = PolicyEngine(inputs or Path("."), out)
-            policy_result = policy_engine.run_pack(pack)
-            policy_engine.write_outputs(policy_result)
+            policy_result, evidence_packet = policy_engine.run_pack_with_evidence(pack)
+
+            # Write traditional outputs
+            paths = policy_engine.write_outputs(policy_result, base_name="policy")
+
+            # Write evidence packet
+            evidence_json_path = out / "evidence_packet.json"
+            evidence_md_path = out / "evidence_packet.md"
+            evidence_packet.to_json(evidence_json_path)
+            evidence_packet.to_markdown_file(evidence_md_path)
 
             click.echo(f"  Policy findings: {len(policy_result.findings)}")
+            click.echo(f"  Decision: {evidence_packet.decision.upper()}")
             if policy_result.has_blocking():
                 click.echo("  ⚠️  Blocking policy violations detected!")
+            click.echo(f"  Evidence packet: {evidence_json_path}")
+            click.echo(f"  Evidence summary: {evidence_md_path}")
 
         # Generate evidence manifest
         if manifest:
@@ -804,10 +815,16 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
 
         click.echo(f"Running policy scan on: {inputs}...")
         engine = PolicyEngine(inputs, out)
-        result = engine.run_pack(policy_pack)
+        result, evidence_packet = engine.run_pack_with_evidence(policy_pack)
 
         # Write outputs
         paths = engine.write_outputs(result, base_name="policy")
+
+        # Write evidence packet
+        evidence_json_path = out / "evidence_packet.json"
+        evidence_md_path = out / "evidence_packet.md"
+        evidence_packet.to_json(evidence_json_path)
+        evidence_packet.to_markdown_file(evidence_md_path)
 
         duration_ms = int((time.time() - start_time) * 1000)
 
@@ -815,6 +832,7 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
         click.echo(f"  Rules evaluated: {result.rules_evaluated}")
         click.echo(f"  Rules triggered: {result.rules_triggered}")
         click.echo(f"  Findings: {len(result.findings)}")
+        click.echo(f"  Decision: {evidence_packet.decision.upper()}")
 
         if result.has_blocking():
             blocker_count = sum(1 for f in result.findings if f.severity.value == "BLOCKER")
@@ -824,6 +842,8 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
         click.echo(f"  - JSON:  {paths['json']}")
         click.echo(f"  - MD:    {paths['markdown']}")
         click.echo(f"  - CSV:   {paths['csv']}")
+        click.echo(f"  - Evidence JSON: {evidence_json_path}")
+        click.echo(f"  - Evidence Summary: {evidence_md_path}")
     except FileNotFoundError as e:
         handle_error(e, debug)
     except Exception as e:
