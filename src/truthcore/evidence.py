@@ -75,14 +75,31 @@ class EvidencePacket:
 
     def compute_content_hash(self) -> str:
         """Compute hash of the evidence content for integrity."""
-        # Sort all nested structures for deterministic hashing
-        content = self.to_dict()
-        # Remove timestamp and evaluation_id for content hash
-        content_for_hash = {
-            k: v for k, v in content.items()
-            if k not in ("evaluation_id", "timestamp")
+        # Create dict without content_hash field to avoid recursion
+        content_dict = {
+            "version": self.version,
+            "policy_pack": {
+                "name": self.policy_pack_name,
+                "version": self.policy_pack_version,
+                "hash": self.policy_pack_hash,
+            },
+            "input": {
+                "hash": self.input_hash,
+                "summary": dict(sorted(self.input_summary.items())),
+            },
+            "evaluation": {
+                "rules_evaluated": self.rules_evaluated,
+                "rules_triggered": self.rules_triggered,
+                "rule_evaluations": [r.to_dict() for r in self.rule_evaluations],
+            },
+            "decision": {
+                "outcome": self.decision,
+                "reason": self.decision_reason,
+                "blocking_findings": self.blocking_findings,
+            },
+            "execution_metadata": dict(sorted(self.execution_metadata.items())),
         }
-        content_str = json.dumps(content_for_hash, sort_keys=True, separators=(',', ':'))
+        content_str = json.dumps(content_dict, sort_keys=True, separators=(',', ':'))
         return hashlib.sha256(content_str.encode('utf-8')).hexdigest()
 
     def to_dict(self) -> dict[str, Any]:

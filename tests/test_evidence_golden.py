@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 from pathlib import Path
 
@@ -41,23 +42,43 @@ class TestEvidencePacketDeterminism:
             alternatives_not_triggered=["No matches found for any rule patterns"],
         )
 
+        # Compute policy pack hash
+        pack_content = str(sorted(pack.to_dict().items()))
+        policy_pack_hash = hashlib.sha256(pack_content.encode("utf-8")).hexdigest()[:16]
+
         # Create packet twice
-        packet1 = EvidencePacket.create(
-            policy_pack=pack,
+        packet1 = EvidencePacket(
+            evaluation_id="test-id-1",
+            timestamp="2024-01-01T00:00:00",
+            version="1.0.0",
+            policy_pack_name=pack.name,
+            policy_pack_version=pack.version,
+            policy_pack_hash=policy_pack_hash,
             input_hash="test-hash-123",
             input_summary={"test": "data"},
+            rules_evaluated=1,
+            rules_triggered=1,
             rule_evaluations=[rule_eval],
             decision="allow",
             decision_reason="Test decision",
+            blocking_findings=0,
         )
 
-        packet2 = EvidencePacket.create(
-            policy_pack=pack,
+        packet2 = EvidencePacket(
+            evaluation_id="test-id-2",
+            timestamp="2024-01-01T00:00:00",
+            version="1.0.0",
+            policy_pack_name=pack.name,
+            policy_pack_version=pack.version,
+            policy_pack_hash=policy_pack_hash,
             input_hash="test-hash-123",
             input_summary={"test": "data"},
+            rules_evaluated=1,
+            rules_triggered=1,
             rule_evaluations=[rule_eval],
             decision="allow",
             decision_reason="Test decision",
+            blocking_findings=0,
         )
 
         # Serialize both
@@ -73,7 +94,6 @@ class TestEvidencePacketDeterminism:
 
     def test_content_hash_deterministic(self):
         """Content hash should be deterministic."""
-
         pack = PolicyPack(
             name="test-pack",
             description="Test pack",
@@ -98,22 +118,42 @@ class TestEvidencePacketDeterminism:
             alternatives_not_triggered=[],
         )
 
-        packet1 = EvidencePacket.create(
-            policy_pack=pack,
+        # Compute policy pack hash
+        pack_content = str(sorted(pack.to_dict().items()))
+        policy_pack_hash = hashlib.sha256(pack_content.encode("utf-8")).hexdigest()[:16]
+
+        packet1 = EvidencePacket(
+            evaluation_id="test-id-1",
+            timestamp="2024-01-01T00:00:00",
+            version="1.0.0",
+            policy_pack_name=pack.name,
+            policy_pack_version=pack.version,
+            policy_pack_hash=policy_pack_hash,
             input_hash="test-hash-123",
             input_summary={"test": "data"},
+            rules_evaluated=1,
+            rules_triggered=1,
             rule_evaluations=[rule_eval],
             decision="allow",
             decision_reason="Test decision",
+            blocking_findings=0,
         )
 
-        packet2 = EvidencePacket.create(
-            policy_pack=pack,
+        packet2 = EvidencePacket(
+            evaluation_id="test-id-1",  # Same ID for content hash test
+            timestamp="2024-01-01T00:00:00",
+            version="1.0.0",
+            policy_pack_name=pack.name,
+            policy_pack_version=pack.version,
+            policy_pack_hash=policy_pack_hash,
             input_hash="test-hash-123",
             input_summary={"test": "data"},
+            rules_evaluated=1,
+            rules_triggered=1,
             rule_evaluations=[rule_eval],
             decision="allow",
             decision_reason="Test decision",
+            blocking_findings=0,
         )
 
         assert packet1.compute_content_hash() == packet2.compute_content_hash()

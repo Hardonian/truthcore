@@ -361,7 +361,15 @@ class PolicyPack:
 
     def compute_hash(self) -> str:
         """Compute content hash for integrity."""
-        content = str(sorted(self.to_dict().items()))
+        # Create dict without the _hash field to avoid recursion
+        content_dict = {
+            "name": self.name,
+            "description": self.description,
+            "version": self.version,
+            "rules": [r.to_dict() for r in self.rules],
+            "metadata": dict(sorted(self.metadata.items())),
+        }
+        content = str(sorted(content_dict.items()))
         return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
     def to_dict(self) -> dict[str, Any]:
