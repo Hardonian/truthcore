@@ -547,4 +547,4 @@ jobs:
           fetch-depth: 0
 
       - name: Check conventional commits
-        uses: webiny/action-conventional-commits@v1.3.0
+        uses: webiny/action-conventional-commits@v1.3.1
