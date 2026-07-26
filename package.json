@@ -36,7 +36,9 @@
     "install:all": "pnpm install && pnpm run install:python",
     "dev:dashboard": "cd dashboard && pnpm run dev",
     "contracts:check": "python scripts/contracts_check.py",
+    "status": "python scripts/status.py",
     "doctor": "python scripts/doctor.py",
+    "verify:operator": "python scripts/verify_operator.py",
     "ci": "pnpm run verify:ci && pnpm run contracts:check && pnpm run doctor"
   },
   "keywords": [

@@ -37,6 +37,18 @@ truthctl dashboard demo --out ./demo
 # Open demo_out/dashboard/index.html in your browser
 ```
 
+## Operator Status and Verification
+
+Truth Core is distributed as a local library/CLI. The repository does not claim hosted availability, customer deployments, or revenue. Use these non-destructive checks before relying on a result:
+
+```bash
+pnpm run status          # machine-readable local snapshot
+pnpm run doctor          # dependency and environment diagnostics
+pnpm run verify:operator # status + doctor + contract checks
+```
+
+`verify:operator` returns the first failing command's exit code. For an actual evidence bundle, run `truthctl verify-bundle --bundle ./results`; a passing unit test is not a substitute for verifying the bundle you intend to ship.
+
 ## Installation
 
 ```bash

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "product": "truthcore",
+  "scope": "local_repository",
+  "commands": {
+    "status": "pnpm run status",
+    "doctor": "pnpm run doctor",
+    "verify": "pnpm run verify:operator",
+    "evidence_verify": "truthctl verify-bundle --bundle ./results"
+  },
+  "evidence": {"required": ["status", "doctor", "contracts_check"], "failure_policy": "first_nonzero_exit"},
+  "rollback": {"mode": "filesystem_bundle_selection", "command": "restore_previous_verified_bundle", "destructive": false},
+  "claims": {"hosted": false, "customer_proof": false, "revenue_proof": false}
+}
