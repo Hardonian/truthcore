@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from truthcore import __version__
 from truthcore.anomaly_scoring import (
@@ -97,6 +97,19 @@ class ExplainRequest(BaseModel):
     data: dict[str, Any]
     ruleset: ExplainRuleset
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_payload(cls, values: Any) -> Any:
+        """Accept the original ``rule``/mapping payload as well as the current schema."""
+        if not isinstance(values, dict):
+            return values
+        normalized = dict(values)
+        if "rule_id" not in normalized and "rule" in normalized:
+            normalized["rule_id"] = normalized["rule"]
+        if "ruleset" not in normalized and isinstance(normalized.get("rules"), dict):
+            normalized["ruleset"] = {"rules": list(normalized["rules"].values())}
+        return normalized
+
 
 class HealthResponse(BaseModel):
     """Health check response."""
@@ -158,13 +171,16 @@ def verify_api_key(
         provided_key = api_key
 
     if not provided_key:
-        raise AuthenticationError(
-            "API key required. Provide via Authorization: Bearer <key> header or ?api_key= query parameter",
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="API key required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Validate API key format
-    if not validate_api_key_format(provided_key):
-        raise AuthenticationError("Invalid API key format")
+    # Reject malformed non-matching keys early, but permit an explicitly configured
+    # local/test key so deployments can use their own secret policy.
+    if provided_key != expected_key and not validate_api_key_format(provided_key):
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid API key format")
 
     # Constant-time comparison to prevent timing attacks
     if not secrets.compare_digest(provided_key, expected_key):

@@ -9,7 +9,6 @@ from pathlib import Path
 from truthcore.evidence import EvidencePacket, RuleEvaluation
 from truthcore.policy.models import PolicyPack, PolicyRule, Severity
 from truthcore.rules_engine import RulesEngine
-from truthcore.rules_engine import RulesEngine
 
 
 class TestEvidencePacketDeterminism:

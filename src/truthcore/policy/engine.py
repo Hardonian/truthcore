@@ -87,7 +87,6 @@ class PolicyEngine:
         Returns:
             PolicyResult with findings
         """
-        import time
 
         start_time = time.time()
         result = PolicyResult(
@@ -159,7 +158,6 @@ class PolicyEngine:
         Returns:
             Tuple of (PolicyResult, EvidencePacket)
         """
-        import hashlib
         import time
 
         start_time = time.time()
@@ -323,7 +321,6 @@ class PolicyEngine:
 
     def _compute_input_hash(self) -> str:
         """Compute hash of input directory for integrity."""
-        import hashlib
 
         # Simple hash of directory path and file count for now
         # In production, this could hash file contents

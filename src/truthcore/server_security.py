@@ -16,7 +16,7 @@ import secrets
 import time
 import uuid
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from fastapi import Request, Response
@@ -25,7 +25,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 logger = logging.getLogger(__name__)
 
 
-class ErrorCategory(str, Enum):
+class ErrorCategory(StrEnum):
     """Error categories for classification."""
 
     VALIDATION = "validation"
@@ -38,7 +38,7 @@ class ErrorCategory(str, Enum):
     CONFIGURATION = "configuration"
 
 
-class ErrorSeverity(str, Enum):
+class ErrorSeverity(StrEnum):
     """Error severity levels."""
 
     CRITICAL = "critical"
