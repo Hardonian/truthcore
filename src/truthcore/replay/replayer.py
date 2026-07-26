@@ -182,7 +182,7 @@ class ReplayEngine:
 
         try:
             # Determine mode and profile
-            replay_mode = mode or bundle.manifest.profile or "pr"
+            replay_mode = mode or "pr"
             replay_profile = profile or bundle.manifest.profile or "default"
 
             # Run the verdict aggregation using bundle inputs
@@ -221,7 +221,9 @@ class ReplayEngine:
 
         # Add findings from bundle outputs
         for output_file in bundle.get_output_files():
-            if output_file.suffix == ".json":
+            # The prior verdict is an output artifact, not an engine input.
+            # Feeding it back makes replay depend on its own previous result.
+            if output_file.suffix == ".json" and output_file.name != "verdict.json":
                 input_files.append(output_file)
 
         # Also check inputs directory

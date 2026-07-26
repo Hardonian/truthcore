@@ -34,6 +34,13 @@ DEFAULT_ALLOWLIST = {
     "cache_key",
     "cache_path",
     "cache_hit",
+    # Nested provenance/assignment metadata is regenerated during replay and
+    # does not change the finding, severity, or verdict content.
+    "source_file",
+    "inputs",
+    "assignments",
+    "category_assignment",
+    "temporal_record",
 }
 
 

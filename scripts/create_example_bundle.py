@@ -241,6 +241,19 @@ def create_example_bundle():
             "duration_ms": 5000,
         }, f, indent=2)
 
+    # Keep the fixture aligned with the current aggregation contract. The
+    # replay engine must reproduce this artifact without feeding the previous
+    # verdict back into itself.
+    from truthcore.verdict.aggregator import aggregate_verdict
+
+    current_verdict = aggregate_verdict(
+        input_paths=[run_dir / "readiness.json"],
+        mode="pr",
+        profile="ui",
+    )
+    current_verdict.write_json(run_dir / "verdict.json")
+    current_verdict.write_markdown(run_dir / "verdict.md")
+
     # Create run manifest
     manifest = RunManifest.create(
         command="judge",
