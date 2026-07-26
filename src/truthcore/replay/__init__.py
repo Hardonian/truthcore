@@ -5,6 +5,7 @@ Provides deterministic replay and counterfactual simulation capabilities.
 
 from truthcore.replay.bundle import BundleExporter, ReplayBundle
 from truthcore.replay.diff import DeterministicDiff, DiffComputer, compute_content_hash
+from truthcore.replay.evidence_packet import EvidencePacketExporter
 from truthcore.replay.replayer import ReplayEngine, ReplayReporter, ReplayResult
 from truthcore.replay.simulator import (
     SimulationChanges,
@@ -16,6 +17,7 @@ from truthcore.replay.simulator import (
 __all__ = [
     "ReplayBundle",
     "BundleExporter",
+    "EvidencePacketExporter",
     "ReplayEngine",
     "ReplayResult",
     "ReplayReporter",

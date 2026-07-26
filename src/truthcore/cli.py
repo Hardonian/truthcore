@@ -25,6 +25,7 @@ from truthcore.manifest import RunManifest, normalize_timestamp
 from truthcore.parquet_store import HistoryCompactor, ParquetStore
 from truthcore.replay import (
     BundleExporter,
+    EvidencePacketExporter,
     ReplayBundle,
     ReplayEngine,
     ReplayReporter,
@@ -41,6 +42,7 @@ def register_spine_commands(cli: click.Group) -> None:
     """Register spine CLI commands."""
     try:
         from truthcore.spine.cli import register_spine_commands as _register
+
         _register(cli)
     except ImportError:
         # Spine module not available
@@ -79,17 +81,17 @@ def get_cache(cache_dir: Path | None, readonly: bool = False) -> ContentAddresse
 
 @click.group()
 @click.version_option(version=__version__, prog_name="truthctl")
-@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory (default: .truthcache)')
-@click.option('--no-cache', is_flag=True, help='Disable cache')
-@click.option('--cache-readonly', is_flag=True, help='Use cache but do not write new entries')
-@click.option('--debug', is_flag=True, help='Enable debug mode (show full tracebacks)')
+@click.option("--cache-dir", type=click.Path(path_type=Path), help="Cache directory (default: .truthcache)")
+@click.option("--no-cache", is_flag=True, help="Disable cache")
+@click.option("--cache-readonly", is_flag=True, help="Use cache but do not write new entries")
+@click.option("--debug", is_flag=True, help="Enable debug mode (show full tracebacks)")
 @click.pass_context
 def cli(ctx: click.Context, cache_dir: Path | None, no_cache: bool, cache_readonly: bool, debug: bool):
     """Truth Core CLI - Deterministic evidence-based verification."""
     ctx.ensure_object(dict)
-    ctx.obj['cache_dir'] = None if no_cache else cache_dir
-    ctx.obj['cache_readonly'] = cache_readonly
-    ctx.obj['debug'] = debug
+    ctx.obj["cache_dir"] = None if no_cache else cache_dir
+    ctx.obj["cache_readonly"] = cache_readonly
+    ctx.obj["debug"] = debug
 
 
 # Register verdict commands
@@ -100,23 +102,23 @@ register_spine_commands(cli)
 
 
 @cli.command()
-@click.option('--inputs', '-i', type=click.Path(exists=True, path_type=Path), help='Input directory')
-@click.option('--profile', '-p', default='base')
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path))
-@click.option('--config', '-c', type=click.Path(exists=True, path_type=Path))
-@click.option('--strict/--no-strict', default=None)
-@click.option('--parallel/--sequential', default=True, help='Run engines in parallel')
-@click.option('--diff', '-d', type=click.Path(exists=True, path_type=Path), help='Git diff file for impact analysis')
+@click.option("--inputs", "-i", type=click.Path(exists=True, path_type=Path), help="Input directory")
+@click.option("--profile", "-p", default="base")
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--config", "-c", type=click.Path(exists=True, path_type=Path))
+@click.option("--strict/--no-strict", default=None)
+@click.option("--parallel/--sequential", default=True, help="Run engines in parallel")
+@click.option("--diff", "-d", type=click.Path(exists=True, path_type=Path), help="Git diff file for impact analysis")
 @click.option(
-    '--changed-files',
+    "--changed-files",
     type=click.Path(exists=True, path_type=Path),
-    help='Changed files list (newline or JSON)',
+    help="Changed files list (newline or JSON)",
 )
-@click.option('--plan-out', type=click.Path(path_type=Path), help='Output path for run_plan.json')
-@click.option('--policy-pack', type=str, help='Policy pack to run (built-in name or path)')
-@click.option('--sign/--no-sign', default=False, help='Sign the evidence bundle (requires signing keys)')
-@click.option('--manifest/--no-manifest', default=True, help='Generate evidence manifest')
-@click.option('--compat', is_flag=True, help='Enable backward compatibility mode (legacy formats)')
+@click.option("--plan-out", type=click.Path(path_type=Path), help="Output path for run_plan.json")
+@click.option("--policy-pack", type=str, help="Policy pack to run (built-in name or path)")
+@click.option("--sign/--no-sign", default=False, help="Sign the evidence bundle (requires signing keys)")
+@click.option("--manifest/--no-manifest", default=True, help="Generate evidence manifest")
+@click.option("--compat", is_flag=True, help="Enable backward compatibility mode (legacy formats)")
 @click.pass_context
 def judge(
     ctx: click.Context,
@@ -145,11 +147,11 @@ def judge(
     Use --compat for backward compatibility with truth-core < 0.2.0.
     """
     start_time = time.time()
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         # Setup cache
-        cache = get_cache(ctx.obj.get('cache_dir'), ctx.obj.get('cache_readonly', False))
+        cache = get_cache(ctx.obj.get("cache_dir"), ctx.obj.get("cache_readonly", False))
 
         run_plan_path = plan_out
 
@@ -240,6 +242,7 @@ def judge(
 
             # Copy cached outputs
             import shutil
+
             shutil.copytree(cache_path, out, dirs_exist_ok=True)
 
             # Update manifest with cache info
@@ -348,7 +351,7 @@ def judge(
         run_manifest.write(out)
 
         # Cache results
-        if cache and not ctx.obj.get('cache_readonly'):
+        if cache and not ctx.obj.get("cache_readonly"):
             cache.put(cache_key, out, run_manifest.to_dict())
 
         # Generate verdict
@@ -368,14 +371,14 @@ def judge(
 
 
 @cli.command()
-@click.option('--inputs', '-i', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path))
-@click.option('--config', '-c', type=click.Path(exists=True, path_type=Path))
+@click.option("--inputs", "-i", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--config", "-c", type=click.Path(exists=True, path_type=Path))
 @click.pass_context
 def recon(ctx: click.Context, inputs: Path, out: Path, config: Path | None):
     """Run reconciliation with anomaly detection."""
     start_time = time.time()
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         out.mkdir(parents=True, exist_ok=True)
@@ -410,14 +413,14 @@ def recon(ctx: click.Context, inputs: Path, out: Path, config: Path | None):
 
 
 @cli.command()
-@click.option('--inputs', '-i', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--fsm', '-f', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path))
+@click.option("--inputs", "-i", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--fsm", "-f", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
 @click.pass_context
 def trace(ctx: click.Context, inputs: Path, fsm: Path, out: Path):
     """Run trace analysis with FSM validation."""
     start_time = time.time()
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         out.mkdir(parents=True, exist_ok=True)
@@ -451,14 +454,14 @@ def trace(ctx: click.Context, inputs: Path, fsm: Path, out: Path):
 
 
 @cli.command()
-@click.option('--inputs', '-i', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path))
-@click.option('--parquet/--no-parquet', default=False, help='Write to Parquet history store')
+@click.option("--inputs", "-i", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--parquet/--no-parquet", default=False, help="Write to Parquet history store")
 @click.pass_context
 def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
     """Run knowledge indexing with optional Parquet storage."""
     start_time = time.time()
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         out.mkdir(parents=True, exist_ok=True)
@@ -500,16 +503,16 @@ def index(ctx: click.Context, inputs: Path, out: Path, parquet: bool):
 
 
 @cli.command()
-@click.option('--inputs', '-i', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--mode', '-m', required=True, type=click.Choice(['readiness', 'recon', 'agent', 'knowledge']))
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path))
-@click.option('--compact', is_flag=True, help='Compact history store')
-@click.option('--retention', type=int, default=90, help='Retention period in days for compaction')
+@click.option("--inputs", "-i", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--mode", "-m", required=True, type=click.Choice(["readiness", "recon", "agent", "knowledge"]))
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
+@click.option("--compact", is_flag=True, help="Compact history store")
+@click.option("--retention", type=int, default=90, help="Retention period in days for compaction")
 @click.pass_context
 def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool, retention: int):
     """Run intelligence analysis with anomaly scoring."""
     start_time = time.time()
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         out.mkdir(parents=True, exist_ok=True)
@@ -564,13 +567,13 @@ def intel(ctx: click.Context, inputs: Path, mode: str, out: Path, compact: bool,
 
 
 @cli.command()
-@click.option('--rule', '-r', required=True, help='Rule ID to explain')
-@click.option('--data', '-d', required=True, type=click.Path(exists=True, path_type=Path))
-@click.option('--rules', required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--rule", "-r", required=True, help="Rule ID to explain")
+@click.option("--data", "-d", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--rules", required=True, type=click.Path(exists=True, path_type=Path))
 @click.pass_context
 def explain(ctx: click.Context, rule: str, data: Path, rules: Path):
     """Explain an invariant rule evaluation."""
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         # Load data
@@ -591,11 +594,11 @@ def explain(ctx: click.Context, rule: str, data: Path, rules: Path):
 
 
 @cli.command()
-@click.option('--diff', '-d', type=click.Path(exists=True, path_type=Path), help='Git diff file')
-@click.option('--changed-files', type=click.Path(exists=True, path_type=Path), help='Changed files list')
-@click.option('--profile', '-p', default='base', help='Execution profile')
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output path for run_plan.json')
-@click.option('--source', '-s', help='Source identifier for the analysis')
+@click.option("--diff", "-d", type=click.Path(exists=True, path_type=Path), help="Git diff file")
+@click.option("--changed-files", type=click.Path(exists=True, path_type=Path), help="Changed files list")
+@click.option("--profile", "-p", default="base", help="Execution profile")
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output path for run_plan.json")
+@click.option("--source", "-s", help="Source identifier for the analysis")
 @click.pass_context
 def plan(
     ctx: click.Context,
@@ -610,7 +613,7 @@ def plan(
     Analyzes changes to determine which engines and invariants should run.
     Output is deterministic and cacheable.
     """
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         if not diff and not changed_files:
@@ -665,20 +668,22 @@ def plan(
 
 @cli.command(name="graph")
 @click.option(
-    '--run-dir', '-r', required=True,
+    "--run-dir",
+    "-r",
+    required=True,
     type=click.Path(exists=True, path_type=Path),
-    help='Run output directory containing run_manifest.json',
+    help="Run output directory containing run_manifest.json",
 )
-@click.option('--plan', type=click.Path(exists=True, path_type=Path), help='Run plan JSON (optional)')
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory for truth graph')
-@click.option('--format', type=click.Choice(['json', 'parquet', 'both']), default='json', help='Output format')
+@click.option("--plan", type=click.Path(exists=True, path_type=Path), help="Run plan JSON (optional)")
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output directory for truth graph")
+@click.option("--format", type=click.Choice(["json", "parquet", "both"]), default="json", help="Output format")
 @click.pass_context
 def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path, format: str):
     """Build a Truth Graph from run outputs.
 
     Creates a graph linking runs, engines, findings, evidence, and entities.
     """
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         out.mkdir(parents=True, exist_ok=True)
@@ -688,13 +693,13 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
         truth_graph = builder.build_from_run_directory(run_dir, plan)
 
         # Export to JSON
-        if format in ('json', 'both'):
+        if format in ("json", "both"):
             json_path = out / "truth_graph.json"
             truth_graph.to_json(json_path)
             click.echo(f"Truth graph (JSON) written to: {json_path}")
 
         # Export to Parquet
-        if format in ('parquet', 'both'):
+        if format in ("parquet", "both"):
             try:
                 parquet_dir = out / "truth_graph.parquet"
                 truth_graph.to_parquet(parquet_dir)
@@ -703,7 +708,7 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
                 click.echo(f"Warning: Could not export to Parquet: {e}", err=True)
 
         # Show stats
-        stats = truth_graph.to_dict()['stats']
+        stats = truth_graph.to_dict()["stats"]
         click.echo("\nGraph Statistics:")
         click.echo(f"  Nodes: {stats['node_count']}")
         click.echo(f"  Edges: {stats['edge_count']}")
@@ -713,15 +718,19 @@ def graph_build(ctx: click.Context, run_dir: Path, plan: Path | None, out: Path,
 
 @cli.command(name="graph-query")
 @click.option(
-    '--graph', '-g', required=True,
+    "--graph",
+    "-g",
+    required=True,
     type=click.Path(exists=True, path_type=Path),
-    help='Truth graph JSON file',
+    help="Truth graph JSON file",
 )
 @click.option(
-    '--where', '-w', required=True,
+    "--where",
+    "-w",
+    required=True,
     help='Query predicate (e.g., "severity=high")',
 )
-@click.option('--out', '-o', type=click.Path(path_type=Path), help='Output file for results')
+@click.option("--out", "-o", type=click.Path(path_type=Path), help="Output file for results")
 @click.pass_context
 def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
     """Query a Truth Graph using simple predicates.
@@ -736,7 +745,7 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
       truthctl graph-query --graph truth_graph.json --where "type=finding"
       truthctl graph-query --graph truth_graph.json --where "severity>=medium" --out results.json
     """
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         # Load graph
@@ -769,18 +778,21 @@ def graph_query(ctx: click.Context, graph: Path, where: str, out: Path | None):
 
 @cli.command()
 @click.option(
-    '--inputs', '-i', required=True,
+    "--inputs",
+    "-i",
+    required=True,
     type=click.Path(exists=True, path_type=Path),
-    help='Input directory to scan',
+    help="Input directory to scan",
 )
 @click.option(
-    '--pack', '-p', required=True,
-    help='Policy pack name (built-in: base, security, privacy, '
-         'logging, agent) or path to YAML file',
+    "--pack",
+    "-p",
+    required=True,
+    help="Policy pack name (built-in: base, security, privacy, logging, agent) or path to YAML file",
 )
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
-@click.option('--config', '-c', type=click.Path(exists=True, path_type=Path), help='Policy configuration file')
-@click.option('--compat', is_flag=True, help='Enable backward compatibility mode (legacy formats, relaxed validation)')
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output directory")
+@click.option("--config", "-c", type=click.Path(exists=True, path_type=Path), help="Policy configuration file")
+@click.option("--compat", is_flag=True, help="Enable backward compatibility mode (legacy formats, relaxed validation)")
 @click.pass_context
 def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: Path | None, compat: bool):
     """Run policy-as-code scanner against inputs.
@@ -797,7 +809,7 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
     from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
     from truthcore.policy.validator import PolicyValidator
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         start_time = time.time()
@@ -851,8 +863,8 @@ def policy_run(ctx: click.Context, inputs: Path, pack: str, out: Path, config: P
 
 
 @cli.command()
-@click.option('--rule', '-r', required=True, help='Rule ID to explain')
-@click.option('--pack', '-p', required=True, help='Policy pack name or path')
+@click.option("--rule", "-r", required=True, help="Rule ID to explain")
+@click.option("--pack", "-p", required=True, help="Policy pack name or path")
 @click.pass_context
 def policy_explain(ctx: click.Context, rule: str, pack: str):
     """Explain a policy rule.
@@ -864,7 +876,7 @@ def policy_explain(ctx: click.Context, rule: str, pack: str):
     """
     from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         policy_pack = PolicyPackLoader.load_pack(pack)
@@ -884,16 +896,19 @@ def policy_explain(ctx: click.Context, rule: str, pack: str):
 
 @cli.command()
 @click.option(
-    '--bundle', '-b', required=True,
+    "--bundle",
+    "-b",
+    required=True,
     type=click.Path(exists=True, path_type=Path),
-    help='Bundle directory to verify',
+    help="Bundle directory to verify",
 )
 @click.option(
-    '--public-key', '-k',
+    "--public-key",
+    "-k",
     type=click.Path(exists=True, path_type=Path),
-    help='Public key file for signature verification (optional)',
+    help="Public key file for signature verification (optional)",
 )
-@click.option('--out', '-o', type=click.Path(path_type=Path), help='Output directory for verification reports')
+@click.option("--out", "-o", type=click.Path(path_type=Path), help="Output directory for verification reports")
 @click.pass_context
 def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out: Path | None):
     """Verify an evidence bundle for tampering.
@@ -909,7 +924,7 @@ def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out
     from truthcore.provenance.signing import Signer
     from truthcore.provenance.verifier import BundleVerifier
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         click.echo(f"Verifying bundle: {bundle}...")
@@ -967,11 +982,11 @@ def verify_bundle(ctx: click.Context, bundle: Path, public_key: Path | None, out
 
 
 @cli.command()
-@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory')
+@click.option("--cache-dir", type=click.Path(path_type=Path), help="Cache directory")
 @click.pass_context
 def cache_stats(ctx: click.Context, cache_dir: Path | None):
     """Show cache statistics."""
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
@@ -988,12 +1003,12 @@ def cache_stats(ctx: click.Context, cache_dir: Path | None):
 
 
 @cli.command()
-@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory')
-@click.option('--max-age', type=int, default=30, help='Maximum age in days')
+@click.option("--cache-dir", type=click.Path(path_type=Path), help="Cache directory")
+@click.option("--max-age", type=int, default=30, help="Maximum age in days")
 @click.pass_context
 def cache_compact(ctx: click.Context, cache_dir: Path | None, max_age: int):
     """Compact old cache entries."""
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
@@ -1007,12 +1022,12 @@ def cache_compact(ctx: click.Context, cache_dir: Path | None, max_age: int):
 
 
 @cli.command()
-@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory')
-@click.confirmation_option(prompt='Are you sure you want to clear the cache?')
+@click.option("--cache-dir", type=click.Path(path_type=Path), help="Cache directory")
+@click.confirmation_option(prompt="Are you sure you want to clear the cache?")
 @click.pass_context
 def cache_clear(ctx: click.Context, cache_dir: Path | None):
     """Clear all cache entries."""
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         cache = get_cache(cache_dir or Path(".truthcache"))
@@ -1067,28 +1082,33 @@ def bundle_group():
 
 @bundle_group.command(name="export")
 @click.option(
-    "--run-dir", "-r",
+    "--run-dir",
+    "-r",
     required=True,
     type=click.Path(exists=True, path_type=Path),
     help="Directory containing run outputs (with run_manifest.json)",
 )
 @click.option(
-    "--inputs", "-i",
+    "--inputs",
+    "-i",
     type=click.Path(exists=True, path_type=Path),
     help="Original inputs directory (if separate from run_dir)",
 )
 @click.option(
-    "--out", "-o",
+    "--out",
+    "-o",
     required=True,
     type=click.Path(path_type=Path),
     help="Output directory for the bundle",
 )
 @click.option(
-    "--profile", "-p",
+    "--profile",
+    "-p",
     help="Profile used for the run",
 )
 @click.option(
-    "--mode", "-m",
+    "--mode",
+    "-m",
     type=click.Choice(["pr", "main", "release"]),
     help="Mode used for the run",
 )
@@ -1137,26 +1157,40 @@ def bundle_export(
         handle_error(e, debug)
 
 
+@cli.command(name="export-evidence")
+@click.option("--bundle", "-b", required=True, type=click.Path(exists=True, path_type=Path))
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path))
+def export_evidence(bundle: Path, out: Path) -> None:
+    """Export a buyer-usable, hash-indexed replay evidence packet."""
+    replay_bundle = ReplayBundle.load(bundle)
+    packet = EvidencePacketExporter().export(replay_bundle, out)
+    click.echo(json.dumps({"packet": str(packet), "run_id": replay_bundle.manifest.run_id}, sort_keys=True))
+
+
 @cli.command()
 @click.option(
-    "--bundle", "-b",
+    "--bundle",
+    "-b",
     required=True,
     type=click.Path(exists=True, path_type=Path),
     help="Path to replay bundle directory",
 )
 @click.option(
-    "--out", "-o",
+    "--out",
+    "-o",
     required=True,
     type=click.Path(path_type=Path),
     help="Output directory for replay results",
 )
 @click.option(
-    "--mode", "-m",
+    "--mode",
+    "-m",
     type=click.Choice(["pr", "main", "release"]),
     help="Override mode (uses bundle mode if not specified)",
 )
 @click.option(
-    "--profile", "-p",
+    "--profile",
+    "-p",
     help="Override profile (uses bundle profile if not specified)",
 )
 @click.option(
@@ -1265,30 +1299,35 @@ def replay(
 
 @cli.command()
 @click.option(
-    "--bundle", "-b",
+    "--bundle",
+    "-b",
     required=True,
     type=click.Path(exists=True, path_type=Path),
     help="Path to replay bundle directory",
 )
 @click.option(
-    "--out", "-o",
+    "--out",
+    "-o",
     required=True,
     type=click.Path(path_type=Path),
     help="Output directory for simulation results",
 )
 @click.option(
-    "--changes", "-c",
+    "--changes",
+    "-c",
     required=True,
     type=click.Path(exists=True, path_type=Path),
     help="YAML file with changes to apply",
 )
 @click.option(
-    "--mode", "-m",
+    "--mode",
+    "-m",
     type=click.Choice(["pr", "main", "release"]),
     help="Override mode (uses bundle mode if not specified)",
 )
 @click.option(
-    "--profile", "-p",
+    "--profile",
+    "-p",
     help="Override profile (uses bundle profile if not specified)",
 )
 @click.option(
@@ -1393,8 +1432,7 @@ def simulate(
 
             click.echo("\nVerdict Comparison:")
             click.echo(
-                f"  Original:  {orig.verdict.value} "
-                f"({orig.total_findings} findings, {orig.total_points} points)"
+                f"  Original:  {orig.verdict.value} ({orig.total_findings} findings, {orig.total_points} points)"
             )
             click.echo(f"  Simulated: {sim.verdict.value} ({sim.total_findings} findings, {sim.total_points} points)")
 
@@ -1411,13 +1449,13 @@ def simulate(
 
 
 @cli.command()
-@click.option('--host', '-h', default='127.0.0.1', help='Host to bind to')
-@click.option('--port', '-p', default=8000, help='Port to listen on')
-@click.option('--cache-dir', type=click.Path(path_type=Path), help='Cache directory')
-@click.option('--static-dir', type=click.Path(path_type=Path), help='Static files directory for GUI')
-@click.option('--reload', is_flag=True, help='Enable auto-reload for development')
-@click.option('--workers', '-w', default=1, help='Number of worker processes')
-@click.option('--debug', is_flag=True, help='Enable debug mode')
+@click.option("--host", "-h", default="127.0.0.1", help="Host to bind to")
+@click.option("--port", "-p", default=8000, help="Port to listen on")
+@click.option("--cache-dir", type=click.Path(path_type=Path), help="Cache directory")
+@click.option("--static-dir", type=click.Path(path_type=Path), help="Static files directory for GUI")
+@click.option("--reload", is_flag=True, help="Enable auto-reload for development")
+@click.option("--workers", "-w", default=1, help="Number of worker processes")
+@click.option("--debug", is_flag=True, help="Enable debug mode")
 @click.pass_context
 def serve(
     ctx: click.Context,
@@ -1446,7 +1484,7 @@ def serve(
     from truthcore.server import create_app
 
     # Use cache dir from context if not specified
-    effective_cache_dir = cache_dir or ctx.obj.get('cache_dir')
+    effective_cache_dir = cache_dir or ctx.obj.get("cache_dir")
 
     try:
         click.echo(f"Starting Truth Core server on http://{host}:{port}")
@@ -1489,7 +1527,7 @@ def serve(
         click.echo("Install with: pip install 'truth-core[server]'", err=True)
         sys.exit(1)
     except Exception as e:
-        handle_error(e, debug or ctx.obj.get('debug', False))
+        handle_error(e, debug or ctx.obj.get("debug", False))
 
 
 @cli.group(name="dashboard")
@@ -1499,9 +1537,9 @@ def dashboard_group():
 
 
 @dashboard_group.command(name="build")
-@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
-@click.option('--embedded/--no-embedded', default=True, help='Embed run data in dashboard')
+@click.option("--runs", "-r", required=True, type=click.Path(exists=True, path_type=Path), help="Runs directory")
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output directory")
+@click.option("--embedded/--no-embedded", default=True, help="Embed run data in dashboard")
 @click.pass_context
 def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
     """Build the dashboard as static files.
@@ -1517,7 +1555,7 @@ def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
     import shutil
     import subprocess
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         dashboard_dir = Path(__file__).parent.parent.parent.parent / "dashboard"
@@ -1578,10 +1616,7 @@ def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
                     html = f.read()
 
                 # Add script tag before closing body
-                html = html.replace(
-                    "</body>",
-                    '<script src="embedded-runs.js"></script>\n  </body>'
-                )
+                html = html.replace("</body>", '<script src="embedded-runs.js"></script>\n  </body>')
 
                 with open(index_path, "w") as f:
                     f.write(html)
@@ -1599,10 +1634,10 @@ def dashboard_build(ctx: click.Context, runs: Path, out: Path, embedded: bool):
 
 
 @dashboard_group.command(name="serve")
-@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
-@click.option('--port', '-p', default=8787, help='Port to serve on')
-@click.option('--host', '-h', default='127.0.0.1', help='Host to bind to')
-@click.option('--open/--no-open', default=True, help='Open browser automatically')
+@click.option("--runs", "-r", required=True, type=click.Path(exists=True, path_type=Path), help="Runs directory")
+@click.option("--port", "-p", default=8787, help="Port to serve on")
+@click.option("--host", "-h", default="127.0.0.1", help="Host to bind to")
+@click.option("--open/--no-open", default=True, help="Open browser automatically")
 @click.pass_context
 def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: bool):
     """Serve the dashboard locally.
@@ -1617,10 +1652,10 @@ def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: 
     import time
     import webbrowser
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     # Warn if binding to all interfaces
-    if host == '0.0.0.0':
+    if host == "0.0.0.0":
         click.echo("⚠️  Warning: Binding to 0.0.0.0 exposes the dashboard on all network interfaces", err=True)
 
     try:
@@ -1635,7 +1670,7 @@ def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: 
         click.echo("Press Ctrl+C to stop")
 
         # Open browser after a short delay
-        if open and host == '127.0.0.1':
+        if open and host == "127.0.0.1":
             url = f"http://{host}:{port}"
             time.sleep(1)
             webbrowser.open(url)
@@ -1643,7 +1678,7 @@ def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: 
         # Start dev server
         env = {
             **subprocess.os.environ,
-            'VITE_RUNS_DIR': str(runs),
+            "VITE_RUNS_DIR": str(runs),
         }
 
         subprocess.run(
@@ -1662,9 +1697,9 @@ def dashboard_serve(ctx: click.Context, runs: Path, port: int, host: str, open: 
 
 
 @dashboard_group.command(name="snapshot")
-@click.option('--runs', '-r', required=True, type=click.Path(exists=True, path_type=Path), help='Runs directory')
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
-@click.option('--name', '-n', help='Snapshot name (default: timestamp)')
+@click.option("--runs", "-r", required=True, type=click.Path(exists=True, path_type=Path), help="Runs directory")
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output directory")
+@click.option("--name", "-n", help="Snapshot name (default: timestamp)")
 @click.pass_context
 def dashboard_snapshot(ctx: click.Context, runs: Path, out: Path, name: str | None):
     """Create a portable snapshot of runs + dashboard.
@@ -1682,7 +1717,7 @@ def dashboard_snapshot(ctx: click.Context, runs: Path, out: Path, name: str | No
     import shutil
     import subprocess
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         snapshot_name = name or f"truthcore-snapshot-{int(time.time())}"
@@ -1769,7 +1804,7 @@ Open `dashboard/index.html` in any modern browser.
 Or serve locally:
   python -m http.server 8000 --directory dashboard
 
-Created: {time.strftime('%Y-%m-%d %H:%M:%S')}
+Created: {time.strftime("%Y-%m-%d %H:%M:%S")}
 """
         with open(snapshot_dir / "README.txt", "w") as f:
             f.write(readme_content)
@@ -1818,8 +1853,8 @@ def load_run_data(run_dir: Path) -> dict | None:
 
 
 @dashboard_group.command(name="demo")
-@click.option('--out', '-o', required=True, type=click.Path(path_type=Path), help='Output directory')
-@click.option('--open/--no-open', default=True, help='Open browser after building')
+@click.option("--out", "-o", required=True, type=click.Path(path_type=Path), help="Output directory")
+@click.option("--open/--no-open", default=True, help="Open browser after building")
 @click.pass_context
 def dashboard_demo(ctx: click.Context, out: Path, open: bool):
     """Run demo and build dashboard.
@@ -1839,7 +1874,7 @@ def dashboard_demo(ctx: click.Context, out: Path, open: bool):
     import time
     import webbrowser
 
-    debug = ctx.obj.get('debug', False)
+    debug = ctx.obj.get("debug", False)
 
     try:
         click.echo("Creating demo...")
@@ -1853,7 +1888,7 @@ def dashboard_demo(ctx: click.Context, out: Path, open: bool):
         run_dir = runs_dir / run_id
         run_dir.mkdir(exist_ok=True)
 
-        timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
         # Create manifest
         manifest = {
@@ -2051,5 +2086,5 @@ def main() -> None:
     cli()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
