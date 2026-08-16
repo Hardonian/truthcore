@@ -80,7 +80,7 @@ jobs:
           pip-audit --desc --format=json
 
       - name: Check for secrets (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         with:
           args: detect --redact -v
         env:
