@@ -283,6 +283,7 @@ class JsonTtlCache:
 
     def put(self, cache_key: str, data: dict[str, Any], expires_at: float) -> None:
         """Persist cached payload to disk."""
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         entry_path = self._entry_path(cache_key)
         with open(entry_path, "w", encoding="utf-8") as f:
             json.dump({"expires_at": expires_at, "data": data}, f, indent=2, sort_keys=True)

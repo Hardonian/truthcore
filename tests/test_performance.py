@@ -6,16 +6,13 @@ These are not strict benchmarks but regression guards.
 
 from __future__ import annotations
 
-import json
 import time
 
-import pytest
-
-from truthcore.canonical import canonical_hash, canonical_json
+from truthcore.canonical import canonical_json
 from truthcore.determinism import determinism_mode
 from truthcore.manifest import hash_dict
 from truthcore.memoize import clear_memo_cache, memo_stats, memoize_by_hash
-from truthcore.severity import Category, EngineHealth, Severity
+from truthcore.severity import EngineHealth
 from truthcore.verdict.aggregator import VerdictAggregator
 from truthcore.verdict.models import Mode, VerdictThresholds
 

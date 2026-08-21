@@ -24,8 +24,6 @@ from truthcore.determinism import (
     determinism_mode,
     is_deterministic,
     stable_git_sha,
-    stable_isoformat,
-    stable_now,
     stable_random_hex,
     stable_run_id,
     stable_timestamp,
@@ -34,7 +32,7 @@ from truthcore.determinism import (
 from truthcore.envelope import ExplainabilityEnvelope, ReasonEntry, UncertaintyNote
 from truthcore.invariant_dsl import InvariantDSL
 from truthcore.manifest import RunManifest, hash_dict, normalize_timestamp
-from truthcore.severity import Category, EngineHealth, Severity
+from truthcore.severity import EngineHealth
 from truthcore.verdict.aggregator import VerdictAggregator
 from truthcore.verdict.models import Mode, VerdictThresholds
 
@@ -598,7 +596,6 @@ class TestEnvelopeSchemaValidation:
     @pytest.fixture
     def envelope_schema(self):
         """Load the envelope schema."""
-        import jsonschema
         schema_path = Path(__file__).parent.parent / "contracts" / "explainability_envelope.schema.json"
         with open(schema_path, encoding="utf-8") as f:
             return json.load(f)

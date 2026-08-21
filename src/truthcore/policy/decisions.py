@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from truthcore.determinism import stable_now
+
 
 class PolicyEffect(Enum):
     """Policy decision effect types.
@@ -136,7 +138,7 @@ class PolicyOverride:
         Returns:
             True if override applies
         """
-        from datetime import UTC, datetime
+        from datetime import datetime
 
         # Check expiry
         if self.expires_at:

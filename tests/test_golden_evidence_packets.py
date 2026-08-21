@@ -15,7 +15,7 @@ import jsonschema
 import pytest
 
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
-from truthcore.policy.models import PolicyPack, PolicyRule, Severity
+from truthcore.policy.models import PolicyPack, Severity
 
 # Paths
 EVIDENCE_DIR = Path(__file__).parent.parent / "evidence-packets"
@@ -211,7 +211,7 @@ class TestGoldenPacketDeterminism:
             try:
                 pack = PolicyPackLoader.load_pack(packet["pack_name"])
             except FileNotFoundError:
-                pytest.skip(f"Built-in pack not installed")
+                pytest.skip("Built-in pack not installed")
 
             rule = pack.get_rule(packet["rule_id"])
             if rule is None:
