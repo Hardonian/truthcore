@@ -12,7 +12,7 @@ CRITICAL: These tests verify that all governance decisions can be
 cheaply reversed without data loss.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 
 import pytest
 

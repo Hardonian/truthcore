@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from truthcore.evidence import EvidencePacket
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
 from truthcore.policy.models import PolicyPack
 

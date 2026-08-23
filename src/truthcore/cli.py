@@ -292,7 +292,7 @@ def judge(
             policy_result, evidence_packet = policy_engine.run_pack_with_evidence(pack)
 
             # Write traditional outputs
-            paths = policy_engine.write_outputs(policy_result, base_name="policy")
+            policy_engine.write_outputs(policy_result, base_name="policy")
 
             # Write evidence packet
             evidence_json_path = out / "evidence_packet.json"

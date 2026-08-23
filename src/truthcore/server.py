@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from truthcore import __version__
 from truthcore.anomaly_scoring import (
@@ -37,7 +37,7 @@ from truthcore.cache import ContentAddressedCache, JsonTtlCache
 from truthcore.impact import ChangeImpactEngine
 from truthcore.invariant_dsl import InvariantDSL
 from truthcore.manifest import RunManifest, normalize_timestamp
-from truthcore.parquet_store import HistoryCompactor
+from truthcore.parquet_store import CompactionPolicy, HistoryCompactor, ParquetStore
 from truthcore.policy.engine import PolicyEngine, PolicyPackLoader
 from truthcore.security import SecurityLimits, safe_extract_zip
 
@@ -53,7 +53,6 @@ from truthcore.server_security import (
     ValidationError,
     create_error_response,
     generate_error_id,
-    validate_api_key_format,
 )
 from truthcore.ui_geometry import UIGeometryParser, UIReachabilityChecker
 
@@ -96,6 +95,22 @@ class ExplainRequest(BaseModel):
     rule_id: str
     data: dict[str, Any]
     ruleset: ExplainRuleset
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_shape(cls, value: Any) -> Any:
+        """Accept the original ``rule``/``rules`` request contract."""
+        if not isinstance(value, dict):
+            return value
+        normalized = dict(value)
+        if "rule_id" not in normalized and "rule" in normalized:
+            normalized["rule_id"] = normalized.pop("rule")
+        if "ruleset" not in normalized and "rules" in normalized:
+            rules = normalized.pop("rules")
+            if isinstance(rules, dict):
+                rules = list(rules.values())
+            normalized["ruleset"] = {"rules": rules}
+        return normalized
 
 
 class HealthResponse(BaseModel):
@@ -158,17 +173,19 @@ def verify_api_key(
         provided_key = api_key
 
     if not provided_key:
-        raise AuthenticationError(
-            "API key required. Provide via Authorization: Bearer <key> header or ?api_key= query parameter",
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="API key required. Provide via Authorization: Bearer *** header or ?api_key= query parameter",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Validate API key format
-    if not validate_api_key_format(provided_key):
-        raise AuthenticationError("Invalid API key format")
 
     # Constant-time comparison to prevent timing attacks
     if not secrets.compare_digest(provided_key, expected_key):
-        raise AuthenticationError("Invalid API key")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return True
 
@@ -707,15 +724,26 @@ def create_app(
 
                 inputs_path = inputs_path or Path(".")
 
+                historical_files = sorted(inputs_path.rglob("*.json"), reverse=True)
+                history: list[dict[str, Any]] = []
+                for historical_file in historical_files[:50]:
+                    try:
+                        with open(historical_file, encoding="utf-8") as history_stream:
+                            report = json.load(history_stream)
+                        if isinstance(report, dict):
+                            history.append(report)
+                    except (OSError, json.JSONDecodeError):
+                        logger.warning("Skipping unreadable history file: %s", historical_file)
+
                 # Create appropriate scorer
                 if intel_request.mode == "readiness":
-                    scorer = ReadinessAnomalyScorer(inputs_path)
+                    scorer = ReadinessAnomalyScorer(history)
                 elif intel_request.mode == "recon":
-                    scorer = ReconciliationAnomalyScorer(inputs_path)
+                    scorer = ReconciliationAnomalyScorer(history)
                 elif intel_request.mode == "agent":
-                    scorer = AgentBehaviorScorer(inputs_path)
+                    scorer = AgentBehaviorScorer(history)
                 elif intel_request.mode == "knowledge":
-                    scorer = KnowledgeHealthScorer(inputs_path)
+                    scorer = KnowledgeHealthScorer(history)
                 else:
                     raise HTTPException(
                         status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -727,14 +755,16 @@ def create_app(
 
                 # Write scorecard
                 writer = ScorecardWriter(tmp_path)
-                writer.write(scores, mode=intel_request.mode)
+                writer.write(scores, prefix=f"{intel_request.mode}_intel")
 
                 # Compact if requested
                 if intel_request.compact:
+                    store = ParquetStore(inputs_path / "parquet_history")
                     compactor = HistoryCompactor(
-                        retention_days=intel_request.retention_days,
+                        store,
+                        CompactionPolicy(retention_days=intel_request.retention_days),
                     )
-                    stats = compactor.compact(inputs_path)
+                    stats = compactor.compact(dry_run=False)
                 else:
                     stats = None
 

@@ -21,7 +21,7 @@ export function loadVerdict(input: unknown): Verdict {
     try {
       data = JSON.parse(input);
     } catch (e) {
-      throw new Error(`Invalid JSON: ${e instanceof Error ? e.message : "Unknown error"}`);
+      throw new Error(`Invalid JSON: ${e instanceof Error ? e.message : "Unknown error"}`, { cause: e });
     }
   } else {
     data = input;
