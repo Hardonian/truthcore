@@ -376,24 +376,24 @@ jobs:
           mkdir -p /tmp/full-test/inputs
           # Create test inputs
           echo '{"elements": [{"id": "btn1", "clickable": true}]}' > /tmp/full-test/inputs/ui_facts.json
-          
+
           truthctl judge \
             --inputs /tmp/full-test/inputs \
             --profile ui \
             --out /tmp/full-test/run1 \
             --manifest
-          
+
           echo "=== Step 2: Export bundle ==="
           truthctl bundle export \
             --run-dir /tmp/full-test/run1 \
             --inputs /tmp/full-test/inputs \
             --out /tmp/full-test/bundle
-          
+
           echo "=== Step 3: Replay bundle ==="
           truthctl replay \
             --bundle /tmp/full-test/bundle \
             --out /tmp/full-test/replay
-          
+
           echo "=== Step 4: Create simulation changes ==="
           cat > /tmp/full-test/changes.yaml << 'EOF'
           thresholds:
@@ -402,13 +402,13 @@ jobs:
           disabled_engines: []
           suppressions: []
           EOF
-          
+
           echo "=== Step 5: Run simulation ==="
           truthctl simulate \
             --bundle /tmp/full-test/bundle \
             --out /tmp/full-test/sim \
             --changes /tmp/full-test/changes.yaml
-          
+
           echo "=== Full workflow: SUCCESS ==="
 
   # ============================================================================

@@ -1,7 +1,7 @@
 # TruthCore Milestone 1: Read-Only Truth Spine
-**Status:** Defined → Ready for Implementation  
-**Target:** v0.3.0  
-**Estimated Duration:** 4-6 weeks  
+**Status:** Defined → Ready for Implementation
+**Target:** v0.3.0
+**Estimated Duration:** 4-6 weeks
 **Success Criteria:** Engineers voluntarily consult TruthCore for explanation queries
 
 ---
@@ -196,7 +196,7 @@ This milestone implements the infrastructure to answer those questions.
 class Assertion:
     """
     A claim backed by evidence. Immutable and content-addressed.
-    
+
     Assertions do not have confidence - they are statements of what
     the system observed or calculated. Confidence belongs to Beliefs.
     """
@@ -207,7 +207,7 @@ class Assertion:
     source: str                 # Origin (engine, human, external)
     timestamp: str              # ISO 8601 UTC
     context: Dict[str, Any]     # Run ID, profile, etc.
-    
+
     def lineage(self, store: GraphStore) -> AssertionLineage: ...
 ```
 
@@ -217,7 +217,7 @@ class Assertion:
 class Evidence:
     """
     Raw or derived data that supports assertions.
-    
+
     Evidence is the foundation - assertions are built upon it.
     Both are immutable and content-addressed.
     """
@@ -228,7 +228,7 @@ class Evidence:
     timestamp: str              # When captured
     validity_seconds: int       # How long this evidence remains valid
     metadata: Dict[str, Any]    # Schema version, format, etc.
-    
+
     def is_stale(self, now: datetime) -> bool: ...
 ```
 
@@ -238,7 +238,7 @@ class Evidence:
 class Belief:
     """
     A versioned belief in an assertion with confidence scoring.
-    
+
     Beliefs are NOT mutable - each update creates a new Belief
     with incremented version number. Previous beliefs retained
     for history queries.
@@ -252,7 +252,7 @@ class Belief:
     superseded_at: str          # ISO 8601 (when newer belief formed)
     upstream_belief_ids: List[str]  # Beliefs this depends on
     rationale: str              # Why this confidence level
-    
+
     def current_confidence(self, now: datetime, decay_rate: float) -> float: ...
 ```
 
@@ -262,7 +262,7 @@ class Belief:
 class MeaningVersion:
     """
     Semantic versioning for the *meaning* of concepts.
-    
+
     When "deployment ready" changes from "score >= 90" to
     "score >= 90 AND all reviews complete", this captures
     that semantic drift explicitly.
@@ -274,7 +274,7 @@ class MeaningVersion:
     examples: List[Dict]        # Exemplars
     valid_from: str             # ISO 8601
     valid_until: Optional[str]  # ISO 8601 or None (current)
-    
+
     def is_current(self, timestamp: str) -> bool: ...
     def is_compatible_with(self, other: "MeaningVersion") -> bool: ...
 ```
@@ -285,7 +285,7 @@ class MeaningVersion:
 class Decision:
     """
     A recorded choice made by system or human.
-    
+
     Decisions reference the beliefs that informed them.
     They do not require TruthCore's permission to be made.
     """
@@ -296,7 +296,7 @@ class Decision:
     context: Dict[str, Any]     # Run context, thresholds, etc.
     actor: str                  # Who/what decided
     timestamp: str              # ISO 8601
-    
+
     def get_beliefs(self, store: GraphStore) -> List[Belief]: ...
 ```
 
@@ -306,7 +306,7 @@ class Decision:
 class Override:
     """
     Human intervention that contradicts system recommendation.
-    
+
     All overrides are scoped, authorized, and time-bounded.
     """
     override_id: str            # Unique identifier
@@ -317,7 +317,7 @@ class Override:
     rationale: str              # Why override
     expires_at: str             # ISO 8601 (REQUIRED - no permanent overrides)
     created_at: str             # ISO 8601
-    
+
     def is_expired(self, now: datetime) -> bool: ...
 ```
 
@@ -453,11 +453,11 @@ Response: Counter-evidence patterns:
 class SpineReplay:
     """
     Deterministic replay of belief formation.
-    
+
     Given the same evidence and assertions, produces
     identical belief confidence scores.
     """
-    
+
     def replay_assertion(
         self,
         assertion_id: str,
@@ -465,11 +465,11 @@ class SpineReplay:
     ) -> List[Belief]:
         """
         Replay belief formation for an assertion.
-        
+
         Returns belief history deterministically.
         """
         ...
-    
+
     def simulate_contrafactual(
         self,
         assertion_id: str,
@@ -477,7 +477,7 @@ class SpineReplay:
     ) -> Belief:
         """
         What would we believe if evidence were different?
-        
+
         Does not modify stored beliefs. Returns hypothetical.
         """
         ...
@@ -585,7 +585,7 @@ POST /spine/v1/query/dependencies  { assertion_ids: [...] }
 # truthcore.config.yaml
 spine:
   enabled: false              # Master switch (default: OFF)
-  
+
   # Component flags
   assertions: false           # Accept assertions
   beliefs: false              # Form/update beliefs
@@ -593,16 +593,16 @@ spine:
   decisions: false            # Record decisions
   overrides: false            # Track overrides
   meanings: false             # Version semantic meanings
-  
+
   # Query flags
   queries_enabled: false      # Enable query API
   query_depth_max: 10         # Max lineage depth
-  
+
   # Ingestion flags
   ingest_enabled: false       # Accept telemetry
   ingest_queue_size: 10000    # Bounded queue
   ingest_async: true          # Non-blocking
-  
+
   # Storage
   storage_path: ".truthcore/spine"
   evidence_ttl_days: 90
@@ -701,7 +701,7 @@ spine:
 
 #### Risk 1: Nobody Uses It
 **Scenario:** Engineers don't find value in querying TruthCore.
-**Mitigation:** 
+**Mitigation:**
 - Integrate into existing dashboard
 - Provide compelling use cases in docs
 - Make CLI queries fast and useful
@@ -894,8 +894,8 @@ This milestone implements a read-only truth spine that:
 
 ---
 
-**Document Status:** Complete  
-**Next Step:** Phase 0 Implementation  
-**Decision:** Proceed with implementation  
-**Risk Level:** Low (observe-only, feature-flagged, removable)  
-**Last Updated:** 2026-02-01  
+**Document Status:** Complete
+**Next Step:** Phase 0 Implementation
+**Decision:** Proceed with implementation
+**Risk Level:** Low (observe-only, feature-flagged, removable)
+**Last Updated:** 2026-02-01

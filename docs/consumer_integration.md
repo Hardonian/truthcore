@@ -31,13 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install truth-core
         run: pip install truth-core
-      
+
       - name: Run truth-core
         run: truthctl judge --inputs ./src --out ./truth-outputs
-      
+
       - name: Validate contract version
         run: |
           CONTRACT_VERSION=$(jq -r '._contract.contract_version' ./truth-outputs/verdict.json)
@@ -45,7 +45,7 @@ jobs:
             echo "Expected contract version 2.0.0, got $CONTRACT_VERSION"
             exit 1
           fi
-      
+
       - name: Validate artifact
         run: truthctl contracts validate --file ./truth-outputs/verdict.json --strict
 ```
@@ -166,29 +166,29 @@ import json
 
 class TruthCoreConsumer:
     """Example consumer that pins to contract version 2.0.0."""
-    
+
     SUPPORTED_VERSION = "2.0.0"
-    
+
     def process_verdict(self, artifact_path: str) -> dict:
         # Load artifact
         with open(artifact_path) as f:
             artifact = json.load(f)
-        
+
         # Extract metadata
         metadata = extract_metadata(artifact)
         if not metadata:
             raise ValueError("No contract metadata found")
-        
+
         # Check version compatibility
         if metadata.contract_version != self.SUPPORTED_VERSION:
             raise ValueError(
                 f"Expected version {self.SUPPORTED_VERSION}, "
                 f"got {metadata.contract_version}"
             )
-        
+
         # Validate
         validate_artifact_or_raise(artifact, "verdict", self.SUPPORTED_VERSION)
-        
+
         # Process (your logic here)
         return {
             "verdict": artifact["verdict"],
@@ -208,20 +208,20 @@ const SUPPORTED_VERSION = '2.0.0';
 function processVerdict(artifactPath) {
   // Load artifact
   const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
-  
+
   // Extract metadata
   const metadata = artifact._contract;
   if (!metadata) {
     throw new Error('No contract metadata found');
   }
-  
+
   // Check version
   if (metadata.contract_version !== SUPPORTED_VERSION) {
     throw new Error(
       `Expected version ${SUPPORTED_VERSION}, got ${metadata.contract_version}`
     );
   }
-  
+
   // Process (your logic here)
   return {
     verdict: artifact.verdict,

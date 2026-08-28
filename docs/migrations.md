@@ -40,7 +40,7 @@ Each migration is a pure function:
 def migrate_v1_to_v2(artifact: dict) -> dict:
     """
     Migrate artifact from v1.0.0 to v2.0.0.
-    
+
     Changes:
     - Renames 'result' to 'verdict'
     - Adds 'confidence' field (required)
@@ -280,7 +280,7 @@ truthctl contracts migrate --file art_v2.json --to 3.0.0 --out art_v3.json
 
 **Error**: Output validates but consumer code breaks
 
-**Solution**: 
+**Solution**:
 1. Check if migration should be marked as breaking
 2. Verify consumer code handles new structure
 3. Use compat mode during transition

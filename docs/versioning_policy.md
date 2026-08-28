@@ -85,7 +85,7 @@ When a version reaches end-of-life:
 **Breaking (MAJOR)**
 - Any breaking change per definition above
 
-**Approval**: 
+**Approval**:
 - Three maintainer reviews
 - RFC document
 - Migration path implemented

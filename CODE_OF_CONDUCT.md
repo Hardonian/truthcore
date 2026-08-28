@@ -52,19 +52,19 @@ will be reviewed and investigated promptly and fairly.
 Community leaders will follow these guidelines:
 
 ### 1. Correction
-**Impact**: Minor violation  
+**Impact**: Minor violation
 **Consequence**: Private warning with clarity on why behavior was inappropriate
 
 ### 2. Warning
-**Impact**: Moderate violation  
+**Impact**: Moderate violation
 **Consequence**: Formal warning with restrictions
 
 ### 3. Temporary Ban
-**Impact**: Serious violation  
+**Impact**: Serious violation
 **Consequence**: Temporary ban from community spaces
 
 ### 4. Permanent Ban
-**Impact**: Severe violation or pattern  
+**Impact**: Severe violation or pattern
 **Consequence**: Permanent ban from community spaces
 
 ## Attribution

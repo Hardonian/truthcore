@@ -190,10 +190,10 @@ Example consumer workflow:
 # .github/workflows/truth-core.yml
 - name: Run truth-core
   run: truthctl judge --inputs ./src --out ./truth-outputs
-  
+
 - name: Validate outputs
   run: truthctl contracts validate --inputs ./truth-outputs --strict
-  
+
 - name: Pin to contract version
   run: |
     CONTRACT_VERSION=$(jq -r '._contract.contract_version' ./truth-outputs/verdict.json)

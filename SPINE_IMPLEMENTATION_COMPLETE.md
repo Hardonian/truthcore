@@ -32,7 +32,7 @@ Successfully implemented TruthCore Milestone 1: **Read-Only Truth Spine** (Phase
 ============================= test results =============================
 tests/test_spine.py - 26 passed, 0 failed
 Phase 0 (Primitives): ✅ 7 tests
-Phase 1 (Graph/Belief): ✅ 5 tests  
+Phase 1 (Graph/Belief): ✅ 5 tests
 Phase 2 (Ingestion): ✅ 2 tests
 Phase 3 (Queries): ✅ 9 tests
 Phase 4 (Client): ✅ 2 tests

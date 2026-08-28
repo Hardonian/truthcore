@@ -2,7 +2,7 @@
 
 **Document Purpose:** Identify and mitigate risks that could impact the Truth Core OSS launch timeline or quality.
 
-**Created:** 2026-01-31  
+**Created:** 2026-01-31
 **Review Cycle:** Daily during launch sprint
 
 ---
@@ -10,8 +10,8 @@
 ## Risk Register
 
 ### R1: Dashboard Scope Creep
-**Severity:** HIGH  
-**Probability:** MEDIUM  
+**Severity:** HIGH
+**Probability:** MEDIUM
 **Impact:** Timeline slip, incomplete features
 
 **Description:** The static dashboard has many requirements (charts, tables, import/export, accessibility). Risk of not completing all features in time.
@@ -22,14 +22,14 @@
 - Use simple, proven tech (vanilla TS + Vite)
 - Implement MVP first, polish second
 
-**Owner:** Principal Engineer  
+**Owner:** Principal Engineer
 **Status:** MONITORING
 
 ---
 
 ### R2: Cross-Platform Build Issues
-**Severity:** MEDIUM  
-**Probability:** MEDIUM  
+**Severity:** MEDIUM
+**Probability:** MEDIUM
 **Impact:** CI failures, contributor friction
 
 **Description:** Windows path handling, line endings, and file permissions differ from Unix. Dashboard build may behave differently.
@@ -40,14 +40,14 @@
 - Test dashboard build on both Windows and Unix
 - Use forward slashes in URLs/paths internally
 
-**Owner:** DevOps Lead  
+**Owner:** DevOps Lead
 **Status:** MONITORING
 
 ---
 
 ### R3: File Size/Performance Issues
-**Severity:** MEDIUM  
-**Probability:** LOW  
+**Severity:** MEDIUM
+**Probability:** LOW
 **Impact:** Dashboard unusable with many runs
 
 **Description:** Loading thousands of runs with large JSON files could slow dashboard or cause memory issues.
@@ -59,14 +59,14 @@
 - Set reasonable limits (max 1000 runs displayed)
 - Virtual scrolling for long tables
 
-**Owner:** Performance Lead  
+**Owner:** Performance Lead
 **Status:** MONITORING
 
 ---
 
 ### R4: Security Vulnerabilities
-**Severity:** HIGH  
-**Probability:** LOW  
+**Severity:** HIGH
+**Probability:** LOW
 **Impact:** Reputational damage, security issues
 
 **Description:** Dashboard may introduce XSS, path traversal, or other security issues if not properly sanitized.
@@ -79,14 +79,14 @@
 - Security review checklist
 - Third-party audit if time permits
 
-**Owner:** Security Lead  
+**Owner:** Security Lead
 **Status:** MONITORING
 
 ---
 
 ### R5: Documentation Drift
-**Severity:** MEDIUM  
-**Probability:** HIGH  
+**Severity:** MEDIUM
+**Probability:** HIGH
 **Impact:** Confused users, support burden
 
 **Description:** As code changes rapidly during sprint, documentation may become stale or inaccurate.
@@ -98,14 +98,14 @@
 - Verify all examples work before launch
 - Add documentation smoke tests
 
-**Owner:** Tech Writer  
+**Owner:** Tech Writer
 **Status:** MONITORING
 
 ---
 
 ### R6: Dependency Vulnerabilities
-**Severity:** MEDIUM  
-**Probability:** LOW  
+**Severity:** MEDIUM
+**Probability:** LOW
 **Impact:** Security alerts post-launch
 
 **Description:** Dependencies may have known vulnerabilities that could block launch or require urgent patches.
@@ -117,14 +117,14 @@
 - Have upgrade path documented
 - Monitor CVE databases
 
-**Owner:** Security Lead  
+**Owner:** Security Lead
 **Status:** MONITORING
 
 ---
 
 ### R7: Determinism Regression
-**Severity:** HIGH  
-**Probability:** LOW  
+**Severity:** HIGH
+**Probability:** LOW
 **Impact:** Core value proposition compromised
 
 **Description:** Changes during refactoring could accidentally introduce non-deterministic behavior (timestamps, ordering, randomness).
@@ -136,14 +136,14 @@
 - Validate timestamp normalization
 - Add regression tests
 
-**Owner:** Principal Engineer  
+**Owner:** Principal Engineer
 **Status:** MONITORING
 
 ---
 
 ### R8: Test Flakiness
-**Severity:** MEDIUM  
-**Probability:** MEDIUM  
+**Severity:** MEDIUM
+**Probability:** MEDIUM
 **Impact:** CI failures, false positives
 
 **Description:** New dashboard tests or refactored tests may be flaky due to timing, file system, or ordering issues.
@@ -155,14 +155,14 @@
 - Run tests multiple times to verify stability
 - Separate unit and integration tests
 
-**Owner:** QA Lead  
+**Owner:** QA Lead
 **Status:** MONITORING
 
 ---
 
 ### R9: License Compliance
-**Severity:** MEDIUM  
-**Probability:** LOW  
+**Severity:** MEDIUM
+**Probability:** LOW
 **Impact:** Legal issues, license violation
 
 **Description:** Dashboard dependencies or fonts may have incompatible licenses.
@@ -174,14 +174,14 @@
 - Generate license attribution file
 - Review font licenses
 
-**Owner:** Legal/OSS Lead  
+**Owner:** Legal/OSS Lead
 **Status:** MONITORING
 
 ---
 
 ### R10: GitHub Pages Compatibility
-**Severity:** LOW  
-**Probability:** MEDIUM  
+**Severity:** LOW
+**Probability:** MEDIUM
 **Impact:** Dashboard won't deploy to Pages
 
 **Description:** GitHub Pages has limitations (no server-side, Jekyll processing, base URL issues).
@@ -193,7 +193,7 @@
 - Verify base URL handling
 - SPA routing with hash-based URLs
 
-**Owner:** DevOps Lead  
+**Owner:** DevOps Lead
 **Status:** MONITORING
 
 ---

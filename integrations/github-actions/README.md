@@ -29,14 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Truth Core Verification
         uses: your-org/truth-core/integrations/github-actions@main
         with:
           profile: readylayer
           inputs-path: ./src
           output-path: verdict.json
-      
+
       - name: Upload Verdict
         uses: actions/upload-artifact@v4
         with:
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Verify Release Readiness
         uses: your-org/truth-core/integrations/github-actions@main
         with:
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Validate Agent Traces
         uses: your-org/truth-core/integrations/github-actions@main
         with:
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Verify Security Keys
         uses: your-org/truth-core/integrations/github-actions@main
         with:

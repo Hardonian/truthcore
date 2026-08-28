@@ -43,15 +43,15 @@ function setupEventListeners(): void {
     stateManager.saveTheme();
     applyTheme();
   });
-  
+
   // Import
   importBtn.addEventListener('click', handleImport);
   emptyImportBtn.addEventListener('click', handleImport);
   fileInput.addEventListener('change', handleFileSelect);
-  
+
   // Export
   exportBtn.addEventListener('click', handleExport);
-  
+
   // Navigation
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -60,13 +60,13 @@ function setupEventListeners(): void {
       renderView();
     });
   });
-  
+
   // Back button
   backBtn.addEventListener('click', () => {
     stateManager.setState({ view: 'runs', selectedRunId: null });
     renderView();
   });
-  
+
   // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -119,7 +119,7 @@ async function handleFileSelect(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
   const files = input.files;
   if (!files || files.length === 0) return;
-  
+
   // Process files - simplified version
   alert('File import via input is limited. Use the File System Access API for better results.');
 }
@@ -130,16 +130,16 @@ async function handleExport(): Promise<void> {
     alert('No runs to export');
     return;
   }
-  
+
   try {
     const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
-    
+
     // Create snapshot
     const runsDir = await dirHandle.getDirectoryHandle('runs', { create: true });
-    
+
     for (const run of runs) {
       const runDir = await runsDir.getDirectoryHandle(run.run_id, { create: true });
-      
+
       if (run.manifest) {
         await writeFile(runDir, 'run_manifest.json', JSON.stringify(run.manifest, null, 2));
       }
@@ -156,11 +156,11 @@ async function handleExport(): Promise<void> {
         await writeFile(runDir, 'policy_findings.json', JSON.stringify(run.policy, null, 2));
       }
     }
-    
+
     // Create embedded data file
     const dashboardDir = await dirHandle.getDirectoryHandle('dashboard', { create: true });
     await writeFile(dashboardDir, 'embedded-runs.js', `window.__EMBEDDED_RUNS__ = ${JSON.stringify(runs)};`);
-    
+
     alert('Snapshot exported successfully!');
   } catch (e) {
     console.error('Export failed:', e);
@@ -177,17 +177,17 @@ async function writeFile(dirHandle: FileSystemDirectoryHandle, filename: string,
 
 function renderView(): void {
   const state = stateManager.getState();
-  
+
   // Update nav buttons
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', (btn as HTMLElement).dataset.view === state.view);
   });
-  
+
   // Show/hide views
   runsView.style.display = state.view === 'runs' ? 'block' : 'none';
   runDetailView.style.display = state.view === 'run-detail' ? 'block' : 'none';
   settingsView.style.display = state.view === 'settings' ? 'block' : 'none';
-  
+
   if (state.view === 'runs') {
     renderRunsView();
   } else if (state.view === 'run-detail' && state.selectedRunId) {
@@ -202,24 +202,24 @@ function showEmptyState(): void {
 
 function renderRunsView(): void {
   const { runs } = stateManager.getState();
-  
+
   if (runs.length === 0) {
     showEmptyState();
     return;
   }
-  
+
   emptyState.style.display = 'none';
   runsView.style.display = 'block';
-  
+
   // Update count
   runsCount.textContent = `${runs.length} run${runs.length === 1 ? '' : 's'}`;
-  
+
   // Render stats
   renderStats(runs);
-  
+
   // Render runs list
   runsList.innerHTML = runs.map((run: RunData) => renderRunItem(run)).join('');
-  
+
   // Add click handlers
   runsList.querySelectorAll('.run-item').forEach((item, index) => {
     item.addEventListener('click', () => {
@@ -237,9 +237,9 @@ function renderStats(runs: RunData[]): void {
   const avgScore = runs.length > 0
     ? Math.round(runs.reduce((sum, r) => sum + (r.verdict?.score || 0), 0) / runs.length)
     : 0;
-  
+
   const totalFindings = runs.reduce((sum, r) => sum + (r.verdict?.total_findings || 0), 0);
-  
+
   statsGrid.innerHTML = `
     <div class="stat-card">
       <div class="stat-value">${totalRuns}</div>
@@ -270,9 +270,9 @@ function renderRunItem(run: RunData): string {
   const timestamp = run.manifest?.timestamp || 'Unknown';
   const profile = run.manifest?.profile || 'default';
   const duration = run.manifest?.duration_ms || 0;
-  
+
   const verdictClass = verdict === 'PASS' ? 'badge-pass' : verdict === 'FAIL' ? 'badge-fail' : 'badge-conditional';
-  
+
   return `
     <div class="run-item">
       <div class="run-item-left">
@@ -295,19 +295,19 @@ function renderRunDetail(runId: string): void {
   const { runs } = stateManager.getState();
   const run = runs.find((r: RunData) => r.run_id === runId);
   if (!run) return;
-  
+
   // Update header
   detailTitle.textContent = `Run: ${run.run_id}`;
   const verdict = run.verdict?.verdict || 'UNKNOWN';
   detailVerdict.textContent = verdict;
   detailVerdict.className = `badge ${verdict === 'PASS' ? 'badge-pass' : verdict === 'FAIL' ? 'badge-fail' : 'badge-conditional'}`;
-  
+
   // Update stats
   const score = run.verdict?.score || 0;
   const findings = run.verdict?.total_findings || 0;
   const duration = run.manifest?.duration_ms || 0;
   const profile = run.manifest?.profile || 'default';
-  
+
   detailStats.innerHTML = `
     <div class="stat-card">
       <div class="stat-value">${score}</div>
@@ -326,7 +326,7 @@ function renderRunDetail(runId: string): void {
       <div class="stat-label">Profile</div>
     </div>
   `;
-  
+
   // Render initial tab (overview)
   document.querySelectorAll('.tab-btn').forEach((btn, i) => {
     btn.classList.toggle('active', i === 0);
@@ -338,7 +338,7 @@ function renderTab(tab: string): void {
   const { runs, selectedRunId } = stateManager.getState();
   const run = runs.find((r: RunData) => r.run_id === selectedRunId);
   if (!run) return;
-  
+
   switch (tab) {
     case 'overview':
       renderOverviewTab(run);
@@ -363,13 +363,13 @@ function renderTab(tab: string): void {
 
 function renderOverviewTab(run: RunData): void {
   let html = '<div class="overview-content">';
-  
+
   // Severity distribution chart
   if (run.verdict?.findings_by_severity) {
     const severityData = Object.entries(run.verdict.findings_by_severity)
       .filter(([, count]) => count > 0)
       .map(([label, value]) => ({ label, value, color: getSeverityColor(label as Severity) }));
-    
+
     if (severityData.length > 0) {
       html += '<div class="card">';
       html += '<h3 class="card-title">Severity Distribution</h3>';
@@ -377,14 +377,14 @@ function renderOverviewTab(run: RunData): void {
       html += '</div>';
     }
   }
-  
+
   // Engine breakdown
   if (run.verdict?.findings) {
     const engineCounts: Record<string, number> = {};
     run.verdict.findings.forEach(f => {
       engineCounts[f.engine] = (engineCounts[f.engine] || 0) + 1;
     });
-    
+
     const engineData = Object.entries(engineCounts).map(([label, value]) => ({ label, value }));
     if (engineData.length > 0) {
       html += '<div class="card">';
@@ -393,19 +393,19 @@ function renderOverviewTab(run: RunData): void {
       html += '</div>';
     }
   }
-  
+
   html += '</div>';
   tabContent.innerHTML = html;
 }
 
 function renderFindingsTab(run: RunData): void {
   const findings = run.verdict?.findings || [];
-  
+
   if (findings.length === 0) {
     tabContent.innerHTML = '<div class="empty-state"><p>No findings for this run</p></div>';
     return;
   }
-  
+
   // Filter bar
   let html = `
     <div class="filter-bar">
@@ -427,12 +427,12 @@ function renderFindingsTab(run: RunData): void {
       </div>
     </div>
   `;
-  
+
   // Findings table
   html += '<div class="table-container"><table class="table"><thead><tr>';
   html += '<th>Severity</th><th>Category</th><th>Engine</th><th>Rule</th><th>Message</th>';
   html += '</tr></thead><tbody>';
-  
+
   findings.forEach(finding => {
     html += `<tr>
       <td><span class="badge badge-severity-${finding.severity.toLowerCase()}">${finding.severity}</span></td>
@@ -442,43 +442,43 @@ function renderFindingsTab(run: RunData): void {
       <td>${escapeHtml(finding.message)}</td>
     </tr>`;
   });
-  
+
   html += '</tbody></table></div>';
   tabContent.innerHTML = html;
-  
+
   // Add filter handlers
   const searchInput = document.getElementById('findings-search') as HTMLInputElement;
   const severitySelect = document.getElementById('findings-severity') as HTMLSelectElement;
-  
+
   const applyFilters = () => {
     const search = searchInput.value.toLowerCase();
     const severity = severitySelect.value as Severity | '';
-    
+
     filterManager.setFilters({ search, severity: severity ? [severity] : [] });
     // Re-render with filters (simplified - in production, filter the DOM or re-render)
   };
-  
+
   searchInput?.addEventListener('input', applyFilters);
   severitySelect?.addEventListener('change', applyFilters);
 }
 
 function renderInvariantsTab(run: RunData): void {
   const results = run.invariants?.results || [];
-  
+
   if (results.length === 0) {
     tabContent.innerHTML = '<div class="empty-state"><p>No invariants for this run</p></div>';
     return;
   }
-  
+
   let html = '<div class="table-container"><table class="table"><thead><tr>';
   html += '<th>Rule</th><th>Status</th><th>Severity</th><th>Message</th>';
   html += '</tr></thead><tbody>';
-  
+
   results.forEach(result => {
-    const statusBadge = result.passed 
-      ? '<span class="badge badge-pass">PASS</span>' 
+    const statusBadge = result.passed
+      ? '<span class="badge badge-pass">PASS</span>'
       : '<span class="badge badge-fail">FAIL</span>';
-    
+
     html += `<tr>
       <td>${escapeHtml(result.name)}</td>
       <td>${statusBadge}</td>
@@ -486,23 +486,23 @@ function renderInvariantsTab(run: RunData): void {
       <td>${escapeHtml(result.message || '')}</td>
     </tr>`;
   });
-  
+
   html += '</tbody></table></div>';
   tabContent.innerHTML = html;
 }
 
 function renderPolicyTab(run: RunData): void {
   const findings = run.policy?.findings || [];
-  
+
   if (findings.length === 0) {
     tabContent.innerHTML = '<div class="empty-state"><p>No policy findings for this run</p></div>';
     return;
   }
-  
+
   let html = '<div class="table-container"><table class="table"><thead><tr>';
   html += '<th>Rule</th><th>Severity</th><th>Message</th><th>File</th>';
   html += '</tr></thead><tbody>';
-  
+
   findings.forEach(finding => {
     html += `<tr>
       <td>${escapeHtml(finding.rule_id)}</td>
@@ -511,7 +511,7 @@ function renderPolicyTab(run: RunData): void {
       <td>${escapeHtml(finding.file || '')}</td>
     </tr>`;
   });
-  
+
   html += '</tbody></table></div>';
   tabContent.innerHTML = html;
 }
@@ -521,18 +521,18 @@ function renderProvenanceTab(run: RunData): void {
     tabContent.innerHTML = '<div class="empty-state"><p>No provenance data for this run</p></div>';
     return;
   }
-  
+
   let html = '<div class="card">';
   html += '<h3 class="card-title">Provenance Information</h3>';
   html += '<table class="table"><tbody>';
-  
+
   if (run.manifest) {
     html += `<tr><td>Run ID</td><td>${escapeHtml(run.manifest.run_id)}</td></tr>`;
     html += `<tr><td>Timestamp</td><td>${escapeHtml(run.manifest.timestamp)}</td></tr>`;
     html += `<tr><td>Input Hash</td><td><code>${escapeHtml(run.manifest.input_hash)}</code></td></tr>`;
     html += `<tr><td>Config Hash</td><td><code>${escapeHtml(run.manifest.config_hash)}</code></td></tr>`;
   }
-  
+
   if (run.provenance) {
     html += `<tr><td>Bundle Hash</td><td><code>${escapeHtml(run.provenance.bundle_hash)}</code></td></tr>`;
     html += `<tr><td>Files in Bundle</td><td>${run.provenance.files.length}</td></tr>`;
@@ -541,7 +541,7 @@ function renderProvenanceTab(run: RunData): void {
       html += `<tr><td>Signature Algorithm</td><td>${escapeHtml(run.provenance.signature.algorithm)}</td></tr>`;
     }
   }
-  
+
   html += '</tbody></table></div>';
   tabContent.innerHTML = html;
 }
@@ -551,7 +551,7 @@ function renderFilesTab(run: RunData): void {
     tabContent.innerHTML = '<div class="empty-state"><p>No files recorded for this run</p></div>';
     return;
   }
-  
+
   let html = '<ul class="file-list">';
   run.files.forEach(file => {
     const icon = getFileIcon(file);

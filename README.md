@@ -411,5 +411,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Version:** 0.2.0  
+**Version:** 0.2.0
 **Python:** 3.11+

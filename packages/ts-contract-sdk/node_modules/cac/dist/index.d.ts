@@ -173,7 +173,7 @@ declare class CAC extends EventEmitter {
     /**
      * Parse argv
      */
-    parse(argv?: string[], { 
+    parse(argv?: string[], {
     /** Whether to run the action for matched command */
     run, }?: {
         run?: boolean | undefined;

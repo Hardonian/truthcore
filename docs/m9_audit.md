@@ -1,7 +1,7 @@
 # M9 Baseline Audit Report
 
-**Date:** 2026-02-01  
-**Version:** 0.2.0  
+**Date:** 2026-02-01
+**Version:** 0.2.0
 **Status:** In Progress
 
 ## Summary
@@ -72,7 +72,7 @@ This document records the baseline state of the truth-core repository at the sta
 
 ### CLI Commands Tested
 
-**truthctl --help**: PASS  
+**truthctl --help**: PASS
 Available commands:
 - bundle, cache-clear, cache-compact, cache-stats, explain
 - generate-keys, graph, graph-query, index, intel, judge

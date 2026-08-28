@@ -248,13 +248,13 @@ diff ./replay-bundle/outputs/verdict.md ./sim-no-ui/verdict.md
   run: |
     # Run analysis
     truthctl judge --inputs ./test-data --out ./results
-    
+
     # Export bundle
     truthctl bundle export --run-dir ./results --out ./bundle
-    
+
     # Replay and verify
     truthctl replay --bundle ./bundle --out ./replay --strict
-    
+
     # If we get here, outputs are deterministic
     echo "✅ Determinism verified"
 ```

@@ -87,7 +87,7 @@ All phases 0-5 have been successfully implemented:
 ============================= test results =============================
 tests/test_spine.py - 26 passed
 - Phase 0 (Primitives): ✅ 7 tests passing
-- Phase 1 (Graph/Belief): ✅ 5 tests passing  
+- Phase 1 (Graph/Belief): ✅ 5 tests passing
 - Phase 2 (Ingestion): ✅ 2 tests passing
 - Phase 3 (Queries): ✅ 9 tests passing
 - Phase 4 (Client): ✅ 2 tests passing

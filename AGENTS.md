@@ -1,6 +1,6 @@
 # AGENTS.md — Truth Core Operating Manual
 
-> **Truth Core** — Deterministic, evidence-based verification framework for software systems.  
+> **Truth Core** — Deterministic, evidence-based verification framework for software systems.
 > **Repo:** Hybrid Python + TypeScript monorepo | **License:** MIT | **Version:** 0.2.0
 
 ---
@@ -358,6 +358,6 @@ Fixes #XXX
 
 ---
 
-**Last updated:** 2026-02-05  
-**Maintained by:** AI agents + human reviewers  
+**Last updated:** 2026-02-05
+**Maintained by:** AI agents + human reviewers
 **Questions?** See `CONTRIBUTING.md` or open an issue.

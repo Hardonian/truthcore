@@ -94,7 +94,7 @@ def process_data(input_path: Path, strict: bool = False) -> dict:
     """
     if not input_path.exists():
         raise FileNotFoundError(f"Input not found: {input_path}")
-    
+
     # Process logic here
     return {"result": "success"}
 ```

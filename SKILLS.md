@@ -445,6 +445,6 @@ For any work to be considered **ship-ready** in Truth Core:
 
 ---
 
-**Last updated:** 2026-02-05  
-**Maintained by:** AI agents + human reviewers  
+**Last updated:** 2026-02-05
+**Maintained by:** AI agents + human reviewers
 **Updates:** Submit PR following conventions in AGENTS.md

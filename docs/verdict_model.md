@@ -305,7 +305,7 @@ truthctl judge --inputs ./test-outputs --profile ui --out ./results
 - Category limits: security=100, build=50
 
 **Main Mode:**
-- Blockers: 0  
+- Blockers: 0
 - Highs: 2 (override up to 5)
 - Total points: 75
 - Category limits: security=50, build=25, types=30

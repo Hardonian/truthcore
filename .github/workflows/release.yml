@@ -39,27 +39,27 @@ jobs:
           else
             CHANGES=$(git log --pretty=format:"- %s" | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" | head -50 || true)
           fi
-          
+
           if [ -z "$CHANGES" ]; then
             CHANGES="- Maintenance release"
           fi
-          
+
           NOTES="## Changes
-          
+
           $CHANGES
-          
+
           ## Installation
-          
+
           \`\`\`bash
           pip install truth-core==${{ steps.version.outputs.version }}
           \`\`\`
-          
+
           ## Docker
-          
+
           \`\`\`bash
           docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
           \`\`\`"
-          
+
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -208,7 +208,7 @@ jobs:
         run: |
           VERSION=${{ needs.create-release.outputs.version }}
           DATE=$(date +%Y-%m-%d)
-          
+
           # Get changes
           LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
@@ -216,16 +216,16 @@ jobs:
           else
             CHANGES=$(git log --pretty=format:"- %s" | grep -E "^(feat|fix|refactor|docs|test|chore|perf|ci|build|style)(\(.+\))?:" | head -50 || true)
           fi
-          
+
           # Create new entry
           NEW_ENTRY="## [$VERSION] - $DATE
-          
+
           $CHANGES
           "
-          
+
           # Insert after header
           echo "$NEW_ENTRY" | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
-          
+
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add CHANGELOG.md

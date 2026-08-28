@@ -1,7 +1,7 @@
 # Truth Core Repository Audit Notes
 
-**Date**: 2026-02-03  
-**Auditor**: Kimi (Principal Engineer + Security/QA Lead)  
+**Date**: 2026-02-03
+**Auditor**: Kimi (Principal Engineer + Security/QA Lead)
 **Scope**: Full repo hardening for ship-ready OSS
 
 ---
@@ -34,7 +34,7 @@ truthcore/
 └── .github/workflows/     # CI configuration
 ```
 
-**Package Manager Situation**: 
+**Package Manager Situation**:
 - Root: No package.json (Python-only at root)
 - Dashboard: npm with package-lock.json
 - TS SDK: npm with package-lock.json
@@ -50,7 +50,7 @@ truthcore/
 - `verdict/`, `engines/`, `invariants/`: Core logic
 - `replay/`, `spine/`: Replay/simulation system
 
-**Linting (ruff)**: 
+**Linting (ruff)**:
 - **1299+ errors** (whitespace, line length, unused vars, missing docstrings)
 - `cli.py` alone has 100+ line length violations
 - `cache.py` has trailing whitespace throughout
@@ -319,8 +319,8 @@ pnpm verify                     # All gates pass
 
 ## Risk Assessment
 
-**Low Risk**: Formatting changes, config updates, CI additions  
-**Medium Risk**: Fixing Python imports (may change API surface)  
+**Low Risk**: Formatting changes, config updates, CI additions
+**Medium Risk**: Fixing Python imports (may change API surface)
 **High Risk**: None - changes are additive or cosmetic
 
 **Rollback Strategy**: All changes are in version control; can revert any commit.

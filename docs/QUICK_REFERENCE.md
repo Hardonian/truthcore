@@ -244,22 +244,22 @@ truthctl spine why assertion_123
 
 # Output:
 # # Belief: assertion_123
-# 
+#
 # ## Claim
 # "Deployment is ready for production"
-# 
+#
 # ## Current Confidence
 # 0.85 (formed at 2026-02-01T12:00:00Z)
-# 
+#
 # ## Evidence (3 items)
 # 1. [evidence_abc] test_results.json (confidence: +0.30)
 # 2. [evidence_def] security_scan.json (confidence: +0.35)
 # 3. [evidence_ghi] coverage_report.json (confidence: +0.20)
-# 
+#
 # ## Dependencies
 # - tests_pass (confidence: 0.95)
 # - security_clean (confidence: 0.89)
-# 
+#
 # ## Confidence Computation
 # base: 0.50 × evidence_weight: 1.70 = 0.85
 ```
@@ -366,7 +366,7 @@ truthctl spine why assertion_123 --format json
 
 ### Issue: Slow queries
 **Cause:** Large dataset or complex lineage
-**Fix:** 
+**Fix:**
 ```bash
 # Check stats
 truthctl spine stats

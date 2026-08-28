@@ -7,7 +7,7 @@ Deterministic normalization for making inputs boring and consistent. All operati
 The normalization toolkit provides three main capabilities:
 
 1. **Canonical Text Normalization** - Normalize text for comparison/hashing
-2. **Canonical JSON Normalization** - Normalize JSON structures for comparison/hashing  
+2. **Canonical JSON Normalization** - Normalize JSON structures for comparison/hashing
 3. **Log Parser Helpers** - Parse common tool outputs into structured findings
 
 ## Quick Start
@@ -109,7 +109,7 @@ except JSONNormalizationError as e:
 ### Supported Parsers
 
 - `eslint-json` - ESLint JSON output
-- `eslint-text` - ESLint text output  
+- `eslint-text` - ESLint text output
 - `tsc` - TypeScript compiler output
 - `playwright-json` - Playwright JSON report
 - `build` - Generic build logs
