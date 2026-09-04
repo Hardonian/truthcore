@@ -1,5 +1,9 @@
 # Truth Core
 
+<!-- BEGIN: REPO HERO -->
+![truthcore — hero generated locally on the GPU stack](assets/repo-hero.png)
+<!-- END: REPO HERO -->
+
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/your-org/truth-core)
